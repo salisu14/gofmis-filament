@@ -35,8 +35,9 @@ class AdminPanelProvider extends PanelProvider
             ->colors([
                 'primary' => Color::Amber,
             ])
+            ->globalSearch()
             ->spa(hasPrefetching: true)
-            ->brandName('Garko Orphans')
+            ->brandName('Garko Orphans Foundation MIS')
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
             ->pages([
@@ -133,18 +134,18 @@ class AdminPanelProvider extends PanelProvider
                                     ->url('/admin/zones')
                                     ->isActiveWhen(fn() => request()->is('admin/zones*')),
 
-
-                                // Bank Accounts
-                                NavigationItem::make('Bank Accounts')
-                                    ->icon('heroicon-o-document-currency-dollar')
-                                    ->url('/admin/bank-accounts')
-                                    ->isActiveWhen(fn() => request()->is('admin/bank-accounts*')),
-
-                                // Payments
-                                NavigationItem::make('Payments')
-                                    ->icon('heroicon-o-document-currency-dollar')
-                                    ->url('/admin/payments')
-                                    ->isActiveWhen(fn() => request()->is('admin/payments*')),
+//
+//                                // Bank Accounts
+//                                NavigationItem::make('Bank Accounts')
+//                                    ->icon('heroicon-o-document-currency-dollar')
+//                                    ->url('/admin/bank-accounts')
+//                                    ->isActiveWhen(fn() => request()->is('admin/bank-accounts*')),
+//
+//                                // Payments
+//                                NavigationItem::make('Payments')
+//                                    ->icon('heroicon-o-document-currency-dollar')
+//                                    ->url('/admin/payments')
+//                                    ->isActiveWhen(fn() => request()->is('admin/payments*')),
                             ])
                     )
                     ->group(

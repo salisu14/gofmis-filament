@@ -15,6 +15,7 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Model;
 
 class DeceasedResource extends Resource
 {
@@ -45,6 +46,37 @@ class DeceasedResource extends Resource
             RelationManagers\WidowsRelationManager::class,
             RelationManagers\OrphansRelationManager::class,
         ];
+    }
+
+    public static function getGloballySearchableAttributes(): array
+    {
+        return [
+            'first_name',
+            'middle_name',
+            'last_name',
+            'full_name',
+            'reg_no',
+            'nin',
+        ];
+    }
+
+    public static function getGlobalSearchResultTitle(Model $record): string
+    {
+        return $record->full_name;
+    }
+
+    public static function getGlobalSearchResultDetails(Model $record): array
+    {
+        return [
+            'Reg No' => $record->reg_no,
+            'NIN' => $record->nin,
+            'Zone' => $record->zone?->name,
+        ];
+    }
+
+    public static function getGlobalSearchResultUrl(Model $record): string
+    {
+        return static::getUrl('view', ['record' => $record]);
     }
 
     public static function getPages(): array

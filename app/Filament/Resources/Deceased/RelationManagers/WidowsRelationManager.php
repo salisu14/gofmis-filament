@@ -32,6 +32,8 @@ class WidowsRelationManager extends RelationManager
     protected static string $relationship = 'widows';
     protected static ?string $recordTitleAttribute = 'full_name';
     protected static ?string $title = 'Widows';
+    protected static ?string $relatedRecordTitleAttribute = 'full_name';
+
     protected static string|null|\BackedEnum $icon = 'heroicon-o-heart';
 
     public function form(Schema $schema): Schema
