@@ -17,6 +17,7 @@ class RegisterDeceasedAction
         return Deceased::create([
             'first_name' => $data->firstName,
             'last_name' => $data->lastName,
+            'middle_name' => $data->middleName, // ✅ FIXED
             'nin' => $data->nin,
             'reg_no' => $this->regNoService->generateDeceasedRegNo(),
             'address' => $data->address,
@@ -24,10 +25,14 @@ class RegisterDeceasedAction
             'death_cause' => $data->deathCause,
             'death_place' => $data->deathPlace,
             'occupation' => $data->occupation,
-            'orphan_count' => $data->orphanCount,
-            'widow_count' => $data->widowCount,
+            'number_of_orphans_left' => $data->numberOfOrphansLeft,
+            'number_of_widows_left' => $data->numberOfWidowsLeft,
+            'guardian_name' => $data->guardianName,
+            'guardian_phone' => $data->guardianPhone, // ✅ FIXED
             'has_death_cert' => $data->hasDeathCert,
             'death_cert_url' => $data->deathCertUrl,
+            'age' => $data->age, // ✅ FIXED
+            'zone_id' => $data->zoneId, // ✅ FIXED
             'date_registered' => now(),
         ]);
     }

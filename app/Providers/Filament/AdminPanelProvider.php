@@ -118,6 +118,15 @@ class AdminPanelProvider extends PanelProvider
                             ])
                     )
                     ->group(
+                        NavigationGroup::make('Deceased Management')
+                            ->items([
+                                NavigationItem::make('Deceased')
+                                    ->icon('heroicon-o-list-bullet')
+                                    ->url('/admin/deceaseds')
+                                    ->isActiveWhen(fn() => request()->is('admin/deceaseds*')),
+                            ])
+                    )
+                    ->group(
                         NavigationGroup::make('Human Resources')
                             ->items([
                                 NavigationItem::make('Business Units')

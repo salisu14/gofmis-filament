@@ -9,15 +9,20 @@ class DeceasedData  extends Data
     public function __construct(
         public string $firstName,
         public string $lastName,
-        public string $nin,
-        public string $address,
-        public string $vulnerabilityStatus, // 'A', 'B', or 'C'
-        public string $deathCause,
-        public string $deathPlace,
+        public ?string $middleName,
+        public ?string $nin,
+        public ?string $address,
+        public string $vulnerabilityStatus,
+        public ?string $deathCause,
+        public ?string $deathPlace,
         public ?string $occupation = null,
-        public ?int $orphanCount = 0,
-        public ?int $widowCount = 0,
+        public ?int $numberOfOrphansLeft = 0,
+        public ?int $numberOfWidowsLeft = 0,
+        public ?string $guardianName,
+        public ?string $guardianPhone = null,
         public ?bool $hasDeathCert = false,
         public ?string $deathCertUrl = null,
+        public ?int $age = null,
+        public ?string $zoneId = null,
     ) {}
 }

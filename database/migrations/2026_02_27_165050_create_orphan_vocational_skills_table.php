@@ -12,11 +12,16 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('orphan_vocational_skills', function (Blueprint $table) {
-            $table->uuid('id')->primary()->unique();
-            $table->foreignUuid('orphan_id')->constrained('orphans')->cascadeOnDelete();
-            $table->foreignUuid('skill_id')->constrained('vocational_skills');
-            $table->string('specify', 255)->nullable();
+            $table->uuid('id')->primary();
+
+            $table->foreignUuid('orphan_id')->constrained()->cascadeOnDelete();
+            $table->foreignUuid('vocational_skill_id')->constrained('vocational_skills')->cascadeOnDelete();
+
+            $table->string('specify')->nullable();
+
             $table->timestamps();
+
+            $table->unique(['orphan_id', 'vocational_skill_id']);
         });
     }
 

@@ -8,10 +8,13 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Deceased extends Model
 {
-    use HasUuids;
+    use HasUuids, SoftDeletes;
+
+    protected $table = 'deceased';
 
     protected $fillable = [
         'first_name',
@@ -25,8 +28,6 @@ class Deceased extends Model
         'date_registered',
         'death_cause',
         'death_place',
-        'orphan_count',
-        'widow_count',
         'occupation',
         'has_death_cert',
         'death_cert_url',
@@ -34,15 +35,16 @@ class Deceased extends Model
         'number_of_widows_left',
         'guardian_name',
         'guardian_phone',
+        'zone_id', // ✅ IMPORTANT
         'full_name',
     ];
 
     protected $casts = [
         'has_death_cert' => 'boolean',
-        'deceased_age' => 'integer',
+        'age' => 'integer',
         'date_registered' => 'date',
-        'orphan_count' => 'integer',
-        'widow_count' => 'integer',
+        'number_of_orphans_left' => 'integer',
+        'number_of_widows_left' => 'integer',
         'vulnerability_status' => VulnerabilityStatus::class,
     ];
 
@@ -68,7 +70,7 @@ class Deceased extends Model
             ->withTimestamps();
     }
 
-    protected static function boot()
+    protected static function boot(): void
     {
         parent::boot();
 

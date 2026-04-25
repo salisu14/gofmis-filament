@@ -33,6 +33,8 @@ return new class extends Migration
                 ->constrained('deceased')
                 ->nullOnDelete();
 
+            $table->unsignedInteger('child_sequence')->after('deceased_id');
+
             $table->foreignUuid('islamiyya_education_id')
                 ->nullable()
                 ->constrained('islamiyya_education')
@@ -45,6 +47,8 @@ return new class extends Migration
 
             $table->string('birth_certificate_path', 255)->nullable();
             $table->timestamps();
+
+            $table->unique(['deceased_id', 'child_sequence']);
         });
     }
 

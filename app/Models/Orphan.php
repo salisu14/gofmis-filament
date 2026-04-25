@@ -9,14 +9,19 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Orphan extends Model
 {
-    use HasUuids;
+    use HasUuids, SoftDeletes;
+
+    protected $table = 'orphans';
 
     protected $fillable = [
         'first_name',
         'last_name',
+        'middle_name',
+        'full_name',
         'gender',
         'nin',
         'reg_no',
@@ -24,6 +29,7 @@ class Orphan extends Model
         'address',
         'picture_url',
         'deceased_id',
+        'child_sequence',
         'islamiyya_education_id',
         'western_education_id',
         'birth_certificate_path',
@@ -32,6 +38,7 @@ class Orphan extends Model
         'is_eligible',
         'age',
         'full_name',
+        'is_married',
         'married_at',
     ];
 
@@ -50,22 +57,27 @@ class Orphan extends Model
 
     public function deceased(): BelongsTo
     {
-        return $this->belongsTo(Deceased::class)->nullable();
+        return $this->belongsTo(Deceased::class);
     }
 
     public function westernEducation(): BelongsTo
     {
-        return $this->belongsTo(WesternEducation::class)->nullable();
+        return $this->belongsTo(WesternEducation::class);
     }
 
     public function islamiyyaEducation(): BelongsTo
     {
-        return $this->belongsTo(IslamiyyaEducation::class)->nullable();
+        return $this->belongsTo(IslamiyyaEducation::class);
     }
 
     public function vocationalSkills(): BelongsToMany
     {
-        return $this->belongsToMany(VocationalSkill::class, 'orphan_vocational_skill')
+        return $this->belongsToMany(
+            VocationalSkill::class,
+            'orphan_vocational_skills',
+            'orphan_id',
+            'vocational_skill_id'
+        )
             ->withPivot('specify')
             ->withTimestamps();
     }
@@ -83,7 +95,7 @@ class Orphan extends Model
         return $this->hasMany(Intervention::class);
     }
 
-    protected static function boot()
+    protected static function boot(): void
     {
         parent::boot();
 

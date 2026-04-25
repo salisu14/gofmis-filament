@@ -15,7 +15,7 @@ return new class extends Migration
             $table->uuid('id')->primary()->unique();
             $table->string('first_name', 100);
             $table->string('last_name', 100);
-            $table->string('middle_name', 100);
+            $table->string('middle_name', 100)->nullable();
             $table->string('nin', 20)->unique();
             $table->string('reg_no', 50)->unique();
             $table->string('skills', 255)->nullable();
@@ -30,6 +30,11 @@ return new class extends Migration
                 ->nullable()
                 ->constrained('deceased')
                 ->nullOnDelete();
+
+            $table->unsignedInteger('child_sequence')->after('deceased_id');
+
+            // 🔥 enforce uniqueness per deceased
+            $table->unique(['deceased_id', 'child_sequence']);
 
             $table->timestamps();
         });

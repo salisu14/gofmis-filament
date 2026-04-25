@@ -27,6 +27,8 @@ return new class extends Migration {
             $table->integer('number_of_orphans_left')->default(0);
             $table->integer('number_of_widows_left')->default(0);
 
+            $table->integer('age')->default(0);
+
             $table->string('guardian_name', 100);
             $table->string('guardian_phone', 100);
 

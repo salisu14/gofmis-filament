@@ -7,14 +7,35 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Widow extends Model
 {
-    use HasUuids;
+    use HasUuids, SoftDeletes;
+
+    protected $table = 'widows';
 
     protected $fillable = [
-        'first_name', 'last_name', 'nin', 'reg_no', 'skills',
-        'address', 'picture_url', 'deceased_id'
+        'first_name',
+        'last_name',
+        'middle_name',
+        'nin',
+        'reg_no',
+        'skills',
+        'address',
+        'picture_url',
+        'is_eligible',
+        'is_married',
+        'deceased_id',
+        'child_sequence',
+         'full_name',
+    ];
+
+    protected $casts = [
+        'is_eligible' => 'boolean',
+        'is_married' => 'boolean',
+        'married_at' => 'datetime',
+        'skills' => 'array',
     ];
 
     public function prescriptions(): MorphMany
@@ -32,7 +53,7 @@ class Widow extends Model
         return $this->hasMany(Loan::class);
     }
 
-    protected static function boot()
+    protected static function boot(): void
     {
         parent::boot();
 
