@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\Role;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
 
 class RolesTableSeeder extends Seeder
 {
@@ -11,14 +12,14 @@ class RolesTableSeeder extends Seeder
     {
         $roles = [
             [
-                'id'    => 1,
+                'uuid'       => Str::uuid(),
                 'name' => 'super_admin',
                 'guard_name' => 'web',
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
             [
-                'id'    => 2,
+                'uuid'       => Str::uuid(),
                 'name' => 'admin',
                 'guard_name' => 'web',
                 'created_at' => now(),

@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\Permission;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
 
 class PermissionsTableSeeder extends Seeder
 {
@@ -47,6 +48,7 @@ class PermissionsTableSeeder extends Seeder
         foreach ($permissionPatterns as [$entity, $actions]) {
             foreach ($actions as $action) {
                 $permissions[] = [
+                    'uuid'       => Str::uuid(),
                     'name'       => "{$entity}_{$action}",
                     'guard_name' => $guard,
                     'created_at' => $now,
@@ -58,6 +60,7 @@ class PermissionsTableSeeder extends Seeder
         // Add standalone permissions
         foreach ($standalonePermissions as $name) {
             $permissions[] = [
+                'uuid'       => Str::uuid(),
                 'name'       => $name,
                 'guard_name' => $guard,
                 'created_at' => $now,
