@@ -22,9 +22,13 @@ return new class extends Migration
                 ->constrained()
                 ->restrictOnDelete();
 
-            $table->text('reason')->nullable();
+            $table->text('rejection_reason')->nullable();
 
             $table->string('status')->default('pending');
+
+            $table->timestamp('request_date')->nullable();
+
+            $table->string('verification_status')->default('unverified'); // verified, unverified, flagged
 
             $table->timestampTz('requested_at')->useCurrent();
 
@@ -33,6 +37,9 @@ return new class extends Migration
 
             $table->foreignUuid('approved_by')->nullable()->constrained('users');
             $table->timestampTz('approved_at')->nullable();
+
+            $table->foreignUuid('verified_by')->nullable()->constrained('users');
+            $table->timestampTz('verified_at')->nullable();
 
             $table->timestampsTz();
 

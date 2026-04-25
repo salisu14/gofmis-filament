@@ -30,14 +30,11 @@ class Orphan extends Model
         'picture_url',
         'deceased_id',
         'child_sequence',
-        'islamiyya_education_id',
-        'western_education_id',
         'birth_certificate_path',
         'status',
         'rejection_reason',
         'is_eligible',
         'age',
-        'full_name',
         'is_married',
         'married_at',
     ];
@@ -50,41 +47,20 @@ class Orphan extends Model
         'married_at' => 'datetime',
     ];
 
-    public function prescriptions(): MorphMany
-    {
-        return $this->morphMany(Prescription::class, 'prescribable');
-    }
+    /* -----------------------------
+     | Core Relationships
+     ------------------------------*/
 
     public function deceased(): BelongsTo
     {
         return $this->belongsTo(Deceased::class);
     }
 
-    public function westernEducation(): BelongsTo
+    public function prescriptions(): MorphMany
     {
-        return $this->belongsTo(WesternEducation::class);
+        return $this->morphMany(Prescription::class, 'prescribable');
     }
 
-    public function islamiyyaEducation(): BelongsTo
-    {
-        return $this->belongsTo(IslamiyyaEducation::class);
-    }
-
-    public function vocationalSkills(): BelongsToMany
-    {
-        return $this->belongsToMany(
-            VocationalSkill::class,
-            'orphan_vocational_skills',
-            'orphan_id',
-            'vocational_skill_id'
-        )
-            ->withPivot('specify')
-            ->withTimestamps();
-    }
-
-    /**
-     * Get all interventions for the orphan (Education, Medical, Welfare, etc).
-     */
     public function interventionRequests(): HasMany
     {
         return $this->hasMany(InterventionRequest::class);
@@ -94,6 +70,44 @@ class Orphan extends Model
     {
         return $this->hasMany(Intervention::class);
     }
+
+    /* -----------------------------
+     | EDUCATION (NEW UNIFIED MODEL)
+     ------------------------------*/
+
+    public function educations(): HasMany
+    {
+        return $this->hasMany(OrphanEducation::class);
+    }
+
+    /* -----------------------------
+     | VOCATIONAL SKILLS (KEEP THIS INDEPENDENT)
+     ------------------------------*/
+
+    public function vocationalSkills(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            VocationalSkill::class,
+            'orphan_vocational_skills',
+            'orphan_id',
+            'vocational_skill_id'
+        )->withPivot(['specify'])
+            ->withTimestamps();
+    }
+
+    public function getPaidAmountAttribute(): float
+    {
+        return $this->payments()->sum('amount');
+    }
+
+    public function getBalanceAttribute(): float
+    {
+        return $this->amount - $this->paid_amount;
+    }
+
+    /* -----------------------------
+     | AUTO NAME GENERATION
+     ------------------------------*/
 
     protected static function boot(): void
     {

@@ -56,7 +56,11 @@ class DeceasedInfolist
                             ->numeric(),
                         TextEntry::make('widows_count')
                             ->label('Widows Registered')
-                            ->state(fn ($record) => $record->widows()->count())
+                            ->state(fn ($record) =>
+                            method_exists($record, 'widows')
+                                ? $record->widows()->count()
+                                : 0
+                            )
                             ->badge()
                             ->color('warning'),
                         TextEntry::make('number_of_orphans_left')
@@ -64,7 +68,11 @@ class DeceasedInfolist
                             ->numeric(),
                         TextEntry::make('orphans_count')
                             ->label('Orphans Registered')
-                            ->state(fn ($record) => $record->orphans()->count())
+                            ->state(fn ($record) =>
+                            method_exists($record, 'orphans')
+                                ? $record->orphans()->count()
+                                : 0
+                            )
                             ->badge()
                             ->color('info'),
                     ])->columns(4),

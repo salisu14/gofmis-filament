@@ -10,13 +10,30 @@ return new class extends Migration {
      */
     public function up(): void
     {
+
         Schema::create('categories', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->string('name');
-            $table->string('description')->nullable();
-            $table->foreignUuid('user_id')->constrained('users');
 
+            // Basic Info
+            $table->string('name')->unique();
+            $table->text('description')->nullable();
+
+            // Self-referencing Foreign Key for Nesting
+            $table->foreignUuid('parent_id')
+                ->nullable()
+                ->constrained('categories')
+                ->nullOnDelete();
+
+            // Ownership
+            $table->foreignUuid('user_id')
+                ->constrained('users')
+                ->cascadeOnDelete();
+
+            $table->softDeletes();
             $table->timestamps();
+
+            // Index for hierarchical lookups
+            $table->index('parent_id');
         });
     }
 

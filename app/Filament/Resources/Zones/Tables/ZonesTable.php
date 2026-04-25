@@ -63,6 +63,6 @@ class ZonesTable
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
                 ]),
-            ]);
+            ])->defaultSort('name', 'asc');
     }
 }

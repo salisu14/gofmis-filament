@@ -14,14 +14,15 @@ class VocationalSkill extends Model
 
     protected $fillable = ['name'];
 
-    public function orphans(): BelongsToMany
+    public function orphanSkills(): BelongsToMany
     {
         return $this->belongsToMany(
             Orphan::class,
             'orphan_vocational_skills',
             'vocational_skill_id',
             'orphan_id'
-        )->withPivot('specify')
+        )->using(OrphanVocationalSkill::class)
+            ->withPivot('specify')
             ->withTimestamps();
     }
 }

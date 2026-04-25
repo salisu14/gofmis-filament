@@ -16,6 +16,7 @@ class InterventionRequest extends Model
         'status',
         'rejection_reason',
         'verification_status',
+        'verification_date',
         'verified_by',
         'verified_at',
         'request_date'

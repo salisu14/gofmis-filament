@@ -22,6 +22,9 @@ return new class extends Migration
                 ->constrained('prescriptions')
                 ->cascadeOnDelete();
 
+            // Optional but recommended for medical tracking
+            $table->string('dosage')->nullable();
+
             $table->timestamps();
         });
     }

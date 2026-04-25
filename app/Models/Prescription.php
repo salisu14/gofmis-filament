@@ -12,6 +12,8 @@ class Prescription extends Model
 {
     use HasUuids;
 
+    protected $table = 'prescriptions';
+
     protected $fillable = [
         'doctor_name',
         'illness',
@@ -43,12 +45,16 @@ class Prescription extends Model
     }
 
     // The drugs prescribed
+    /**
+     * Updated to use the custom pivot model MedicationPrescription.
+     */
     public function medications(): BelongsToMany
     {
-        return $this->belongsToMany(Medication::class, 'medication_prescription');
+        return $this->belongsToMany(Medication::class, 'medication_prescriptions')
+            ->using(MedicationPrescription::class)
+            ->withTimestamps();
     }
 
-    // Helper for total cost
     public function getTotalCostAttribute(): float
     {
         return (float) $this->lab_test_cost + (float) $this->drug_cost;

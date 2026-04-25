@@ -2,13 +2,20 @@
 
 namespace App\Filament\Resources\Deceased\RelationManagers;
 
+use App\Models\Widow;
 use App\Services\RegistrationNumberService;
+use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\ViewAction;
+use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Hidden;
+use Filament\Forms\Components\Repeater;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -173,6 +180,64 @@ class WidowsRelationManager extends RelationManager
                     ->hidden(fn (RelationManager $livewire) => $livewire->getRelationship()->count() >= 4),
             ])
             ->recordActions([
+                // NEW: MEDICAL RECORDS ACTION
+                Action::make('manageMedical')
+                    ->label('Medical Records')
+                    ->icon('heroicon-m-beaker')
+                    ->color('success')
+                    ->modalHeading(fn (Widow $record) => "Prescriptions for {$record->full_name}")
+                    ->modalWidth('5xl')
+                    ->modalSubmitActionLabel('Save Records')
+                    ->schema([
+                        Repeater::make('prescriptions')
+                            ->relationship('prescriptions')
+                            ->schema([
+                                Grid::make(3)->schema([
+                                    TextInput::make('doctor_name')
+                                        ->required(),
+                                    TextInput::make('illness')
+                                        ->label('Diagnosis')
+                                        ->required(),
+                                    DatePicker::make('prescription_date')
+                                        ->default(now())
+                                        ->required(),
+                                ]),
+                                Grid::make(2)->schema([
+                                    TextInput::make('lab_test_cost')
+                                        ->numeric()
+                                        ->prefix('₦')
+                                        ->default(0),
+                                    TextInput::make('drug_cost')
+                                        ->numeric()
+                                        ->prefix('₦')
+                                        ->default(0),
+                                ]),
+                                Select::make('medications')
+                                    ->multiple()
+                                    ->relationship('medications', 'name')
+                                    ->preload()
+                                    ->searchable()
+                                    ->hint('Select prescribed drugs from pharmacy master list.'),
+                                Textarea::make('note')
+                                    ->rows(2)
+                                    ->placeholder('Dosage instructions or clinical notes...')
+                                    ->columnSpanFull(),
+
+                                // Hidden field to track who is issuing
+                                Hidden::make('user_id')
+                                    ->default(auth()->id()),
+                            ])
+                            ->itemLabel(fn (array $state): ?string => $state['illness'] ?? null)
+                            ->collapsible()
+                            ->collapsed()
+                            ->cloneable()
+                            ->addActionLabel('New Prescription'),
+                    ])
+                    ->action(function (Widow $record): void {
+                        $record->touch(); // Refreshes timestamps to trigger UI update
+                    }),
+
+                ViewAction::make(),
                 EditAction::make()->modalWidth('4xl'),
                 DeleteAction::make(),
             ])

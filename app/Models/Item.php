@@ -14,7 +14,7 @@ class Item extends Model
      *
      * @var array
      */
-    protected $guarded = ['created_at', 'updated_at'];
+    protected $fillable = ['name', 'description', 'category_id', 'user_id'];
 
 
     public function user() : BelongsTo

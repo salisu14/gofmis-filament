@@ -52,6 +52,7 @@ return new class extends Migration {
                 ->nullable()
                 ->constrained('zones');
 
+            $table->softDeletes(); // Added for audit trail
             $table->timestamps();
 
             $table->index('vulnerability_status');

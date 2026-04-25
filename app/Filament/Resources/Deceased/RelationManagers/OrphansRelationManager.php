@@ -3,15 +3,17 @@
 namespace App\Filament\Resources\Deceased\RelationManagers;
 
 use App\Filament\Resources\Deceased\DeceasedResource;
+use App\Models\Orphan;
 use App\Services\RegistrationNumberService;
-use Filament\Actions\BulkActionGroup;
+use Filament\Actions\Action;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
-use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Hidden;
+use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -45,8 +47,7 @@ class OrphansRelationManager extends RelationManager
                             ->schema([
                                 TextInput::make('first_name')
                                     ->required()
-                                    ->maxLength(100)
-                                    ->autofocus(),
+                                    ->maxLength(100),
                                 TextInput::make('middle_name')
                                     ->maxLength(100),
                                 TextInput::make('last_name')
@@ -54,7 +55,7 @@ class OrphansRelationManager extends RelationManager
                                     ->maxLength(100),
                             ]),
 
-                        Grid::make(2)
+                        Grid::make(3)
                             ->schema([
                                 Select::make('gender')
                                     ->options(\App\Enums\Gender::class)
@@ -62,9 +63,16 @@ class OrphansRelationManager extends RelationManager
                                     ->native(false),
 
                                 DatePicker::make('birth_date')
+                                    ->required()
                                     ->native(false)
-                                    ->displayFormat('d/m/Y')
-                                    ->closeOnDateSelection(),
+                                    ->displayFormat('d/m/Y'),
+
+                                TextInput::make('child_sequence')
+                                    ->label('Sequence')
+                                    ->numeric()
+                                    ->default(1)
+                                    ->required()
+                                    ->hint('Position among siblings'),
                             ]),
 
                         Grid::make(2)
@@ -73,8 +81,7 @@ class OrphansRelationManager extends RelationManager
                                     ->label('NIN')
                                     ->unique(ignoreRecord: true)
                                     ->placeholder('11-digit NIN')
-                                    ->maxLength(20)
-                                    ->nullable(),
+                                    ->maxLength(20),
 
                                 TextInput::make('reg_no')
                                     ->label('Registration Number')
@@ -84,57 +91,71 @@ class OrphansRelationManager extends RelationManager
                             ]),
                     ]),
 
-                // Section: Status & Marriage
+                // Section: Status & Eligibility
                 Section::make('Status & Eligibility')
-                    ->description('Benefit eligibility and marital status information.')
                     ->icon('heroicon-m-check-badge')
                     ->schema([
                         Grid::make(2)
                             ->schema([
                                 Toggle::make('is_eligible')
-                                    ->label('Eligible for Benefits')
-                                    ->helperText('Verify if this orphan meets current support criteria.')
-                                    ->default(true),
+                                    ->label('Eligible for Support')
+                                    ->default(true)
+                                    ->required(),
 
                                 Toggle::make('is_married')
-                                    ->label('Currently Married')
+                                    ->label('Married')
                                     ->default(false)
+                                    ->required()
                                     ->live(),
                             ]),
 
                         DatePicker::make('married_at')
                             ->label('Marriage Date')
                             ->native(false)
-                            ->visible(fn (Get $get): bool => $get('is_married'))
+                            ->visible(fn (Get $get) => $get('is_married'))
+                            ->required(fn (Get $get) => $get('is_married'))
                             ->columnSpanFull(),
                     ]),
 
-                // Section: Education
-                Section::make('Education & Vocational Training')
-                    ->description('Academic background and professional skills.')
+                // Section: Unified Education (Fixed to match model)
+                Section::make('Education History')
+                    ->description('Current and past enrollments.')
                     ->icon('heroicon-m-academic-cap')
                     ->schema([
-                        Grid::make(2)
+                        Repeater::make('educations')
+                            ->relationship('educations')
                             ->schema([
-                                Select::make('western_education_id')
-                                    ->relationship('westernEducation', 'school_name')
-                                    ->searchable()
-                                    ->preload()
-                                    ->nullable()
-                                    ->createOptionForm([
-                                        TextInput::make('school_name')->required(),
-                                    ]),
+                                Grid::make(2)->schema([
+                                    Select::make('institution_id')
+                                        ->relationship('institution', 'name')
+                                        ->required()
+                                        ->searchable()
+                                        ->preload(),
+                                    TextInput::make('level')
+                                        ->label('Level/Class')
+                                        ->placeholder('e.g. Primary 4, JSS 2')
+                                        ->required(),
+                                ]),
+                                Grid::make(2)->schema([
+                                    TextInput::make('school_fee')
+                                        ->numeric()
+                                        ->prefix('₦'),
+                                    Toggle::make('is_current')
+                                        ->label('Current Enrollment')
+                                        ->default(true),
+                                ]),
+                            ])
+                            ->itemLabel(fn (array $state): ?string => $state['level'] ?? null)
+                            ->collapsible()
+                            ->collapsed()
+                            ->addActionLabel('Add Enrollment Record')
+                            ->columnSpanFull(),
+                    ]),
 
-                                Select::make('islamiyya_education_id')
-                                    ->relationship('islamiyyaEducation', 'islamiyya_name')
-                                    ->searchable()
-                                    ->preload()
-                                    ->nullable()
-                                    ->createOptionForm([
-                                        TextInput::make('islamiyya_name')->required(),
-                                    ]),
-                            ]),
-
+                // Section: Vocational Skills
+                Section::make('Vocational Training')
+                    ->icon('heroicon-m-briefcase')
+                    ->schema([
                         CheckboxList::make('vocationalSkills')
                             ->relationship('vocationalSkills', 'name')
                             ->searchable()
@@ -143,9 +164,8 @@ class OrphansRelationManager extends RelationManager
                             ->columnSpanFull(),
                     ]),
 
-                // Section: Documents & Address
-                Section::make('Documentation & Contact')
-                    ->description('Physical records and residential details.')
+                // Section: Documentation & Address
+                Section::make('Documents & Address')
                     ->icon('heroicon-m-document-duplicate')
                     ->schema([
                         Grid::make(2)
@@ -153,41 +173,22 @@ class OrphansRelationManager extends RelationManager
                                 FileUpload::make('picture_url')
                                     ->label('Profile Photo')
                                     ->image()
+                                    ->avatar()
                                     ->disk('public')
                                     ->directory('orphan-photos')
-                                    ->visibility('public')
-                                    ->nullable()
-                                    ->storeFileNamesIn('picture_original_name') // optional but stabilizes state
-                                    ->dehydrated(true)
-                                    ->preserveFilenames()
                                     ->imageEditor()
                                     ->circleCropper(),
-//
-//                                FileUpload::make('picture_url')
-//                                    ->label('Profile Picture')
-//                                    ->image()
-//                                    ->avatar()
-//                                    ->disk('public')
-//                                    ->directory('orphan-photos')
-//                                    ->visibility('public')
-//                                    ->imageEditor()
-//                                    ->circleCropper()
-//                                    ->nullable(),
 
                                 FileUpload::make('birth_certificate_path')
                                     ->label('Birth Certificate')
-                                    ->acceptedFileTypes(['application/pdf', 'image/*'])
                                     ->directory('certificates')
                                     ->disk('public')
-                                    ->visibility('public')
-                                    ->maxSize(1024)
-                                    ->nullable(),
+                                    ->acceptedFileTypes(['application/pdf', 'image/*']),
                             ]),
 
                         Textarea::make('address')
-                            ->label('Full Residential Address')
-                            ->placeholder('Enter detailed address with landmarks...')
-                            ->rows(4)
+                            ->label('Residential Address')
+                            ->rows(3)
                             ->required()
                             ->columnSpanFull(),
                     ]),
@@ -206,41 +207,29 @@ class OrphansRelationManager extends RelationManager
                 Tables\Columns\TextColumn::make('full_name')
                     ->label('Name')
                     ->searchable(['first_name', 'middle_name', 'last_name'])
-                    ->sortable()
                     ->weight('bold'),
 
                 Tables\Columns\TextColumn::make('gender')
-                    ->badge()
-                    ->color(fn ($state): string => match($state?->value) {
-                        'MALE' => 'primary',
-                        'FEMALE' => 'danger',
-                        default => 'gray'
-                    }),
+                    ->badge(),
 
                 Tables\Columns\TextColumn::make('age')
                     ->label('Age')
-                    ->sortable('birth_date'),
+                    ->state(fn ($record) => $record->age ?? 'N/A'),
 
                 Tables\Columns\TextColumn::make('reg_no')
                     ->label('Reg No')
-                    ->searchable()
                     ->badge(),
 
                 Tables\Columns\IconColumn::make('is_eligible')
                     ->label('Eligible')
                     ->boolean()
                     ->alignCenter(),
-
-                Tables\Columns\IconColumn::make('is_married')
-                    ->label('Married')
-                    ->boolean()
-                    ->toggleable(isToggledHiddenByDefault: true),
             ])
-            ->defaultSort('created_at', 'desc')
             ->headerActions([
                 CreateAction::make()
                     ->label('Add Orphan')
                     ->icon('heroicon-m-plus')
+                    ->modalWidth('4xl')
                     ->mutateDataUsing(function (array $data, RelationManager $livewire): array {
 
                         $deceased = $livewire->getOwnerRecord();
@@ -249,16 +238,68 @@ class OrphansRelationManager extends RelationManager
                             ->generateOrphanData($deceased);
 
                         return array_merge($data, $generated);
-                    }),
+                    })
             ])
             ->recordActions([
+                // IMPROVED MEDICAL RECORDS ACTION
+                Action::make('manageMedical')
+                    ->label('Medical')
+                    ->icon('heroicon-m-beaker')
+                    ->color('success')
+                    ->modalHeading(fn (Orphan $record) => "Medical History: {$record->full_name}")
+                    ->modalWidth('5xl')
+                    ->modalSubmitActionLabel('Save Updates')
+                    ->form([
+                        Repeater::make('prescriptions')
+                            ->relationship('prescriptions')
+                            ->schema([
+                                Grid::make(3)->schema([
+                                    TextInput::make('doctor_name')
+                                        ->required()
+                                        ->placeholder('Attending Doctor'),
+                                    TextInput::make('illness')
+                                        ->label('Diagnosis')
+                                        ->required()
+                                        ->placeholder('Illness or reason for visit'),
+                                    DatePicker::make('prescription_date')
+                                        ->default(now())
+                                        ->required()
+                                        ->native(false),
+                                ]),
+                                Grid::make(2)->schema([
+                                    TextInput::make('lab_test_cost')
+                                        ->numeric()
+                                        ->prefix('₦')
+                                        ->default(0),
+                                    TextInput::make('drug_cost')
+                                        ->numeric()
+                                        ->prefix('₦')
+                                        ->default(0),
+                                ]),
+                                Select::make('medications')
+                                    ->multiple()
+                                    ->relationship('medications', 'name')
+                                    ->preload()
+                                    ->searchable()
+                                    ->hint('Search by drug name.'),
+                                Textarea::make('note')
+                                    ->label('Prescription Note')
+                                    ->rows(2)
+                                    ->placeholder('Dosage details or observations...')
+                                    ->columnSpanFull(),
+                                Hidden::make('user_id')
+                                    ->default(auth()->id()),
+                            ])
+                            ->itemLabel(fn (array $state): ?string => ($state['illness'] ?? null) . ($state['prescription_date'] ? " (" . date('d/m/Y', strtotime($state['prescription_date'])) . ")" : ""))
+                            ->collapsible()
+                            ->collapsed()
+                            ->cloneable()
+                            ->addActionLabel('New Medical Record'),
+                    ])
+                    ->action(fn (Orphan $record) => $record->touch()),
+
                 EditAction::make()->modalWidth('4xl'),
                 DeleteAction::make(),
-            ])
-            ->toolbarActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make(),
-                ]),
             ]);
     }
 }

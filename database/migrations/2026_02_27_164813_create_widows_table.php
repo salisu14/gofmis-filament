@@ -36,6 +36,7 @@ return new class extends Migration
             // 🔥 enforce uniqueness per deceased
             $table->unique(['deceased_id', 'child_sequence']);
 
+            $table->softDeletes(); // Added for audit trail
             $table->timestamps();
         });
     }

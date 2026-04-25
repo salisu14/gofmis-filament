@@ -58,8 +58,67 @@ class AdminPanelProvider extends PanelProvider
                             ->url('/admin')
                             ->isActiveWhen(fn() => request()->is('admin')),
                     ])
+                    // Deceased Module
+                    ->group(
+                        NavigationGroup::make('Deceased')
+                            ->items([
+                                NavigationItem::make('Deceased')
+                                    ->icon('heroicon-o-list-bullet')
+                                    ->url('/admin/deceaseds')
+                                    ->isActiveWhen(fn() => request()->is('admin/deceaseds*')),
 
-                    // Accounting Module
+                                // Sponsorships
+                                NavigationItem::make('Sponsorships')
+                                    ->icon('heroicon-o-receipt-percent')
+                                    ->url('/admin/sponsorships')
+                                    ->isActiveWhen(fn() => request()->is('admin/sponsorhips*')),
+                            ])
+                    )
+                    // Medicals
+                    ->group(
+                        NavigationGroup::make('Medicals')
+                            ->items([
+                                // Allocation
+                                NavigationItem::make('Medications')
+                                    ->icon('heroicon-o-viewfinder-circle')
+                                    ->url('/admin/medications')
+                                    ->isActiveWhen(fn() => request()->is('admin/medications*')),
+
+                                // Prescriptions
+                                NavigationItem::make('Prescriptions')
+                                    ->icon('heroicon-o-paper-clip')
+                                    ->url('/admin/prescriptions')
+                                    ->isActiveWhen(fn() => request()->is('admin/prescriptions*')),
+
+                            ])
+                    )
+
+                    // Interventions
+                    ->group(
+                        NavigationGroup::make('Interventions')
+                            ->items([
+                                // Categories
+                                NavigationItem::make('Categories')
+                                    ->icon('heroicon-o-document-currency-dollar')
+                                    ->url('/admin/categories')
+                                    ->isActiveWhen(fn() => request()->is('admin/categories*')),
+
+                                // Intervention Type
+                                NavigationItem::make('Intervention Types')
+                                    ->icon('heroicon-o-presentation-chart-line')
+                                    ->url('/admin/intervention-types')
+                                    ->isActiveWhen(fn() => request()->is('admin/intervention-types*')),
+
+                                // Intervention Request
+                                NavigationItem::make('Intervention Requests')
+                                    ->icon('heroicon-o-squares-2x2')
+                                    ->url('/admin/intervention-requests')
+                                    ->isActiveWhen(fn() => request()->is('admin/intervention-requests*')),
+
+                            ])
+                    )
+
+                    // Address Module
                     ->group(
                         NavigationGroup::make('Address')
                             ->items([
@@ -74,29 +133,6 @@ class AdminPanelProvider extends PanelProvider
                                     ->url('/admin/zones')
                                     ->isActiveWhen(fn() => request()->is('admin/zones*')),
 
-                                // Allocation
-                                NavigationItem::make('Allocation')
-                                    ->icon('heroicon-o-viewfinder-circle')
-                                    ->url('/admin/allocations')
-                                    ->isActiveWhen(fn() => request()->is('admin/allocations*')),
-
-                                // VAT & Tax
-                                NavigationItem::make('VAT & Tax Setup')
-                                    ->icon('heroicon-o-receipt-percent')
-                                    ->url('/admin/vat-masters')
-                                    ->isActiveWhen(fn() => request()->is('admin/vat-masters*')),
-
-                                // Approval Templates
-                                NavigationItem::make('Approval Templates')
-                                    ->icon('heroicon-o-paper-clip')
-                                    ->url('/admin/approval-templates')
-                                    ->isActiveWhen(fn() => request()->is('admin/approval-templates*')),
-
-                                // Posting Setups & Posting Groups
-                                NavigationItem::make('Posting Groups')
-                                    ->icon('heroicon-o-squares-2x2')
-                                    ->url('/admin/posting-groups')
-                                    ->isActiveWhen(fn() => request()->is('admin/posting-groups*')),
 
                                 // Bank Accounts
                                 NavigationItem::make('Bank Accounts')
@@ -109,21 +145,30 @@ class AdminPanelProvider extends PanelProvider
                                     ->icon('heroicon-o-document-currency-dollar')
                                     ->url('/admin/payments')
                                     ->isActiveWhen(fn() => request()->is('admin/payments*')),
-
-                                // Inventory Valuation Report
-                                NavigationItem::make('Inventory Valuation Report')
-                                    ->icon('heroicon-o-presentation-chart-line')
-                                    ->url('/admin/inventory-valuation-report')
-                                    ->isActiveWhen(fn() => request()->is('admin/inventory-valuation-report*')),
                             ])
                     )
                     ->group(
-                        NavigationGroup::make('Deceased Management')
+                        NavigationGroup::make('Education')
                             ->items([
-                                NavigationItem::make('Deceased')
-                                    ->icon('heroicon-o-list-bullet')
-                                    ->url('/admin/deceaseds')
-                                    ->isActiveWhen(fn() => request()->is('admin/deceaseds*')),
+                                NavigationItem::make('Institution')
+                                    ->icon('heroicon-o-document-duplicate')
+                                    ->url('/admin/institutions')
+                                    ->isActiveWhen(fn() => request()->is('admin/institutions*')),
+
+                                NavigationItem::make('Orphan Education')
+                                    ->icon('heroicon-o-academic-cap')
+                                    ->url('/admin/orphan-education')
+                                    ->isActiveWhen(fn() => request()->is('admin/orphan-education*')),
+
+                                NavigationItem::make('Vocational Skills')
+                                    ->icon('heroicon-o-presentation-chart-line')
+                                    ->url('/admin/vocational-skills')
+                                    ->isActiveWhen(fn() => request()->is('admin/vocational-skills*')),
+
+                                NavigationItem::make('Education Fee Invoices')
+                                    ->icon('heroicon-o-banknotes')
+                                    ->url('/admin/education-fee-invoices')
+                                    ->isActiveWhen(fn() => request()->is('admin/education-fee-invoices*')),
                             ])
                     )
                     ->group(
@@ -149,20 +194,10 @@ class AdminPanelProvider extends PanelProvider
                                     ->url('/admin/employees')
                                     ->isActiveWhen(fn() => request()->is('admin/employees*')),
 
-                                NavigationItem::make('Pay Codes')
-                                    ->icon('heroicon-o-banknotes')
-                                    ->url('/admin/pay-codes')
-                                    ->isActiveWhen(fn() => request()->is('admin/pay-codes*')),
-
                                 NavigationItem::make('Payroll Periods')
                                     ->icon('heroicon-o-calendar-date-range')
                                     ->url('/admin/payroll-periods')
                                     ->isActiveWhen(fn() => request()->is('admin/payroll-periods*')),
-
-                                NavigationItem::make('Payroll Documents')
-                                    ->icon('heroicon-o-document-currency-dollar')
-                                    ->url('/admin/payroll-documents')
-                                    ->isActiveWhen(fn() => request()->is('admin/payroll-documents*')),
 
                                 NavigationItem::make('Tax Tables')
                                     ->icon('heroicon-o-square-2-stack')
