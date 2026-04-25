@@ -53,6 +53,22 @@ class Widow extends Model
         return $this->hasMany(Loan::class);
     }
 
+    public function widowLoans(): HasMany
+    {
+        return $this->hasMany(WidowLoan::class);
+    }
+
+    // Check if widow can apply for a new loan
+    public function canApplyForLoan(): bool
+    {
+        $activeLoan = $this->widowLoans()->whereNotIn('status', [
+            \App\Enums\WidowLoanStatus::COMPLETED->value,
+            \App\Enums\WidowLoanStatus::REJECTED->value,
+        ])->exists();
+
+        return !$activeLoan;
+    }
+
     protected static function boot(): void
     {
         parent::boot();

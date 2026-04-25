@@ -8,9 +8,9 @@ class CreateWidowLoanData extends Data
 {
     public function __construct(
         public string $widowId,
-        public float $amount,
-        public string $business,
-        public ?string $description = null,
+        public float $principalAmount,
+        public ?int $durationMonths = null,
+        public ?string $purpose = null,
         public ?string $bankAccountId = null,
     ) {}
 

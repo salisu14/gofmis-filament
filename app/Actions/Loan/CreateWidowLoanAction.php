@@ -3,11 +3,11 @@
 namespace App\Actions\Loan;
 
 use App\Data\Loan\CreateWidowLoanData;
-use App\Enums\LoanStatus;
+use App\Enums\WidowLoanStatus;
 use App\Exceptions\InsufficientBankBalanceException;
 use App\Exceptions\InsufficientFundsException;
 use App\Models\BankAccount;
-use App\Models\Loan;
+use App\Models\WidowLoan;
 use Exception;
 
 class CreateWidowLoanAction
@@ -17,7 +17,7 @@ class CreateWidowLoanAction
      * @throws InsufficientFundsException
      * @throws InsufficientBankBalanceException
      */
-    public function execute(CreateWidowLoanData $data): Loan
+    public function execute(CreateWidowLoanData $data): WidowLoan
     {
         // 1. Retrieve the specific bank account (you need to add bank_account_id to your CreateLoanDTO)
         $bank = BankAccount::findOrFail($data->bankAccountId);
@@ -27,23 +27,22 @@ class CreateWidowLoanAction
         }
 
         // 2. Check Balance
-        if (!$bank->hasSufficientFunds($data->amount)) {
+        if (!$bank->hasSufficientFunds($data->principalAmount)) {
             throw new InsufficientBankBalanceException('Insufficient funds in the selected bank account.');
         }
 
         // Using strict float comparison
-        if ($data->amount > $bank->balance) {
+        if ($data->principalAmount > $bank->balance) {
             throw new InsufficientFundsException('Insufficient funds to grant this loan.');
         }
 
         // 2. Create the Loan
-        return Loan::create([
+        return WidowLoan::create([
             'widow_id'        => $data->widowId,
-            'amount'          => $data->amount,
-            'original_amount' => $data->amount, // Snapshot original amount
-            'business'        => $data->business,
-            'description'     => $data->description,
-            'status'          => LoanStatus::PENDING,
+            'principal_amount' => $data->principalAmount,
+            'duration_months' => $data->durationMonths,
+            'purpose'         => $data->purpose,
+            'status'          => WidowLoanStatus::DRAFT,
         ]);
     }
 }
