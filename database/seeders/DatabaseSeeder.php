@@ -22,8 +22,9 @@ class DatabaseSeeder extends Seeder
             PermissionsTableSeeder::class,
             RolesTableSeeder::class,
             UsersTableSeeder::class,
+            ImprestSeeder::class,
             BankAccountsTableSeeder::class,
-//            OrphanClassesTableSeeder::class,
+            ImprestPermissionSeeder::class,
             MedicationsTableSeeder::class,
         ]);
     }

@@ -4,9 +4,11 @@ namespace App\Enums;
 
 enum PaymentMethod: string
 {
-    case CASH = 'CASH';
-    case BANK = 'BANK';
-    case TRANSFER = 'TRANSFER';
+    case CASH = 'cash';
+    case BANK = 'bank';
+    case TRANSFER = 'transfer';
+    case CHECK = 'check';
+    case DIGITAL = 'digital';
 
     public function getLabel(): string
     {
@@ -14,6 +16,8 @@ enum PaymentMethod: string
             self::CASH     => 'Cash',
             self::BANK     => 'Bank Deposit',
             self::TRANSFER => 'Transfer',
+            self::DIGITAL  => 'Digital Payment',
+            self::CHECK    => 'Check',
         };
     }
 
@@ -23,6 +27,8 @@ enum PaymentMethod: string
             self::CASH     => 'success', // Green
             self::BANK     => 'info',    // Blue
             self::TRANSFER => 'warning', // Orange
+            self::DIGITAL  => 'primary',
+            self::CHECK    => 'gray',
         };
     }
 
@@ -32,6 +38,8 @@ enum PaymentMethod: string
             self::CASH     => 'heroicon-o-banknotes',
             self::BANK     => 'heroicon-o-building-library',
             self::TRANSFER => 'heroicon-o-arrow-path',
+            self::DIGITAL  => 'heroicon-o-credit-card',
+            self::CHECK    => 'heroicon-o-clipboard-document-list',
         };
     }
 }

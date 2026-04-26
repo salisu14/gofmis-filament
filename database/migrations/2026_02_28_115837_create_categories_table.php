@@ -10,7 +10,6 @@ return new class extends Migration {
      */
     public function up(): void
     {
-
         Schema::create('categories', function (Blueprint $table) {
             $table->uuid('id')->primary();
 
@@ -18,11 +17,8 @@ return new class extends Migration {
             $table->string('name')->unique();
             $table->text('description')->nullable();
 
-            // Self-referencing Foreign Key for Nesting
-            $table->foreignUuid('parent_id')
-                ->nullable()
-                ->constrained('categories')
-                ->nullOnDelete();
+            // Just define column first (NO constraint yet)
+            $table->uuid('parent_id')->nullable();
 
             // Ownership
             $table->foreignUuid('user_id')
@@ -32,8 +28,15 @@ return new class extends Migration {
             $table->softDeletes();
             $table->timestamps();
 
-            // Index for hierarchical lookups
             $table->index('parent_id');
+        });
+
+        // 👉 Add FK AFTER table is created
+        Schema::table('categories', function (Blueprint $table) {
+            $table->foreign('parent_id')
+                ->references('id')
+                ->on('categories')
+                ->nullOnDelete();
         });
     }
 
