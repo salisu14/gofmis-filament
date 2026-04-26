@@ -7,11 +7,17 @@ use Spatie\LaravelData\Data;
 class WidowData extends Data
 {
     public function __construct(
-        public string $deceasedId, // UUID
+        public string $deceasedId,
         public string $firstName,
         public string $lastName,
-        public string $nin,
-        public string $address,
-        public ?string $skills = null,
+        public ?string $middleName = null,
+        public ?string $nin = null,
+        public ?string $address = null,
+
+        // FIX: must be array to match model cast
+        public ?array $skills = [],
+
+        // Optional (future-proof)
+        public bool $isMarried = false,
     ) {}
 }

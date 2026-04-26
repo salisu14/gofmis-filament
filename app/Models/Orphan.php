@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\Gender;
+use App\Models\Scopes\EligibleOrphanScope;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -105,6 +106,18 @@ class Orphan extends Model
         return $this->amount - $this->paid_amount;
     }
 
+    public function scopeEligible($query)
+    {
+        return $query->where('is_eligible', true);
+    }
+
+    public static function getNonEligibleOrphans(): Orphan
+    {
+        return Orphan::withoutGlobalScope(EligibleOrphanScope::class)
+            ->where('is_eligible', false)
+            ->get();
+    }
+
     /* -----------------------------
      | AUTO NAME GENERATION
      ------------------------------*/
@@ -112,6 +125,8 @@ class Orphan extends Model
     protected static function boot(): void
     {
         parent::boot();
+
+        static::addGlobalScope(new EligibleOrphanScope);
 
         static::creating(function ($model) {
             $model->full_name = trim(implode(' ', array_filter([

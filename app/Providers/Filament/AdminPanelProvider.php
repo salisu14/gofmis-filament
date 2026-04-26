@@ -68,6 +68,16 @@ class AdminPanelProvider extends PanelProvider
                                     ->url('/admin/deceaseds')
                                     ->isActiveWhen(fn() => request()->is('admin/deceaseds*')),
 
+                                NavigationItem::make('Widows')
+                                    ->icon('heroicon-o-user')
+                                    ->url('/admin/widows')
+                                    ->isActiveWhen(fn() => request()->is('admin/widows*')),
+
+                                NavigationItem::make('Orphans')
+                                    ->icon('heroicon-o-user-group')
+                                    ->url('/admin/orphans')
+                                    ->isActiveWhen(fn() => request()->is('admin/orphans*')),
+
                                 // Sponsorships
                                 NavigationItem::make('Sponsorships')
                                     ->icon('heroicon-o-receipt-percent')
@@ -184,16 +194,6 @@ class AdminPanelProvider extends PanelProvider
                                     ->icon('heroicon-o-building-storefront')
                                     ->url('/admin/factories')
                                     ->isActiveWhen(fn() => request()->is('admin/factories*')),
-
-                                NavigationItem::make('Departments')
-                                    ->icon('heroicon-o-building-office')
-                                    ->url('/admin/departments')
-                                    ->isActiveWhen(fn() => request()->is('admin/departments*')),
-
-                                NavigationItem::make('Employees')
-                                    ->icon('heroicon-o-user-group')
-                                    ->url('/admin/employees')
-                                    ->isActiveWhen(fn() => request()->is('admin/employees*')),
 
                                 NavigationItem::make('Payroll Periods')
                                     ->icon('heroicon-o-calendar-date-range')

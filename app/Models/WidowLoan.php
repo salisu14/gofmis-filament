@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\WidowLoanStatus;
+use App\Traits\Approvable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -12,7 +13,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class WidowLoan extends Model
 {
-    use HasUuids, SoftDeletes;
+    use HasUuids, SoftDeletes, Approvable;
 
     protected $table = 'widow_loans';
 
@@ -71,5 +72,35 @@ class WidowLoan extends Model
     public function isFullyRepaid(): bool
     {
         return $this->fully_repaid;
+    }
+
+    public function approve(?string $comments = null): void
+    {
+        $flow = $this->approvalFlow;
+        if (!$flow) {
+            throw new \Exception('No approval workflow found for this loan.');
+        }
+
+        app(\App\Services\ApprovalService::class)->approve($flow, auth()->user(), $comments);
+    }
+
+    public function reject(string $reason, ?string $comments = null): void
+    {
+        $flow = $this->approvalFlow;
+        if (!$flow) {
+            throw new \Exception('No approval workflow found for this loan.');
+        }
+
+        app(\App\Services\ApprovalService::class)->reject($flow, auth()->user(), $reason, $comments);
+    }
+
+    public function onApproved(ApprovalFlow $flow): void
+    {
+        $this->update(['status' => WidowLoanStatus::APPROVED]);
+    }
+
+    public function onRejected(ApprovalFlow $flow): void
+    {
+        $this->update(['status' => WidowLoanStatus::REJECTED]);
     }
 }

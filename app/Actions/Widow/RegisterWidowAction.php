@@ -11,30 +11,44 @@ use Illuminate\Support\Facades\DB;
 
 class RegisterWidowAction
 {
-    use HasImageUpload; // If you add image upload later
+    use HasImageUpload;
 
     public function __construct(
-        private RegistrationNumberService $regNoService
+        private readonly RegistrationNumberService $regNoService
     ) {}
 
+    /**
+     * @throws \Throwable
+     */
     public function execute(WidowData $data): Widow
     {
-        // Ensure deceased exists
         $deceased = Deceased::findOrFail($data->deceasedId);
 
         return DB::transaction(function () use ($data, $deceased) {
+
             $widow = Widow::create([
                 'first_name' => $data->firstName,
-                'last_name' => $data->lastName,
-                'nin' => $data->nin,
-                'reg_no' => $this->regNoService->generateWidowRegNo(),
-                'address' => $data->address,
-                'skills' => $data->skills,
+                'last_name'  => $data->lastName,
+                'middle_name'=> $data->middleName,
+                'nin'        => $data->nin,
+
+                // ✅ Standardize like Orphan
+                'reg_no' => $this->regNoService->generateWidowData($deceased),
+
+                'address'     => $data->address,
+                'skills'      => $data->skills ?? [],
+                'is_married'  => $data->isMarried,
                 'deceased_id' => $deceased->id,
             ]);
 
-            // Optional: Update Deceased widow count
-            $deceased->increment('widow_count');
+            // ✅ FIXED FIELD NAME
+            $deceased->increment('number_of_widows_left');
+
+            // (Optional but recommended)
+            // You can later introduce WidowEligibilityService
+            $widow->update([
+                'is_eligible' => true, // or computed later
+            ]);
 
             return $widow;
         });

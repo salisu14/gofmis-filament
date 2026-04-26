@@ -27,6 +27,7 @@ return new class extends Migration
                 ->constrained('users')
                 ->cascadeOnDelete();
 
+            $table->softDeletes(); // Added for audit trail
             $table->timestamps();
 
             // Index for faster lookups on patient

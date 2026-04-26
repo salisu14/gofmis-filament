@@ -45,7 +45,7 @@ class Widow extends Model
 
     public function deceased(): BelongsTo
     {
-        return $this->belongsTo(Deceased::class)->nullable();
+        return $this->belongsTo(Deceased::class);
     }
 
     public function loans(): HasMany

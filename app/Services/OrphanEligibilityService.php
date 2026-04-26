@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\Gender;
 use App\Models\Orphan;
 use App\Events\OrphanBecameIneligible;
 use Carbon\Carbon;
@@ -15,13 +16,18 @@ class OrphanEligibilityService
     public function isEligible(Orphan $orphan): bool
     {
         // Rule 1: Boys > 17 are not eligible
-        if ($orphan->gender === 'MALE' && $orphan->age > 17) {
+        if (
+            $orphan->gender === Gender::MALE &&
+            $orphan->birth_date?->age > 17
+        ) {
             return false;
         }
 
         // Rule 2: Married girls are not eligible
-        // Assuming there is an 'is_married' boolean on the orphan model
-        if ($orphan->gender === 'FEMALE' && ($orphan->is_married ?? false)) {
+        if (
+            $orphan->gender === Gender::FEMALE &&
+            $orphan->is_married
+        ) {
             return false;
         }
 
