@@ -3,18 +3,26 @@
 namespace App\Filament\Resources\Orphans\Tables;
 
 use App\Enums\Gender;
+use App\Enums\VulnerabilityStatus;
+use App\Models\Institution;
+use App\Models\InterventionType;
+use App\Models\OrphanEducation;
+use App\Models\Zone;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ForceDeleteBulkAction;
 use Filament\Actions\RestoreBulkAction;
 use Filament\Actions\ViewAction;
+use Filament\Forms\Components\TextInput;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class OrphansTable
 {
@@ -64,15 +72,91 @@ class OrphansTable
             ->defaultSort('created_at', 'desc')
             ->filters([
                 TrashedFilter::make(),
+
+                // 2. Query by Gender
                 SelectFilter::make('gender')
                     ->options(Gender::class),
+
+                // 1. Query by Age (Range Filter)
+                Filter::make('age_range')
+                    ->form([
+                        TextInput::make('age_from')
+                            ->label('Age From')
+                            ->numeric(),
+                        TextInput::make('age_to')
+                            ->label('Age To')
+                            ->numeric(),
+                    ])
+                    ->query(function (Builder $query, array $data) {
+                        return $query
+                            ->when($data['age_from'], fn ($q) => $q->whereRaw('EXTRACT(YEAR FROM AGE(birth_date)) >= ?', [$data['age_from']]))
+                            ->when($data['age_to'], fn ($q) => $q->whereRaw('EXTRACT(YEAR FROM AGE(birth_date)) <= ?', [$data['age_to']]));
+                    }),
+
+                // 3. Query by School (Institution)
+                SelectFilter::make('school_filter')
+                    ->label('School')
+                    ->options(fn () => Institution::pluck('name', 'id'))
+                    ->query(fn (Builder $query, array $data) => $query->when(
+                        $data['value'],
+                        fn (Builder $query, $value) => $query->whereHas('educations', fn ($q) => $q->where('institution_id', $value))
+                    ))
+                    ->searchable()
+                    ->preload(),
+
+                // 4. Query by Class (Academic Level)
+                SelectFilter::make('academic_level')
+                    ->label('Class / Level')
+                    ->options(fn () => OrphanEducation::query()
+                        ->distinct()
+                        ->pluck('level', 'level')
+                        ->filter()
+                        ->toArray())
+                    ->query(fn (Builder $query, array $data) => $query->when(
+                        $data['value'],
+                        fn (Builder $query, $value) => $query->whereHas('educations', fn ($q) => $q->where('level', $value))
+                    )),
+
+                // 5. Query by Vulnerability (Linked to Deceased Parent)
+                SelectFilter::make('vulnerability_filter')
+                    ->label('Vulnerability')
+                    ->options(VulnerabilityStatus::class)
+                    ->query(fn (Builder $query, array $data) => $query->when(
+                        $data['value'],
+                        fn (Builder $query, $value) => $query->whereHas('deceased', fn ($q) => $q->where('vulnerability_status', $value))
+                    )),
+
+                // 6. Query by Zone (Linked to Deceased Parent)
+                SelectFilter::make('zone_filter')
+                    ->label('Zone')
+                    ->options(fn () => Zone::pluck('name', 'id'))
+                    ->query(fn (Builder $query, array $data) => $query->when(
+                        $data['value'],
+                        fn (Builder $query, $value) => $query->whereHas('deceased', fn ($q) => $q->where('zone_id', $value))
+                    ))
+                    ->searchable()
+                    ->preload(),
+
+                // 7. Query by Intervention Received
+                SelectFilter::make('intervention_type_filter')
+                    ->label('Support Received')
+                    ->options(fn () => InterventionType::pluck('name', 'id'))
+                    ->query(fn (Builder $query, array $data) => $query->when(
+                        $data['value'],
+                        fn (Builder $query, $value) => $query->whereHas('interventions', fn ($q) =>
+                        $q->whereHas('request', fn ($sq) => $sq->where('intervention_type_id', $value))
+                        )
+                    ))
+                    ->searchable()
+                    ->preload(),
+
                 SelectFilter::make('status')
                     ->options([
                         'active' => 'Active',
                         'pending' => 'Pending',
                         'inactive' => 'Inactive',
                     ]),
-            ])
+            ])->deferFilters(false)
             ->recordActions([
                 ViewAction::make(),
                 EditAction::make(),

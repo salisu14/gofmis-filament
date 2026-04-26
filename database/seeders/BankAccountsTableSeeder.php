@@ -22,7 +22,7 @@ class BankAccountsTableSeeder extends Seeder
             'id' => Str::uuid(),
             'account_name' => 'WRL',
             'account_number' => '1230000178',
-            'balance' => 99997.23,
+            'opening_balance' => 99997.23,
             'user_id' => $user->id,
             'created_at' => now(),
             'updated_at' => now(),

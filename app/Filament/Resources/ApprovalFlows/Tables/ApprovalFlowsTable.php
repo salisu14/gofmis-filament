@@ -35,8 +35,9 @@ class ApprovalFlowsTable
                     ->label('Step')
                     ->formatStateUsing(fn ($state, $record) => "{$state} / {$record->total_steps}")
                     ->sortable(),
-                BadgeColumn::make('approvalSteps')
+                TextColumn::make('approvalSteps')
                     ->label('Progress')
+                    ->badge()
                     ->formatStateUsing(function ($record) {
                         $steps = $record->approvalSteps ?? collect();
                         $approved = $steps->where('status', 'approved')->count();

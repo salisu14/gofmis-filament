@@ -10,6 +10,7 @@ use App\Filament\Resources\Orphans\Schemas\OrphanForm;
 use App\Filament\Resources\Orphans\Schemas\OrphanInfolist;
 use App\Filament\Resources\Orphans\Tables\OrphansTable;
 use App\Models\Orphan;
+use App\Models\Scopes\EligibleOrphanScope;
 use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -25,6 +26,14 @@ class OrphanResource extends Resource
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
     protected static ?string $recordTitleAttribute = 'full_name';
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+            ->withoutGlobalScopes([
+                EligibleOrphanScope::class,
+            ]);
+    }
 
     public static function form(Schema $schema): Schema
     {

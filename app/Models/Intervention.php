@@ -28,7 +28,8 @@ class Intervention extends Model
 
     public function request(): BelongsTo
     {
-        return $this->belongsTo(InterventionRequest::class);
+        // Specify the foreign key 'intervention_request_id' to override Laravel's default 'request_id'
+        return $this->belongsTo(InterventionRequest::class, 'intervention_request_id');
     }
 
     public function orphan(): BelongsTo

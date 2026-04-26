@@ -72,6 +72,18 @@ class Orphan extends Model
         return $this->hasMany(Intervention::class);
     }
 
+    public function zone(): \Illuminate\Database\Eloquent\Relations\HasOneThrough|Orphan
+    {
+        return $this->hasOneThrough(
+            Zone::class,
+            Deceased::class,
+            'id',        // Foreign key on Deceased table (local key on Orphan relation)
+            'id',        // Foreign key on Zone table
+            'deceased_id', // Foreign key on Orphan table
+            'zone_id'     // Foreign key on Deceased table
+        );
+    }
+
     /* -----------------------------
      | EDUCATION (NEW UNIFIED MODEL)
      ------------------------------*/

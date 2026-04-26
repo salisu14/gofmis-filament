@@ -61,12 +61,22 @@ class Widow extends Model
     // Check if widow can apply for a new loan
     public function canApplyForLoan(): bool
     {
+        // 1. Must not have an active loan
         $activeLoan = $this->widowLoans()->whereNotIn('status', [
             \App\Enums\WidowLoanStatus::COMPLETED->value,
             \App\Enums\WidowLoanStatus::REJECTED->value,
         ])->exists();
 
-        return !$activeLoan;
+        if ($activeLoan) {
+            return false;
+        }
+
+        // 2. Remarriage Policy: Must not be remarried
+        if ($this->is_married) {
+            return false;
+        }
+
+        return true;
     }
 
     protected static function boot(): void

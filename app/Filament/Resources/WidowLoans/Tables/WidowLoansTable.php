@@ -2,17 +2,16 @@
 
 namespace App\Filament\Resources\WidowLoans\Tables;
 
-use App\Filament\Actions\ApproveWidowLoanAction;
-use App\Filament\Actions\RejectWidowLoanAction;
-use App\Filament\Actions\SubmitForApprovalAction;
-use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
+use App\Enums\WidowLoanStatus;
+use App\Models\WidowLoan;
+use Filament\Actions\Action;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
-use Filament\Tables\Columns\BadgeColumn;
+use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\DB;
 
 class WidowLoansTable
 {
@@ -21,66 +20,58 @@ class WidowLoansTable
         return $table
             ->columns([
                 TextColumn::make('widow.full_name')
-                    ->label('Widow Name')
+                    ->label('Widow')
                     ->searchable()
-                    ->sortable(),
-                TextColumn::make('principal_amount')
-                    ->label('Amount')
-                    ->money('NGN')
-                    ->sortable(),
-                TextColumn::make('duration_months')
-                    ->label('Duration (Months)')
-                    ->sortable(),
-                BadgeColumn::make('status')
-                    ->colors([
-                        'gray' => 'draft',
-                        'warning' => 'pending',
-                        'info' => 'approved',
-                        'danger' => 'rejected',
-                        'primary' => 'disbursed',
-                        'success' => 'completed',
-                        'danger' => 'defaulted',
-                    ])
-                    ->sortable(),
-                TextColumn::make('total_paid')
-                    ->label('Paid')
-                    ->money('NGN')
-                    ->sortable(),
-                TextColumn::make('outstanding_balance')
-                    ->label('Balance')
-                    ->money('NGN')
-                    ->sortable(),
-                TextColumn::make('purpose')
-                    ->limit(30)
-                    ->searchable(),
-                TextColumn::make('created_at')
-                    ->dateTime()
                     ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->weight('bold'),
+
+                TextColumn::make('principal_amount')
+                    ->label('Principal')
+                    ->money('NGN')
+                    ->sortable(),
+
+                TextColumn::make('outstanding_balance')
+                    ->label('Remaining Balance')
+                    ->money('NGN')
+                    ->state(fn (WidowLoan $record) => (float) $record->total_payable - (float) $record->total_paid)
+                    ->color(fn ($state) => $state > 0 ? 'danger' : 'success')
+                    ->weight('bold'),
+
+                TextColumn::make('status')
+                    ->badge()
+                    ->sortable(),
+
+                TextColumn::make('repayment_progress')
+                    ->label('Repaid')
+                    ->state(fn (WidowLoan $record) => $record->total_payable > 0
+                        ? round(($record->total_paid / $record->total_payable) * 100) . '%'
+                        : '0%')
+                    ->badge()
+                    ->color('gray'),
+
+                IconColumn::make('fully_repaid')
+                    ->label('Cleared')
+                    ->boolean()
+                    ->alignCenter(),
             ])
             ->filters([
                 SelectFilter::make('status')
-                    ->options([
-                        'draft' => 'Draft',
-                        'pending' => 'Pending',
-                        'approved' => 'Approved',
-                        'rejected' => 'Rejected',
-                        'disbursed' => 'Disbursed',
-                        'completed' => 'Completed',
-                        'defaulted' => 'Defaulted',
-                    ]),
+                    ->options(WidowLoanStatus::class),
             ])
             ->recordActions([
+
+                Action::make('generateSchedule')
+                    ->label('Generate Schedule')
+                    ->icon('heroicon-m-calendar-days')
+                    ->color('warning')
+                    ->requiresConfirmation()
+                    ->visible(fn (WidowLoan $record) => $record->status === WidowLoanStatus::APPROVED && $record->schedules()->count() === 0)
+                    ->action(fn (WidowLoan $record) => $record->generateLedger()),
+
                 ViewAction::make(),
                 EditAction::make(),
-                SubmitForApprovalAction::make(),
-                ApproveWidowLoanAction::make(),
-                RejectWidowLoanAction::make(),
-            ])
-            ->toolbarActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make(),
-                ]),
+                \App\Filament\Actions\ApproveWidowLoanAction::make(),
+                \App\Filament\Actions\RejectWidowLoanAction::make(),
             ]);
     }
 }

@@ -21,6 +21,19 @@ class WidowLoanRepayment extends Model
         'notes',
     ];
 
+    protected static function booted()
+    {
+        parent::booted();
+
+        static::saved(function ($repayment) {
+            $repayment->widowLoan?->refreshBalance();
+        });
+
+        static::deleted(function ($repayment) {
+            $repayment->widowLoan?->refreshBalance();
+        });
+    }
+
     protected $casts = [
         'amount' => 'decimal:2',
         'paid_at' => 'date',
@@ -28,7 +41,7 @@ class WidowLoanRepayment extends Model
 
     public function widowLoan(): BelongsTo
     {
-        return $this->belongsTo(WidowLoan::class);
+        return $this->belongsTo(WidowLoan::class, 'widow_loan_id');
     }
 
     public function transaction(): BelongsTo

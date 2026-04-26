@@ -14,7 +14,7 @@ class BankAccount extends Model
 
     protected $keyType = 'string';
     public $incrementing = false;
-    protected $table = 'bank_accounts'; // Keeping your table name
+    protected $table = 'bank_accounts';
 
     /**
      * The attributes that are mass assignable.
@@ -24,17 +24,24 @@ class BankAccount extends Model
     protected $fillable = [
         'account_name',
         'account_number',
-        'amount', // Treated as initial deposit
-        'balance', // Treated as current live balance
+        'opening_balance',  // The initial deposit amount when the account was registered
+        'ledger_balance',   // Total actual cash currently sitting in the account
+        'reserved_balance', // Funds tied up in "Pending" Approval Flows
         'user_id'
     ];
 
     protected $casts = [
-        'amount' => 'decimal:2',
-        'balance' => 'decimal:2',
+        'opening_balance' => 'decimal:2',
+        'ledger_balance' => 'decimal:2',
+        'reserved_balance' => 'decimal:2',
     ];
 
-    // Relationships
+    /*
+    |--------------------------------------------------------------------------
+    | Relationships
+    |--------------------------------------------------------------------------
+    */
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
@@ -42,17 +49,57 @@ class BankAccount extends Model
 
     public function transactions(): HasMany
     {
-        // Assuming you might want to track bank transaction logs later
         return $this->hasMany(Transaction::class, 'bank_account_id');
     }
 
-    // Helpers
+    /*
+    |--------------------------------------------------------------------------
+    | Financial Logic
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Checks if there is enough money AFTER accounting for reserved funds.
+     * Available Balance = Ledger Balance - Reserved Balance
+     */
     public function hasSufficientFunds(float $amount): bool
     {
-        return $this->balance >= $amount;
+        $availableBalance = (float) $this->ledger_balance - (float) ($this->reserved_balance ?? 0);
+        return $availableBalance >= $amount;
     }
 
     /**
+     * Call this when an Approval Flow is created/reaches a specific step.
+     */
+    public function reserve(float $amount): void
+    {
+        if (!$this->hasSufficientFunds($amount)) {
+            throw new InsufficientBankBalanceException('Cannot reserve funds: Available balance is too low.');
+        }
+        $this->increment('reserved_balance', $amount);
+    }
+
+    /**
+     * Call this when a flow is REJECTED. Re-releases the "held" funds.
+     */
+    public function unreserve(float $amount): void
+    {
+        $this->decrement('reserved_balance', min($this->reserved_balance, $amount));
+    }
+
+    /**
+     * Call this when a flow is FULLY APPROVED.
+     * It moves funds from the "Reserved" state to an actual "Debit".
+     */
+    public function disburse(float $amount): void
+    {
+        $this->unreserve($amount);
+        $this->debit($amount);
+    }
+
+    /**
+     * Immediate debit for transactions.
+     * Updates the actual ledger balance.
      * @throws InsufficientBankBalanceException
      */
     public function debit(float $amount): void
@@ -60,11 +107,14 @@ class BankAccount extends Model
         if (!$this->hasSufficientFunds($amount)) {
             throw new InsufficientBankBalanceException('Insufficient funds in bank account.');
         }
-        $this->decrement('balance', $amount);
+        $this->decrement('ledger_balance', $amount);
     }
 
+    /**
+     * Adds funds to the actual ledger balance.
+     */
     public function credit(float $amount): void
     {
-        $this->increment('balance', $amount);
+        $this->increment('ledger_balance', $amount);
     }
 }

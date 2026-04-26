@@ -18,25 +18,25 @@ class PendingApprovalsWidget extends BaseWidget
         return auth()->user()?->can('view_approval_flows') ?? false;
     }
 
-    protected function getTableQuery()
-    {
-        $user = auth()->user();
-        
-        // Find flows where the current step requires a role the user has
-        return ApprovalFlow::where('status', 'pending')
-            ->whereHas('steps', function ($query) use ($user) {
-                $query->whereColumn('step_number', 'approval_flows.current_step')
-                    ->where('status', 'pending')
-                    ->where(function ($q) use ($user) {
-                        // User must have the role required by the step
-                        // This assumes user roles can be checked via $user->hasRole()
-                        // If roles are strings, we can use a join or check permissions
-                        $q->whereIn('role_required', $user->getRoleNames());
-                    });
-            })
-            ->orderBy('created_at', 'desc')
-            ->limit(10);
-    }
+//    protected function getTableQuery()
+//    {
+//        $user = auth()->user();
+//
+//        // Find flows where the current step requires a role the user has
+//        return ApprovalFlow::where('status', 'pending')
+//            ->whereHas('steps', function ($query) use ($user) {
+//                $query->whereColumn('step_number', 'approval_flows.current_step')
+//                    ->where('status', 'pending')
+//                    ->where(function ($q) use ($user) {
+//                        // User must have the role required by the step
+//                        // This assumes user roles can be checked via $user->hasRole()
+//                        // If roles are strings, we can use a join or check permissions
+//                        $q->whereIn('role_required', $user->getRoleNames());
+//                    });
+//            })
+//            ->orderBy('created_at', 'desc')
+//            ->limit(10);
+//    }
 
     protected function getTableColumns(): array
     {

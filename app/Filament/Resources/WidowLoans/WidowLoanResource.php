@@ -22,15 +22,7 @@ class WidowLoanResource extends Resource
 {
     protected static ?string $model = WidowLoan::class;
 
-    protected static ?string $navigationLabel = 'Widow Loans';
-
-    protected static ?string $modelLabel = 'Widow Loan';
-
-    protected static ?string $pluralModelLabel = 'Widow Loans';
-
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBanknotes;
-
-    protected static string|null|\UnitEnum $navigationGroup = 'Widow Services';
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
     public static function form(Schema $schema): Schema
     {
@@ -50,8 +42,14 @@ class WidowLoanResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            RelationManagers\SchedulesRelationManager::class,
+            RelationManagers\RepaymentsRelationManager::class,
         ];
+    }
+
+    public function getActiveRelationManager(): int
+    {
+        return (int) request()->query('relation', 0);
     }
 
     public static function getPages(): array

@@ -21,6 +21,7 @@ use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
+
 //use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 
 class AdminPanelProvider extends PanelProvider
@@ -50,7 +51,7 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->authMiddleware([
                 Authenticate::class,
-            ])  ->navigation(function (NavigationBuilder $builder): NavigationBuilder {
+            ])->navigation(function (NavigationBuilder $builder): NavigationBuilder {
                 return $builder
                     // Dashboard
                     ->items([
@@ -83,6 +84,21 @@ class AdminPanelProvider extends PanelProvider
                                     ->icon('heroicon-o-receipt-percent')
                                     ->url('/admin/sponsorships')
                                     ->isActiveWhen(fn() => request()->is('admin/sponsorhips*')),
+                            ])
+                    )
+                    // Revolving Loan
+                    ->group(
+                        NavigationGroup::make('Revolving Loan')
+                            ->items([
+                                NavigationItem::make('Widow Loan')
+                                    ->icon('heroicon-o-square-2-stack')
+                                    ->url('/admin/widow-loans')
+                                    ->isActiveWhen(fn() => request()->is('admin/widow-loans*')),
+
+                                NavigationItem::make('Approval Flows')
+                                    ->icon('heroicon-o-square-2-stack')
+                                    ->url('/admin/approval-flows')
+                                    ->isActiveWhen(fn() => request()->is('admin/approval-flows*')),
                             ])
                     )
                     // Medicals
@@ -126,6 +142,10 @@ class AdminPanelProvider extends PanelProvider
                                     ->url('/admin/intervention-requests')
                                     ->isActiveWhen(fn() => request()->is('admin/intervention-requests*')),
 
+                                NavigationItem::make('Bank Accounts')
+                                    ->icon('heroicon-o-document-currency-dollar')
+                                    ->url('/admin/bank-accounts')
+                                    ->isActiveWhen(fn() => request()->is('admin/bank-accounts*')),
                             ])
                     )
 
@@ -199,16 +219,6 @@ class AdminPanelProvider extends PanelProvider
                                     ->icon('heroicon-o-calendar-date-range')
                                     ->url('/admin/payroll-periods')
                                     ->isActiveWhen(fn() => request()->is('admin/payroll-periods*')),
-
-                                NavigationItem::make('Tax Tables')
-                                    ->icon('heroicon-o-square-2-stack')
-                                    ->url('/admin/tax-tables')
-                                    ->isActiveWhen(fn() => request()->is('admin/tax-tables*')),
-
-                                NavigationItem::make('Social Security Tiers')
-                                    ->icon('heroicon-o-square-2-stack')
-                                    ->url('/admin/social-security-tiers')
-                                    ->isActiveWhen(fn() => request()->is('admin/social-security-tiers*')),
 
                                 NavigationItem::make('Purchase Receipts')
                                     ->icon('heroicon-o-receipt-percent')
