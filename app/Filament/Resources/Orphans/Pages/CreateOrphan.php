@@ -33,6 +33,7 @@ class CreateOrphan extends CreateRecord
             guardianName: $data['guardian_name'] ?? null,
             guardianPhone: $data['guardian_phone'] ?? null,
             address: $data['address'] ?? null,
+            hasBirthCert: $data['has_birth_cert'] ?? false,
             birthCertificatePath: $data['birth_certificate_path'] ?? null,
             educations: $data['educations'] ?? [],
             vocationalSkills: $data['vocationalSkills'] ?? [],

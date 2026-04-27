@@ -61,7 +61,17 @@ class OrphanInfolist
                         TextEntry::make('deceased.full_name')
                             ->label('Parent Record')
                             ->placeholder('Unknown'),
-                    ])->columns(4),
+                        IconEntry::make('has_birth_cert')
+                            ->label('Birth Certificate')
+                            ->boolean(),
+                        TextEntry::make('birth_certificate_path')
+                            ->label('Certificate Link')
+                            ->url(fn ($record) => $record->birth_certificate_path ? asset('storage/' . $record->birth_certificate_path) : null)
+                            ->openUrlInNewTab()
+                            ->visible(fn ($record) => $record->has_birth_cert && $record->birth_certificate_path)
+                            ->placeholder('No file uploaded')
+                            ->icon('heroicon-m-link'),
+                    ])->columns(3),
 
                 Section::make('Personal Details')
                     ->schema([

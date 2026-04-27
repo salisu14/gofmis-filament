@@ -31,6 +31,7 @@ class Orphan extends Model
         'picture_url',
         'deceased_id',
         'child_sequence',
+        'has_birth_cert',
         'birth_certificate_path',
         'status',
         'rejection_reason',
@@ -45,6 +46,7 @@ class Orphan extends Model
         'birth_date' => 'date',
         'is_eligible' => 'boolean',
         'is_married' => 'boolean',
+        'has_birth_cert' => 'boolean',
         'married_at' => 'datetime',
     ];
 

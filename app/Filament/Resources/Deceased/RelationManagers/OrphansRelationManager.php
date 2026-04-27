@@ -179,11 +179,19 @@ class OrphansRelationManager extends RelationManager
                                     ->imageEditor()
                                     ->circleCropper(),
 
-                                FileUpload::make('birth_certificate_path')
-                                    ->label('Birth Certificate')
-                                    ->directory('certificates')
-                                    ->disk('public')
-                                    ->acceptedFileTypes(['application/pdf', 'image/*']),
+                                Section::make('Birth Certificate')
+                                    ->compact()
+                                    ->schema([
+                                        Toggle::make('has_birth_cert')
+                                            ->label('Has Birth Certificate?')
+                                            ->live(),
+                                        FileUpload::make('birth_certificate_path')
+                                            ->label('Certificate Scan')
+                                            ->visible(fn ($get) => $get('has_birth_cert'))
+                                            ->directory('birth-certificates')
+                                            ->disk('public')
+                                            ->acceptedFileTypes(['application/pdf', 'image/*']),
+                                    ])->columns(2),
                             ]),
 
                         Textarea::make('address')

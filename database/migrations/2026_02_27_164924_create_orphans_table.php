@@ -40,6 +40,7 @@ return new class extends Migration
             // Contact & Assets
             $table->text('address')->nullable();
             $table->text('picture_url')->nullable();
+            $table->boolean('has_birth_cert')->default(false);
             $table->string('birth_certificate_path', 255)->nullable();
 
             // Relationships

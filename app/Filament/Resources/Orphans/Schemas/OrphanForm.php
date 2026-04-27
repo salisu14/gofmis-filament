@@ -72,7 +72,7 @@ class OrphanForm
                                 ->dehydrated(false),
 
                             Select::make('deceased_id')
-                                ->label('Deceased Spouse')
+                                ->label('Deceased')
                                 ->relationship('deceased', 'full_name')
                                 ->searchable()
                                 ->preload()
@@ -133,6 +133,20 @@ class OrphanForm
                             ->directory('widow-photos')
                             ->disk('public')
                             ->columnSpanFull(),
+
+                        Section::make('Birth Certificate')
+                            ->compact()
+                            ->schema([
+                                Toggle::make('has_birth_cert')
+                                    ->label('Has Birth Certificate?')
+                                    ->live(),
+                                FileUpload::make('birth_certificate_path')
+                                    ->label('Certificate Scan')
+                                    ->visible(fn ($get) => $get('has_birth_cert'))
+                                    ->directory('birth-certificates')
+                                    ->disk('public')
+                                    ->acceptedFileTypes(['application/pdf', 'image/*']),
+                            ])->columns(2),
                     ]),
             ]);
     }

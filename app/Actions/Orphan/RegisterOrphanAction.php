@@ -48,6 +48,7 @@ class RegisterOrphanAction
                 'address' => $data->address,
                 'picture_url' => $picturePath,
                 'deceased_id' => $deceased->id,
+                'has_birth_cert' => $data->hasBirthCert,
                 'birth_certificate_path' => $data->birthCertificatePath,
                 'status' => 'draft',
             ]);

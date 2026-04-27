@@ -22,6 +22,7 @@ class OrphanData extends Data
         public ?string      $guardianName = null,
         public ?string      $guardianPhone = null,
         public ?string      $address = null,
+        public bool         $hasBirthCert = false,
         public ?string      $birthCertificatePath = null,
 
         /*
