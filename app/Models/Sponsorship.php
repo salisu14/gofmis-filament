@@ -14,7 +14,7 @@ class Sponsorship extends Model
 
     protected $fillable = [
         'orphan_id',
-        'sponsor_name',
+        'sponsor_id',
         'amount_committed',
         'start_date',
         'end_date',
@@ -26,6 +26,14 @@ class Sponsorship extends Model
         'start_date' => 'date',
         'end_date' => 'date',
     ];
+
+    /**
+     * Get the sponsor of this sponsorship.
+     */
+    public function sponsor(): BelongsTo
+    {
+        return $this->belongsTo(Sponsor::class);
+    }
 
     /**
      * Get the orphan being sponsored.

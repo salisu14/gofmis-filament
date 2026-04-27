@@ -78,12 +78,23 @@ class AdminPanelProvider extends PanelProvider
                                     ->icon('heroicon-o-user-group')
                                     ->url('/admin/orphans')
                                     ->isActiveWhen(fn() => request()->is('admin/orphans*')),
+                            ])
+                    )
+                    // Address Module
+                    ->group(
+                        NavigationGroup::make('Sponsorship')
+                            ->items([
+                                // Sponsor
+                                NavigationItem::make('Sponsors')
+                                    ->icon('heroicon-o-trophy')
+                                    ->url('/admin/donors')
+                                    ->isActiveWhen(fn() => request()->is('admin/donors*')),
 
                                 // Sponsorships
                                 NavigationItem::make('Sponsorships')
                                     ->icon('heroicon-o-receipt-percent')
                                     ->url('/admin/sponsorships')
-                                    ->isActiveWhen(fn() => request()->is('admin/sponsorhips*')),
+                                    ->isActiveWhen(fn() => request()->is('admin/sponsorships*')),
                             ])
                     )
                     // Revolving Loan

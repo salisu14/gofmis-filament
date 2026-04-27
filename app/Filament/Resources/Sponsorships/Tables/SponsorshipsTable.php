@@ -26,10 +26,11 @@ class SponsorshipsTable
                     ->sortable()
                     ->weight('bold'),
 
-                TextColumn::make('sponsor_name')
+                TextColumn::make('sponsor.name')
                     ->label('Sponsor')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->description(fn ($record) => $record->sponsor?->type?->getLabel()),
 
                 TextColumn::make('amount_committed')
                     ->label('Committed')

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\OrphanEducation\Tables;
 
+use App\Models\OrphanEducation;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -10,6 +11,7 @@ use Filament\Actions\RestoreBulkAction;
 use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 
@@ -19,49 +21,54 @@ class OrphanEducationTable
     {
         return $table
             ->columns([
-                TextColumn::make('id')
-                    ->label('ID'),
-                TextColumn::make('orphan.id')
-                    ->searchable(),
+                TextColumn::make('orphan.full_name')
+                    ->label('Student')
+                    ->searchable()
+                    ->sortable()
+                    ->weight('bold'),
+
                 TextColumn::make('institution.name')
-                    ->searchable(),
-                TextColumn::make('school_fee')
-                    ->numeric()
-                    ->sortable(),
-                TextColumn::make('fee_frequency')
-                    ->searchable(),
-                IconColumn::make('is_fee_supported')
-                    ->boolean(),
-                TextColumn::make('support_amount')
-                    ->numeric()
-                    ->sortable(),
-                TextColumn::make('level')
-                    ->searchable(),
-                TextColumn::make('class_level')
-                    ->searchable(),
+                    ->label('Institution')
+                    ->searchable()
+                    ->sortable()
+                    ->description(fn (OrphanEducation $record) => "Level: {$record->level}"),
+
+                TextColumn::make('total_paid')
+                    ->label('Paid')
+                    ->state(fn (OrphanEducation $record) => $record->total_paid)
+                    ->money('NGN')
+                    ->color('success')
+                    ->alignEnd(),
+
+                TextColumn::make('balance')
+                    ->label('Balance')
+                    ->state(fn (OrphanEducation $record) => $record->balance)
+                    ->money('NGN')
+                    ->color(fn ($state) => $state > 0 ? 'danger' : 'success')
+                    ->weight('bold')
+                    ->alignEnd(),
+
                 IconColumn::make('is_current')
-                    ->boolean(),
+                    ->label('Active')
+                    ->boolean()
+                    ->alignCenter(),
+
+                IconColumn::make('is_fee_supported')
+                    ->label('Sponsored')
+                    ->boolean()
+                    ->toggleable(isToggledHiddenByDefault: true),
+
                 TextColumn::make('started_at')
+                    ->label('Started')
                     ->date()
-                    ->sortable(),
-                TextColumn::make('ended_at')
-                    ->date()
-                    ->sortable(),
-                TextColumn::make('deleted_at')
-                    ->dateTime()
                     ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('created_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('updated_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->toggleable(),
             ])
             ->filters([
                 TrashedFilter::make(),
+                TernaryFilter::make('is_current')
+                    ->label('Active Students Only')
+                    ->indicator('Current Enrollments'),
             ])
             ->recordActions([
                 ViewAction::make(),

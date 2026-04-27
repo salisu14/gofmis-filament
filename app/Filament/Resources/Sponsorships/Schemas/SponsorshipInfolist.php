@@ -21,9 +21,10 @@ class SponsorshipInfolist
                             ->size('lg')
                             ->color('primary'),
 
-                        TextEntry::make('sponsor_name')
+                        TextEntry::make('sponsor.name')
                             ->label('Sponsor')
-                            ->weight('bold'),
+                            ->weight('bold')
+                            ->hint(fn ($record) => $record->sponsor?->type?->getLabel()),
 
                         TextEntry::make('amount_committed')
                             ->label('Committed Amount')

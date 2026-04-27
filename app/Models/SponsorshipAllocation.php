@@ -13,6 +13,7 @@ class SponsorshipAllocation extends Model
 
     protected $fillable = [
         'sponsorship_id',
+        'sponsor_id',
         'orphan_education_id',
         'amount_allocated',
     ];
@@ -20,6 +21,23 @@ class SponsorshipAllocation extends Model
     protected $casts = [
         'amount_allocated' => 'decimal:2',
     ];
+
+    protected static function booted()
+    {
+        static::creating(function ($allocation) {
+            if (!$allocation->sponsor_id && $allocation->sponsorship_id) {
+                $allocation->sponsor_id = $allocation->sponsorship->sponsor_id;
+            }
+        });
+    }
+
+    /**
+     * Get the sponsor of this allocation.
+     */
+    public function sponsor(): BelongsTo
+    {
+        return $this->belongsTo(Sponsor::class);
+    }
 
     /**
      * Get the sponsorship source for this allocation.

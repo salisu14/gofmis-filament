@@ -29,11 +29,27 @@ class SponsorshipForm
                                 ->required()
                                 ->hint('Select the student receiving this support.'),
 
-                            TextInput::make('sponsor_name')
-                                ->label('Sponsor Name/Organization')
-                                ->placeholder('e.g. Al-Khair Foundation')
+                            Select::make('sponsor_id')
+                                ->label('Sponsor')
+                                ->relationship('sponsor', 'name')
+                                ->searchable()
+                                ->preload()
                                 ->required()
-                                ->maxLength(255),
+                                ->createOptionForm([
+                                    TextInput::make('name')
+                                        ->required()
+                                        ->maxLength(255),
+                                    Select::make('type')
+                                        ->options(\App\Enums\SponsorType::class)
+                                        ->required(),
+                                    TextInput::make('email')
+                                        ->email()
+                                        ->maxLength(255),
+                                    TextInput::make('phone')
+                                        ->tel()
+                                        ->maxLength(255),
+                                ])
+                                ->hint('Select or create a new sponsor.'),
                         ]),
                     ]),
 
