@@ -83,7 +83,7 @@ class FundUtilizationReport extends Page implements HasForms, HasTable
                 TextColumn::make('name')->label('Deceased')->searchable(),
                 TextColumn::make('item_service')->limit(30),
                 TextColumn::make('category')->badge(),
-                TextColumn::make('total_price')->money('USD')->alignment('right'),
+                TextColumn::make('total_price')->money('NGN')->alignment('right'),
             ])
             ->defaultSort('date', 'desc')
             ->paginated([10, 25, 50]);

@@ -15,7 +15,7 @@ class ImprestSeeder extends Seeder
     {
         $custodian = User::factory()->create([
             'id' => (string) Str::uuid(),
-            'name' => 'Imprest Custodian'
+            'name' => 'GOF Fund Custodian'
         ]);
 
         $supervisor = User::factory()->create([
@@ -26,8 +26,8 @@ class ImprestSeeder extends Seeder
         $fund = ImprestFund::factory()->create([
             'id' => (string) Str::uuid(),
             'custodian_id' => $custodian->id,
-            'authorized_amount' => 1000.00,
-            'current_balance' => 1000.00,
+            'authorized_amount' => 100000.00,
+            'current_balance' => 20000000.00,
         ]);
 
         // ✅ Create transactions

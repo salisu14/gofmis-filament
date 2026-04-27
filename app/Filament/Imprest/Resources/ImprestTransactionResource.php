@@ -142,7 +142,7 @@ class ImprestTransactionResource extends Resource
                         TextInput::make('unit_price')
                             ->required()
                             ->numeric()
-                            ->prefix('$')
+                            ->prefix('₦')
                             ->minValue(0)
                             ->step(0.01)
                             ->live()
@@ -155,7 +155,7 @@ class ImprestTransactionResource extends Resource
                         TextInput::make('total_price')
                             ->required()
                             ->numeric()
-                            ->prefix('$')
+                            ->prefix('₦')
                             ->disabled()
                             ->dehydrated()
                             ->default(0),
@@ -235,12 +235,12 @@ class ImprestTransactionResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\TextColumn::make('unit_price')
-                    ->money('USD')
+                    ->money('NGN')
                     ->alignment('right')
                     ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\TextColumn::make('total_price')
-                    ->money('USD')
+                    ->money('NGN')
                     ->sortable()
                     ->alignment('right')
                     ->weight('font-bold'),
@@ -437,9 +437,9 @@ class ImprestTransactionResource extends Resource
                     ->columns(3)
                     ->schema([
                         TextEntry::make('quantity')->numeric(decimalPlaces: 2),
-                        TextEntry::make('unit_price')->money('USD'),
+                        TextEntry::make('unit_price')->money('NGN'),
                         TextEntry::make('total_price')
-                            ->money('USD')
+                            ->money('NGN')
                             ->weight('font-bold')
                             ->size(TextSize::Large),
                     ]),
@@ -458,12 +458,6 @@ class ImprestTransactionResource extends Resource
             ]);
     }
 
-//    public static function getEloquentQuery(): Builder
-//    {
-//        return parent::getEloquentQuery()
-//            ->with(['fund', 'custodian', 'approver']);
-//    }
-
     public static function getGlobalSearchResultTitle(Model $record): string
     {
         return $record->voucher_no;
@@ -473,7 +467,7 @@ class ImprestTransactionResource extends Resource
     {
         return [
             'Deceased' => $record->name,
-            'Amount' => '$' . number_format($record->total_price, 2),
+            'Amount' => '₦' . number_format($record->total_price, 2),
             'Status' => $record->status,
         ];
     }

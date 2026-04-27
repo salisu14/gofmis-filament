@@ -29,15 +29,15 @@ class ReconciliationsRelationManager extends RelationManager
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('cash_on_hand')
-                    ->money('USD')
+                    ->money('NGN')
                     ->alignment('right'),
 
                 Tables\Columns\TextColumn::make('receipts_total')
-                    ->money('USD')
+                    ->money('NGN')
                     ->alignment('right'),
 
                 Tables\Columns\TextColumn::make('actual_variance')
-                    ->money('USD')
+                    ->money('NGN')
                     ->alignment('right')
                     ->color(fn ($record) => $record->isBalanced() ? 'success' : 'danger'),
 

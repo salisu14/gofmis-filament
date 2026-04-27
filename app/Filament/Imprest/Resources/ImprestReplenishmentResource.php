@@ -84,7 +84,7 @@ class ImprestReplenishmentResource extends Resource
                         TextInput::make('amount')
                             ->required()
                             ->numeric()
-                            ->prefix('$')
+                            ->prefix('₦')
                             ->disabled()
                             ->dehydrated()
                             ->helperText('Auto-calculated from fund activity'),
@@ -92,13 +92,13 @@ class ImprestReplenishmentResource extends Resource
                         TextInput::make('receipts_total')
                             ->required()
                             ->numeric()
-                            ->prefix('$')
+                            ->prefix('₦')
                             ->disabled()
                             ->dehydrated(),
 
                         TextInput::make('variance')
                             ->numeric()
-                            ->prefix('$')
+                            ->prefix('₦')
                             ->default(0)
                             ->disabled()
                             ->dehydrated(),
@@ -133,18 +133,18 @@ class ImprestReplenishmentResource extends Resource
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('amount')
-                    ->money('USD')
+                    ->money('NGN')
                     ->sortable()
                     ->alignment('right')
                     ->weight('font-bold'),
 
                 Tables\Columns\TextColumn::make('receipts_total')
-                    ->money('USD')
+                    ->money('NGN')
                     ->alignment('right')
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('variance')
-                    ->money('USD')
+                    ->money('NGN')
                     ->alignment('right')
                     ->color(fn (float $state): string => $state != 0 ? 'danger' : 'success')
                     ->toggleable(),

@@ -50,7 +50,7 @@ class TransactionsRelationManager extends RelationManager
                     ->searchable(),
 
                 Tables\Columns\TextColumn::make('total_price')
-                    ->money('USD')
+                    ->money('NGN')
                     ->alignment('right'),
 
                 Tables\Columns\IconColumn::make('receipt_attached')

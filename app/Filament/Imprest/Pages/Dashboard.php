@@ -38,28 +38,4 @@ class Dashboard extends BaseDashboard
 
         return $actions;
     }
-
-//    public function getHeaderActions(): array
-//    {
-//        $user = Auth::user();
-//        $actions = [];
-//
-//        if ($user->can('create', \App\Models\ImprestTransaction::class)) {
-//            $actions[] = Action::make('new_transaction')
-//                ->label('New Transaction')
-//                ->icon('heroicon-m-plus')
-//                ->url(\App\Filament\Imprest\Resources\ImprestTransactionResource::getUrl('create'))
-//                ->color('primary');
-//        }
-//
-//        if ($user->can('replenish', \App\Models\ImprestFund::class)) {
-//            $actions[] = Action::make('request_replenishment')
-//                ->label('Request Replenishment')
-//                ->icon('heroicon-m-arrow-path')
-//                ->url(\App\Filament\Imprest\Resources\ImprestReplenishmentResource::getUrl('create'))
-//                ->color('warning');
-//        }
-//
-//        return $actions;
-//    }
 }

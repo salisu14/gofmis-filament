@@ -50,7 +50,7 @@ class ImprestFundResource extends Resource
     {
         return [
             'Custodian' => $record->custodian?->name,
-            'Balance' => '$' . number_format($record->current_balance, 2),
+            'Balance' => '₦' . number_format($record->current_balance, 2),
         ];
     }
 
@@ -76,7 +76,7 @@ class ImprestFundResource extends Resource
                         Forms\Components\TextInput::make('authorized_amount')
                             ->required()
                             ->numeric()
-                            ->prefix('$')
+                            ->prefix('₦')
                             ->maxValue(999999.99)
                             ->minValue(0.01)
                             ->live()
@@ -87,7 +87,7 @@ class ImprestFundResource extends Resource
                         Forms\Components\TextInput::make('current_balance')
                             ->required()
                             ->numeric()
-                            ->prefix('$')
+                            ->prefix('₦')
                             ->disabled()
                             ->dehydrated(),
 
@@ -122,12 +122,12 @@ class ImprestFundResource extends Resource
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('authorized_amount')
-                    ->money('USD')
+                    ->money('NGN')
                     ->sortable()
                     ->alignment('right'),
 
                 Tables\Columns\TextColumn::make('current_balance')
-                    ->money('USD')
+                    ->money('NGN')
                     ->sortable()
                     ->alignment('right')
                     ->color(fn (ImprestFund $record): string => $record->isLowBalance() ? 'danger' : 'success'),
@@ -225,14 +225,14 @@ class ImprestFundResource extends Resource
                     ->columns(3)
                     ->schema([
                         TextEntry::make('authorized_amount')
-                            ->money('USD')
+                            ->money('NGN')
                             ->icon('heroicon-m-banknotes'),
                         TextEntry::make('current_balance')
-                            ->money('USD')
+                            ->money('NGN')
                             ->color(fn (ImprestFund $record): string => $record->isLowBalance() ? 'danger' : 'success'),
                         TextEntry::make('total_spent')
                             ->state(fn (ImprestFund $record): float => $record->authorized_amount - $record->current_balance)
-                            ->money('USD'),
+                            ->money('NGN'),
                     ]),
 
                 Section::make('Audit Trail')

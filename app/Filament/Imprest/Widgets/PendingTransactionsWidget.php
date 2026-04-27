@@ -42,7 +42,7 @@ class PendingTransactionsWidget extends BaseWidget
                     ->searchable(),
 
                 Tables\Columns\TextColumn::make('total_price')
-                    ->money('USD')
+                    ->money('NGN')
                     ->sortable()
                     ->alignment('right'),
 

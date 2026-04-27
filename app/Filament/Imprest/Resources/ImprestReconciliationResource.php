@@ -70,7 +70,7 @@ class ImprestReconciliationResource extends Resource
                         TextInput::make('cash_on_hand')
                             ->required()
                             ->numeric()
-                            ->prefix('$')
+                            ->prefix('₦')
                             ->step(0.01)
                             ->live()
                             ->afterStateUpdated(function (Get $get, Set $set) {
@@ -83,21 +83,21 @@ class ImprestReconciliationResource extends Resource
                         TextInput::make('receipts_total')
                             ->required()
                             ->numeric()
-                            ->prefix('$')
+                            ->prefix('₦')
                             ->disabled()
                             ->dehydrated(),
 
                         TextInput::make('expected_balance')
                             ->required()
                             ->numeric()
-                            ->prefix('$')
+                            ->prefix('₦')
                             ->disabled()
                             ->dehydrated()
                             ->helperText('Authorized amount from fund setup'),
 
                         TextInput::make('actual_variance')
                             ->numeric()
-                            ->prefix('$')
+                            ->prefix('₦')
                             ->disabled()
                             ->dehydrated(),
 //                            ->color(fn (float $state): string => abs($state) < 0.01 ? 'success' : 'danger'),
@@ -146,20 +146,20 @@ class ImprestReconciliationResource extends Resource
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('cash_on_hand')
-                    ->money('USD')
+                    ->money('NGN')
                     ->alignment('right'),
 
                 Tables\Columns\TextColumn::make('receipts_total')
-                    ->money('USD')
+                    ->money('NGN')
                     ->alignment('right'),
 
                 Tables\Columns\TextColumn::make('expected_balance')
-                    ->money('USD')
+                    ->money('NGN')
                     ->alignment('right')
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('actual_variance')
-                    ->money('USD')
+                    ->money('NGN')
                     ->alignment('right')
                     ->color(fn (ImprestReconciliation $record): string => $record->isBalanced() ? 'success' : 'danger')
                     ->weight('font-bold'),
@@ -270,16 +270,16 @@ class ImprestReconciliationResource extends Resource
                     ->columns(4)
                     ->schema([
                         TextEntry::make('cash_on_hand')
-                            ->money('USD')
+                            ->money('NGN')
                             ->icon('heroicon-m-banknotes'),
                         TextEntry::make('receipts_total')
-                            ->money('USD')
+                            ->money('NGN')
                             ->icon('heroicon-m-receipt-percent'),
                         TextEntry::make('expected_balance')
-                            ->money('USD')
+                            ->money('NGN')
                             ->icon('heroicon-m-scale'),
                         TextEntry::make('actual_variance')
-                            ->money('USD')
+                            ->money('NGN')
                             ->color(fn (ImprestReconciliation $record): string => $record->isBalanced() ? 'success' : 'danger')
                             ->weight('font-bold'),
                     ]),
