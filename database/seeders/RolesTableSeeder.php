@@ -25,6 +25,13 @@ class RolesTableSeeder extends Seeder
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
+            [
+                'uuid'       => Str::uuid(),
+                'name'       => 'coordinator',
+                'guard_name' => 'web',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
         ];
 
         Role::insert($roles);

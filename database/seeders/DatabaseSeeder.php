@@ -26,6 +26,7 @@ class DatabaseSeeder extends Seeder
             BankAccountsTableSeeder::class,
             ImprestPermissionSeeder::class,
             MedicationsTableSeeder::class,
+            WelfarePackageSeeder::class,
         ]);
     }
 }

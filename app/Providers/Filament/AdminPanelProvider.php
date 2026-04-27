@@ -153,6 +153,12 @@ class AdminPanelProvider extends PanelProvider
                                     ->url('/admin/intervention-requests')
                                     ->isActiveWhen(fn() => request()->is('admin/intervention-requests*')),
 
+                                // Welfare Package
+                                NavigationItem::make('Welfare Packages')
+                                    ->icon('heroicon-o-building-storefront')
+                                    ->url('/admin/welfare-packages')
+                                    ->isActiveWhen(fn() => request()->is('admin/welfare-packages*')),
+
                                 NavigationItem::make('Bank Accounts')
                                     ->icon('heroicon-o-document-currency-dollar')
                                     ->url('/admin/bank-accounts')
@@ -216,16 +222,6 @@ class AdminPanelProvider extends PanelProvider
                     ->group(
                         NavigationGroup::make('Human Resources')
                             ->items([
-                                NavigationItem::make('Business Units')
-                                    ->icon('heroicon-o-wrench')
-                                    ->url('/admin/businesses')
-                                    ->isActiveWhen(fn() => request()->is('admin/businesses*')),
-
-                                NavigationItem::make('Factories')
-                                    ->icon('heroicon-o-building-storefront')
-                                    ->url('/admin/factories')
-                                    ->isActiveWhen(fn() => request()->is('admin/factories*')),
-
                                 NavigationItem::make('Payroll Periods')
                                     ->icon('heroicon-o-calendar-date-range')
                                     ->url('/admin/payroll-periods')
