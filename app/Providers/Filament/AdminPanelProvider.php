@@ -96,7 +96,7 @@ class AdminPanelProvider extends PanelProvider
                                     ->isActiveWhen(fn() => request()->is('admin/widow-loans*')),
 
                                 NavigationItem::make('Approval Flows')
-                                    ->icon('heroicon-o-square-2-stack')
+                                    ->icon('heroicon-o-book-open')
                                     ->url('/admin/approval-flows')
                                     ->isActiveWhen(fn() => request()->is('admin/approval-flows*')),
                             ])

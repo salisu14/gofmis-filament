@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\WidowLoanStatus;
+use App\Enums\LoanRepaymentFrequency;
 use App\Traits\Approvable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
@@ -37,6 +38,7 @@ class WidowLoan extends Model
         'widow_id',
         'principal_amount',
         'duration_months',
+        'repayment_frequency',
         'total_payable',
         'total_paid',
         'outstanding_balance',
@@ -60,6 +62,7 @@ class WidowLoan extends Model
         'disbursed_at' => 'datetime',
         'fully_repaid' => 'boolean',
         'status' => WidowLoanStatus::class,
+        'repayment_frequency' => LoanRepaymentFrequency::class,
     ];
 
     public function widow(): BelongsTo
@@ -177,18 +180,24 @@ class WidowLoan extends Model
             // Clear existing schedule if any
             $this->schedules()->delete();
 
-            // Logic: Total Payable / Duration = Installment
-            // Based on 4 weeks per month for the loop
-            $totalWeeks = $this->duration_months * 4;
-            $installmentAmount = $this->total_payable / $totalWeeks;
+            // Logic: Total Payable / Total Intervals = Installment
+            $isWeekly = $this->repayment_frequency === LoanRepaymentFrequency::WEEKLY;
+            $intervalsPerMonth = $isWeekly ? 4 : 1;
+            $totalIntervals = $this->duration_months * $intervalsPerMonth;
+            
+            $installmentAmount = $this->total_payable / $totalIntervals;
             
             $startDate = $this->disbursed_at ?: now();
 
-            for ($i = 1; $i <= $totalWeeks; $i++) {
+            for ($i = 1; $i <= $totalIntervals; $i++) {
+                $dueDate = $isWeekly 
+                    ? $startDate->copy()->addWeeks($i)
+                    : $startDate->copy()->addMonths($i);
+
                 $this->schedules()->create([
                     'installment_number' => $i,
                     'amount_due' => $installmentAmount,
-                    'due_date' => $startDate->copy()->addWeeks($i),
+                    'due_date' => $dueDate,
                     'is_paid' => false,
                 ]);
             }

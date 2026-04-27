@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\WidowLoans\Schemas;
 
+use App\Enums\LoanRepaymentFrequency;
 use App\Enums\WidowLoanStatus;
 use App\Models\Widow;
 use Filament\Forms\Components\DateTimePicker;
@@ -56,22 +57,32 @@ class WidowLoanForm
 
                             Select::make('repayment_frequency')
                                 ->label('Repayment Frequency')
-                                ->options([
-                                    'weekly' => 'Weekly',
-                                    'monthly' => 'Monthly',
-                                ])
+                                ->options(LoanRepaymentFrequency::class)
                                 ->required()
-                                ->default('weekly')
-                                ->native(false),
+                                ->default(LoanRepaymentFrequency::WEEKLY)
+                                ->native(false)
+                                ->live(),
                         ]),
 
                         Grid::make(3)->schema([
                             TextInput::make('duration_months')
-                                ->label('Duration (Units)')
-                                ->helperText('Number of weeks/months based on frequency.')
+                                ->label('Duration (Months)')
+                                ->helperText('Number of months for the loan term.')
                                 ->numeric()
                                 ->default(12)
-                                ->required(),
+                                ->required()
+                                ->live(onBlur: true)
+                                ->afterStateUpdated(function ($state, $get, $set) {
+                                    $principal = (float) $get('total_payable');
+                                    $duration = (int) $state;
+                                    $freq = $get('repayment_frequency');
+                                    if ($principal > 0 && $duration > 0) {
+                                        $intervals = $freq === LoanRepaymentFrequency::WEEKLY->value || $freq === 'weekly'
+                                            ? $duration * 4
+                                            : $duration;
+                                        $set('installment_amount', round($principal / $intervals, 2));
+                                    }
+                                }),
 
                             TextInput::make('total_payable')
                                 ->label('Total Payable')
@@ -83,8 +94,8 @@ class WidowLoanForm
                                 ->label('Per Installment')
                                 ->numeric()
                                 ->prefix('₦')
-                                ->placeholder('Calculated on approval')
-                                ->disabled(),
+                                ->readOnly()
+                                ->helperText('Auto-calculated from frequency & duration.'),
                         ]),
                     ]),
 
@@ -95,8 +106,10 @@ class WidowLoanForm
                             Select::make('status')
                                 ->options(WidowLoanStatus::class)
                                 ->required()
-                                ->default(WidowLoanStatus::PENDING->value)
-                                ->native(false),
+                                ->default(WidowLoanStatus::DRAFT->value)
+                                ->native(false)
+                                ->disabled()
+                                ->dehydrated(),
 
                             DateTimePicker::make('disbursed_at')
                                 ->label('Disbursement Date')
