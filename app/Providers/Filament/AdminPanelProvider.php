@@ -120,10 +120,10 @@ class AdminPanelProvider extends PanelProvider
                                     ->url('/admin/widow-loans')
                                     ->isActiveWhen(fn() => request()->is('admin/widow-loans*')),
 
-                                NavigationItem::make('Approval Flows')
-                                    ->icon('heroicon-o-book-open')
-                                    ->url('/admin/approval-flows')
-                                    ->isActiveWhen(fn() => request()->is('admin/approval-flows*')),
+//                                NavigationItem::make('Approval Flows')
+//                                    ->icon('heroicon-o-book-open')
+//                                    ->url('/admin/approval-flows')
+//                                    ->isActiveWhen(fn() => request()->is('admin/approval-flows*')),
                             ])
                     )
                     // Medicals
@@ -220,20 +220,20 @@ class AdminPanelProvider extends PanelProvider
                                     ->isActiveWhen(fn() => request()->is('admin/education-fee-invoices*')),
                             ])
                     )
-                    ->group(
-                        NavigationGroup::make('Human Resources')
-                            ->items([
-                                NavigationItem::make('Payroll Periods')
-                                    ->icon('heroicon-o-calendar-date-range')
-                                    ->url('/admin/payroll-periods')
-                                    ->isActiveWhen(fn() => request()->is('admin/payroll-periods*')),
-
-                                NavigationItem::make('Purchase Receipts')
-                                    ->icon('heroicon-o-receipt-percent')
-                                    ->url('/admin/purchase-receipts')
-                                    ->isActiveWhen(fn() => request()->is('admin/purchase-receipts*')),
-                            ])
-                    )
+//                    ->group(
+//                        NavigationGroup::make('Human Resources')
+//                            ->items([
+//                                NavigationItem::make('Payroll Periods')
+//                                    ->icon('heroicon-o-calendar-date-range')
+//                                    ->url('/admin/payroll-periods')
+//                                    ->isActiveWhen(fn() => request()->is('admin/payroll-periods*')),
+//
+//                                NavigationItem::make('Purchase Receipts')
+//                                    ->icon('heroicon-o-receipt-percent')
+//                                    ->url('/admin/purchase-receipts')
+//                                    ->isActiveWhen(fn() => request()->is('admin/purchase-receipts*')),
+//                            ])
+//                    )
 
                     // Setup & Administration
                     ->group(
