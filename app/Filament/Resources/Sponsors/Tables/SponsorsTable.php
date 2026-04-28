@@ -41,7 +41,7 @@ class SponsorsTable
                 // Financial summary column similar to the selected OrphanEducation code style
                 TextColumn::make('total_committed')
                     ->label('Total Commitment')
-                    ->state(fn (Sponsor $record) => $record->sponsorships()->sum('amount_committed'))
+                    ->state(fn(Sponsor $record) => $record->sponsorships()->sum('amount_committed'))
                     ->money('NGN')
                     ->color('success')
                     ->weight('bold')

@@ -2,6 +2,7 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Widgets\IdCardPrintQueueWidget;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -21,8 +22,6 @@ use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
-
-//use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -78,6 +77,21 @@ class AdminPanelProvider extends PanelProvider
                                     ->icon('heroicon-o-user-group')
                                     ->url('/admin/orphans')
                                     ->isActiveWhen(fn() => request()->is('admin/orphans*')),
+                            ])
+                    )
+                    // ID Card
+                    ->group(
+                        NavigationGroup::make('ID Cards')
+                            ->items([
+                                NavigationItem::make('ID Cards')
+                                    ->icon('heroicon-o-credit-card')
+                                    ->url('/admin/id-cards')
+                                    ->isActiveWhen(fn() => request()->is('admin/id-cards*')),
+
+                                NavigationItem::make('ID Card Print Batches')
+                                    ->icon('heroicon-o-printer')
+                                    ->url('/admin/id-card-print-batches')
+                                    ->isActiveWhen(fn() => request()->is('admin/id-card-print-batches*')),
                             ])
                     )
                     // Address Module
@@ -180,19 +194,6 @@ class AdminPanelProvider extends PanelProvider
                                     ->icon('heroicon-o-calendar-date-range')
                                     ->url('/admin/zones')
                                     ->isActiveWhen(fn() => request()->is('admin/zones*')),
-
-//
-//                                // Bank Accounts
-//                                NavigationItem::make('Bank Accounts')
-//                                    ->icon('heroicon-o-document-currency-dollar')
-//                                    ->url('/admin/bank-accounts')
-//                                    ->isActiveWhen(fn() => request()->is('admin/bank-accounts*')),
-//
-//                                // Payments
-//                                NavigationItem::make('Payments')
-//                                    ->icon('heroicon-o-document-currency-dollar')
-//                                    ->url('/admin/payments')
-//                                    ->isActiveWhen(fn() => request()->is('admin/payments*')),
                             ])
                     )
                     ->group(
@@ -259,6 +260,7 @@ class AdminPanelProvider extends PanelProvider
             ->widgets([
                 AccountWidget::class,
                 FilamentInfoWidget::class,
+                IdCardPrintQueueWidget::class,
             ])
             ->middleware([
                 EncryptCookies::class,
@@ -266,7 +268,6 @@ class AdminPanelProvider extends PanelProvider
                 StartSession::class,
                 AuthenticateSession::class,
                 ShareErrorsFromSession::class,
-//                PreventRequestForgery::class,
                 SubstituteBindings::class,
                 DisableBladeIconComponents::class,
                 DispatchServingFilamentEvent::class,
@@ -274,6 +275,11 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->authMiddleware([
                 Authenticate::class,
+            ])->navigationGroups([
+                'ID Card Management',
+                'Beneficiaries',
+                'Finance',
+                'Settings',
             ]);
     }
 }

@@ -42,14 +42,17 @@ class ImprestTransactionResource extends Resource
     protected static string|null|\UnitEnum $navigationGroup = 'Transactions';
     protected static ?int $navigationSort = 2;
     protected static ?string $recordTitleAttribute = 'voucher_no';
+
     public static function getNavigationBadge(): ?string
     {
         return static::getModel()::pending()->count() ?: null;
     }
+
     public static function getNavigationBadgeColor(): ?string
     {
         return 'warning';
     }
+
     public static function getEloquentQuery(): Builder
     {
         $query = parent::getEloquentQuery()
@@ -59,7 +62,7 @@ class ImprestTransactionResource extends Resource
         if (!auth()->user()->hasRole('admin')) {
             $query->where(function ($q) {
                 $q->where('custodian_id', auth()->id())
-                    ->orWhereHas('fund', fn ($fq) => $fq->where('custodian_id', auth()->id()));
+                    ->orWhereHas('fund', fn($fq) => $fq->where('custodian_id', auth()->id()));
             });
         }
 
@@ -79,7 +82,7 @@ class ImprestTransactionResource extends Resource
                             ->searchable()
                             ->preload()
                             ->native(false)
-                            ->default(fn () => request()->query('fund_id'))
+                            ->default(fn() => request()->query('fund_id'))
                             ->live()
                             ->afterStateUpdated(function (Set $set) {
                                 $set('custodian_id', auth()->id());
@@ -109,14 +112,14 @@ class ImprestTransactionResource extends Resource
 
                         Select::make('category')
                             ->options(collect(TransactionCategory::cases())->mapWithKeys(
-                                fn ($case) => [$case->value => $case->label()]
+                                fn($case) => [$case->value => $case->label()]
                             ))
                             ->required()
                             ->native(false),
 
                         Select::make('payment_method')
                             ->options(collect(PaymentMethod::cases())->mapWithKeys(
-                                fn ($case) => [$case->value => $case->getLabel()]
+                                fn($case) => [$case->value => $case->getLabel()]
                             ))
                             ->required()
                             ->default(PaymentMethod::CASH->value)
@@ -196,7 +199,7 @@ class ImprestTransactionResource extends Resource
                     ->searchable()
                     ->sortable()
                     ->badge()
-                    ->color(fn (ImprestTransaction $record): string => match ($record->status) {
+                    ->color(fn(ImprestTransaction $record): string => match ($record->status) {
                         'active' => 'success',
                         'pending' => 'warning',
                         'voided' => 'danger',
@@ -256,7 +259,7 @@ class ImprestTransactionResource extends Resource
 
                 Tables\Columns\TextColumn::make('status')
                     ->badge()
-                    ->color(fn (string $state): string => match ($state) {
+                    ->color(fn(string $state): string => match ($state) {
                         'active' => 'success',
                         'pending' => 'warning',
                         'voided' => 'danger',
@@ -289,7 +292,7 @@ class ImprestTransactionResource extends Resource
 
                 Tables\Filters\SelectFilter::make('category')
                     ->options(collect(TransactionCategory::cases())->mapWithKeys(
-                        fn ($case) => [$case->value => $case->label()]
+                        fn($case) => [$case->value => $case->label()]
                     ))
                     ->multiple()
                     ->native(false),
@@ -301,8 +304,8 @@ class ImprestTransactionResource extends Resource
                     ])
                     ->query(function (Builder $query, array $data): Builder {
                         return $query
-                            ->when($data['from'], fn ($q, $date) => $q->whereDate('date', '>=', $date))
-                            ->when($data['until'], fn ($q, $date) => $q->whereDate('date', '<=', $date));
+                            ->when($data['from'], fn($q, $date) => $q->whereDate('date', '>=', $date))
+                            ->when($data['until'], fn($q, $date) => $q->whereDate('date', '<=', $date));
                     }),
 
                 Tables\Filters\TernaryFilter::make('receipt_attached')
@@ -321,8 +324,7 @@ class ImprestTransactionResource extends Resource
                     ->modalHeading('Approve Transaction')
                     ->modalDescription('This will deduct the amount from the fund balance.')
                     ->modalSubmitActionLabel('Approve')
-                    ->visible(fn (ImprestTransaction $record): bool =>
-                        $record->status === 'pending' && auth()->user()->can('approve', $record)
+                    ->visible(fn(ImprestTransaction $record): bool => $record->status === 'pending' && auth()->user()->can('approve', $record)
                     )
                     ->action(function (ImprestTransaction $record) {
                         $service = app(ImprestTransactionServiceInterface::class);
@@ -353,8 +355,7 @@ class ImprestTransactionResource extends Resource
                     ->requiresConfirmation()
                     ->modalHeading('Void Transaction')
                     ->modalDescription('This action cannot be undone. The fund balance will be restored if already deducted.')
-                    ->visible(fn (ImprestTransaction $record): bool =>
-                        $record->isVoidable() && auth()->user()->can('void', $record)
+                    ->visible(fn(ImprestTransaction $record): bool => $record->isVoidable() && auth()->user()->can('void', $record)
                     )
                     ->action(function (ImprestTransaction $record, array $data) {
                         $service = app(ImprestTransactionServiceInterface::class);
@@ -372,14 +373,13 @@ class ImprestTransactionResource extends Resource
                     }),
 
                 EditAction::make()
-                    ->visible(fn (ImprestTransaction $record): bool =>
-                        $record->status === 'pending'
+                    ->visible(fn(ImprestTransaction $record): bool => $record->status === 'pending'
                     ),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make()
-                        ->visible(fn (): bool => auth()->user()->hasRole('admin')),
+                        ->visible(fn(): bool => auth()->user()->hasRole('admin')),
                 ]),
             ])
             ->defaultSort('date', 'desc');
@@ -394,7 +394,7 @@ class ImprestTransactionResource extends Resource
                     ->schema([
                         TextEntry::make('voucher_no')
                             ->badge()
-                            ->color(fn (ImprestTransaction $record): string => match ($record->status) {
+                            ->color(fn(ImprestTransaction $record): string => match ($record->status) {
                                 'active' => 'success',
                                 'pending' => 'warning',
                                 'voided' => 'danger',
@@ -403,7 +403,7 @@ class ImprestTransactionResource extends Resource
                         TextEntry::make('date')->date(),
                         TextEntry::make('status')
                             ->badge()
-                            ->color(fn (string $state): string => match ($state) {
+                            ->color(fn(string $state): string => match ($state) {
                                 'active' => 'success',
                                 'pending' => 'warning',
                                 'voided' => 'danger',
@@ -429,8 +429,8 @@ class ImprestTransactionResource extends Resource
                         TextEntry::make('category')->badge(),
                         TextEntry::make('payment_method')->badge(),
                         TextEntry::make('receipt_attached')
-                            ->icon(fn (bool $state): string => $state ? 'heroicon-m-check-circle' : 'heroicon-m-x-circle')
-                            ->color(fn (bool $state): string => $state ? 'success' : 'danger'),
+                            ->icon(fn(bool $state): string => $state ? 'heroicon-m-check-circle' : 'heroicon-m-x-circle')
+                            ->color(fn(bool $state): string => $state ? 'success' : 'danger'),
                     ]),
 
                 Section::make('Financial Breakdown')
@@ -453,7 +453,7 @@ class ImprestTransactionResource extends Resource
                         TextEntry::make('approved_at')->dateTime()->placeholder('—'),
                         TextEntry::make('void_reason')
                             ->columnSpanFull()
-                            ->visible(fn (ImprestTransaction $record): bool => $record->status === 'voided'),
+                            ->visible(fn(ImprestTransaction $record): bool => $record->status === 'voided'),
                     ]),
             ]);
     }

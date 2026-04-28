@@ -11,8 +11,8 @@ use Filament\Widgets\TableWidget as BaseWidget;
 
 class PendingTransactionsWidget extends BaseWidget
 {
-    protected int|string|array $columnSpan = 'full';
     protected static ?string $heading = 'Pending Approvals';
+    protected int|string|array $columnSpan = 'full';
 
     public function table(Table $table): Table
     {
@@ -62,7 +62,7 @@ class PendingTransactionsWidget extends BaseWidget
                     ->modalHeading('Approve Transaction')
                     ->modalDescription('Are you sure you want to approve this transaction?')
                     ->modalSubmitActionLabel('Yes, Approve')
-                    ->visible(fn (ImprestTransaction $record): bool => auth()->user()->can('approve', $record))
+                    ->visible(fn(ImprestTransaction $record): bool => auth()->user()->can('approve', $record))
                     ->action(function (ImprestTransaction $record) {
                         $service = app(\App\Services\Contracts\Imprest\ImprestTransactionServiceInterface::class);
                         $service->approve(new \App\Data\Imprest\ApproveTransactionDto(
@@ -74,7 +74,7 @@ class PendingTransactionsWidget extends BaseWidget
 
                 Action::make('view')
                     ->icon('heroicon-m-eye')
-                    ->url(fn (ImprestTransaction $record): string => ImprestTransactionResource::getUrl('view', ['record' => $record])),
+                    ->url(fn(ImprestTransaction $record): string => ImprestTransactionResource::getUrl('view', ['record' => $record])),
             ])
             ->emptyStateHeading('No pending transactions')
             ->emptyStateDescription('All transactions have been processed.')

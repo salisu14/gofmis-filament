@@ -19,15 +19,14 @@ class ViewImprestReconciliation extends ViewRecord
 
         return [
             Actions\EditAction::make()
-                ->visible(fn (): bool => $record->status === 'in_progress'),
+                ->visible(fn(): bool => $record->status === 'in_progress'),
 
             Action::make('acknowledge')
                 ->label('Acknowledge')
                 ->icon('heroicon-m-hand-thumb-up')
                 ->color('success')
                 ->requiresConfirmation()
-                ->visible(fn (): bool =>
-                    !$record->custodian_acknowledged &&
+                ->visible(fn(): bool => !$record->custodian_acknowledged &&
                     auth()->id() === $record->custodian_id
                 )
                 ->action(function () use ($record) {
@@ -47,8 +46,7 @@ class ViewImprestReconciliation extends ViewRecord
                 ->icon('heroicon-m-check')
                 ->color('primary')
                 ->requiresConfirmation()
-                ->visible(fn (): bool =>
-                    $record->status === 'in_progress' &&
+                ->visible(fn(): bool => $record->status === 'in_progress' &&
                     auth()->user()->can('reconcile', $record->fund)
                 )
                 ->action(function () use ($record) {
@@ -72,8 +70,7 @@ class ViewImprestReconciliation extends ViewRecord
                         ->label('Flag Reason'),
                 ])
                 ->requiresConfirmation()
-                ->visible(fn (): bool =>
-                    $record->status === 'in_progress' &&
+                ->visible(fn(): bool => $record->status === 'in_progress' &&
                     auth()->user()->can('reconcile', $record->fund)
                 )
                 ->action(function (array $data) use ($record) {

@@ -15,7 +15,9 @@ class Zone extends Model
         'name',
         'address',
         'city',
-        'state'
+        'state',
+        'coordinator_name',
+        'coordinator_phone'
     ];
 
     /**

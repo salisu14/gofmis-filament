@@ -35,8 +35,7 @@ class ImprestReplenishmentResource extends Resource
         $query = parent::getEloquentQuery()->with(['fund', 'requester', 'approver']);
 
         if (!auth()->user()->hasRole('admin')) {
-            $query->whereHas('fund', fn ($q) =>
-            $q->where('custodian_id', auth()->id())
+            $query->whereHas('fund', fn($q) => $q->where('custodian_id', auth()->id())
             );
         }
 
@@ -146,12 +145,12 @@ class ImprestReplenishmentResource extends Resource
                 Tables\Columns\TextColumn::make('variance')
                     ->money('NGN')
                     ->alignment('right')
-                    ->color(fn (float $state): string => $state != 0 ? 'danger' : 'success')
+                    ->color(fn(float $state): string => $state != 0 ? 'danger' : 'success')
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('status')
                     ->badge()
-                    ->color(fn (string $state): string => match ($state) {
+                    ->color(fn(string $state): string => match ($state) {
                         'draft' => 'gray',
                         'submitted' => 'warning',
                         'approved' => 'primary',
@@ -194,8 +193,7 @@ class ImprestReplenishmentResource extends Resource
                     ->icon('heroicon-m-check')
                     ->color('success')
                     ->requiresConfirmation()
-                    ->visible(fn (ImprestReplenishment $record): bool =>
-                        $record->status === 'submitted' && auth()->user()->can('approve', $record->fund)
+                    ->visible(fn(ImprestReplenishment $record): bool => $record->status === 'submitted' && auth()->user()->can('approve', $record->fund)
                     )
                     ->action(function (ImprestReplenishment $record) {
                         $service = app(ImprestReplenishmentServiceInterface::class);
@@ -213,8 +211,7 @@ class ImprestReplenishmentResource extends Resource
                     ->requiresConfirmation()
                     ->modalHeading('Process Replenishment')
                     ->modalDescription('This will restore the fund to its authorized amount.')
-                    ->visible(fn (ImprestReplenishment $record): bool =>
-                        $record->status === 'approved' && auth()->user()->can('replenish', $record->fund)
+                    ->visible(fn(ImprestReplenishment $record): bool => $record->status === 'approved' && auth()->user()->can('replenish', $record->fund)
                     )
                     ->action(function (ImprestReplenishment $record) {
                         $service = app(ImprestReplenishmentServiceInterface::class);
@@ -228,7 +225,7 @@ class ImprestReplenishmentResource extends Resource
                     }),
 
                 EditAction::make()
-                    ->visible(fn (ImprestReplenishment $record): bool => $record->status === 'draft'),
+                    ->visible(fn(ImprestReplenishment $record): bool => $record->status === 'draft'),
             ])
             ->defaultSort('created_at', 'desc');
     }

@@ -16,8 +16,7 @@ class EditImprestReconciliation extends EditRecord
         return [
             Actions\ViewAction::make(),
             Actions\DeleteAction::make()
-                ->visible(fn (ImprestReconciliation $record): bool =>
-                    $record->status === 'in_progress' && auth()->user()->hasRole('admin')
+                ->visible(fn(ImprestReconciliation $record): bool => $record->status === 'in_progress' && auth()->user()->hasRole('admin')
                 ),
         ];
     }

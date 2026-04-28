@@ -80,7 +80,7 @@ class RoleResource extends Resource
             ->filters([
                 //
             ])
-            ->modifyQueryUsing(fn ($query) => $query->withCount('permissions'))
+            ->modifyQueryUsing(fn($query) => $query->withCount('permissions'))
             ->recordActions([
                 ViewAction::make(),
                 EditAction::make(),

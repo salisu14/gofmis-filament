@@ -89,7 +89,7 @@ class EnrollmentsRelationManager extends RelationManager
                                 ->label('Support/Sponsorship Amount')
                                 ->numeric()
                                 ->prefix('₦')
-                                ->visible(fn (Get $get) => $get('is_fee_supported')),
+                                ->visible(fn(Get $get) => $get('is_fee_supported')),
                         ])->columns(2),
                     ]),
 
@@ -130,7 +130,7 @@ class EnrollmentsRelationManager extends RelationManager
                 TextColumn::make('school_fee')
                     ->label('Fee Rate')
                     ->money('NGN')
-                    ->description(fn ($record) => "Per {$record->fee_frequency}"),
+                    ->description(fn($record) => "Per {$record->fee_frequency}"),
 
                 IconColumn::make('is_current')
                     ->label('Active')
@@ -148,7 +148,7 @@ class EnrollmentsRelationManager extends RelationManager
                     ->label('Current Students Only'),
 
                 SelectFilter::make('level')
-                    ->options(fn () => \App\Models\OrphanEducation::query()->distinct()->pluck('level', 'level')->toArray()),
+                    ->options(fn() => \App\Models\OrphanEducation::query()->distinct()->pluck('level', 'level')->toArray()),
             ])
             ->headerActions([
                 CreateAction::make()

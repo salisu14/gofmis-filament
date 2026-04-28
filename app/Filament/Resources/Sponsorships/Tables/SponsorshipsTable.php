@@ -30,7 +30,7 @@ class SponsorshipsTable
                     ->label('Sponsor')
                     ->searchable()
                     ->sortable()
-                    ->description(fn ($record) => $record->sponsor?->type?->getLabel()),
+                    ->description(fn($record) => $record->sponsor?->type?->getLabel()),
 
                 TextColumn::make('amount_committed')
                     ->label('Committed')
@@ -54,13 +54,13 @@ class SponsorshipsTable
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true)
-                    ->formatStateUsing(fn ($state) => $state ? 'Archived' : 'Active'),
+                    ->formatStateUsing(fn($state) => $state ? 'Archived' : 'Active'),
             ])
             ->filters([
                 TrashedFilter::make(),
                 Filter::make('active_sponsorships')
                     ->label('Active only')
-                    ->query(fn ($query) => $query->whereNull('end_date')->orWhere('end_date', '>=', now())),
+                    ->query(fn($query) => $query->whereNull('end_date')->orWhere('end_date', '>=', now())),
             ])
             ->filters([
                 TrashedFilter::make(),

@@ -54,6 +54,11 @@ class Orphan extends Model
      | Core Relationships
      ------------------------------*/
 
+    public function idCards(): MorphMany
+    {
+        return $this->morphMany(IdCard::class, 'cardable');
+    }
+
     public function deceased(): BelongsTo
     {
         return $this->belongsTo(Deceased::class);

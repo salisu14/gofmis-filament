@@ -31,20 +31,20 @@ class OrphanEducationTable
                     ->label('Institution')
                     ->searchable()
                     ->sortable()
-                    ->description(fn (OrphanEducation $record) => "Level: {$record->level}"),
+                    ->description(fn(OrphanEducation $record) => "Level: {$record->level}"),
 
                 TextColumn::make('total_paid')
                     ->label('Paid')
-                    ->state(fn (OrphanEducation $record) => $record->total_paid)
+                    ->state(fn(OrphanEducation $record) => $record->total_paid)
                     ->money('NGN')
                     ->color('success')
                     ->alignEnd(),
 
                 TextColumn::make('balance')
                     ->label('Balance')
-                    ->state(fn (OrphanEducation $record) => $record->balance)
+                    ->state(fn(OrphanEducation $record) => $record->balance)
                     ->money('NGN')
-                    ->color(fn ($state) => $state > 0 ? 'danger' : 'success')
+                    ->color(fn($state) => $state > 0 ? 'danger' : 'success')
                     ->weight('bold')
                     ->alignEnd(),
 

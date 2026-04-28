@@ -6,8 +6,8 @@ use App\Models\Orphan;
 use App\Models\Widow;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
@@ -62,13 +62,13 @@ class PrescriptionForm
                                 ->placeholder('Select category first')
                                 ->options(function (Get $get) {
                                     $type = $get('prescribable_type');
-                                    if (! $type) return [];
+                                    if (!$type) return [];
 
                                     return $type::query()->pluck('full_name', 'id');
                                 })
                                 ->searchable()
                                 ->required()
-                                ->hidden(fn (Get $get) => ! $get('prescribable_type')),
+                                ->hidden(fn(Get $get) => !$get('prescribable_type')),
 
                             Select::make('user_id')
                                 ->label('Staff Member')

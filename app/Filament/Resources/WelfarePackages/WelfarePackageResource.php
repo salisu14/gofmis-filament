@@ -6,6 +6,7 @@ use App\Filament\Resources\WelfarePackages\Pages\CreateWelfarePackage;
 use App\Filament\Resources\WelfarePackages\Pages\EditWelfarePackage;
 use App\Filament\Resources\WelfarePackages\Pages\ListWelfarePackages;
 use App\Filament\Resources\WelfarePackages\Schemas\WelfarePackageForm;
+use App\Filament\Resources\WelfarePackages\Schemas\WelfarePackageInfolist;
 use App\Filament\Resources\WelfarePackages\Tables\WelfarePackagesTable;
 use App\Models\WelfarePackage;
 use BackedEnum;
@@ -15,7 +16,6 @@ use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 class WelfarePackageResource extends Resource
 {
@@ -36,6 +36,11 @@ class WelfarePackageResource extends Resource
     public static function table(Table $table): Table
     {
         return WelfarePackagesTable::configure($table);
+    }
+
+    public static function infolist(Schema $schema): Schema
+    {
+        return WelfarePackageInfolist::configure($schema);
     }
 
     public static function getRelations(): array

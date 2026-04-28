@@ -17,8 +17,8 @@ class DateRangeFilter
             ])
             ->query(function (Builder $query, array $data): Builder {
                 return $query
-                    ->when($data['from'], fn ($q, $date) => $q->whereDate('date', '>=', $date))
-                    ->when($data['until'], fn ($q, $date) => $q->whereDate('date', '<=', $date));
+                    ->when($data['from'], fn($q, $date) => $q->whereDate('date', '>=', $date))
+                    ->when($data['until'], fn($q, $date) => $q->whereDate('date', '<=', $date));
             });
     }
 }

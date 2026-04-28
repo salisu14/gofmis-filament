@@ -9,7 +9,6 @@ use Filament\Actions\ForceDeleteBulkAction;
 use Filament\Actions\RestoreBulkAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
-use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 
 class EducationFeeInvoicesTable
@@ -42,12 +41,12 @@ class EducationFeeInvoicesTable
                 TextColumn::make('balance')
                     ->label('Balance')
                     ->money('NGN')
-                    ->color(fn ($state) => $state > 0 ? 'danger' : 'success')
+                    ->color(fn($state) => $state > 0 ? 'danger' : 'success')
                     ->weight('bold'),
 
                 TextColumn::make('status')
                     ->badge()
-                    ->color(fn (string $state): string => match ($state) {
+                    ->color(fn(string $state): string => match ($state) {
                         'paid' => 'success',
                         'partial' => 'warning',
                         'pending' => 'danger',

@@ -2,13 +2,11 @@
 
 namespace App\Filament\Resources\WelfarePackages\Schemas;
 
-use App\Enums\WelfarePackageStatus;
 use Filament\Forms\Components\DatePicker;
-use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
@@ -45,7 +43,7 @@ class WelfarePackageForm
                         DatePicker::make('end_date')
                             ->required()
                             ->native(false)
-                            ->minDate(fn (Get $get) => $get('start_date'))
+                            ->minDate(fn(Get $get) => $get('start_date'))
                             ->after('start_date'),
                     ])->columns(2),
 
@@ -78,7 +76,7 @@ class WelfarePackageForm
                             ->addActionLabel('Add Item')
                             ->reorderable()
                             ->collapsible()
-                            ->itemLabel(fn (array $state): ?string => $state['item_id'] ?? 'New Item'),
+                            ->itemLabel(fn(array $state): ?string => $state['item_id'] ?? 'New Item'),
                     ]),
             ]);
     }

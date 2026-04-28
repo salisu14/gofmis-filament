@@ -14,7 +14,7 @@ class ViewWelfarePackage extends ViewRecord
     {
         return [
             EditAction::make()
-                ->visible(fn () => $this->record->isDraft()),
+                ->visible(fn() => $this->record->isDraft()),
         ];
     }
 }

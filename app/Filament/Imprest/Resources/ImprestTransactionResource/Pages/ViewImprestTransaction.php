@@ -2,11 +2,10 @@
 
 namespace App\Filament\Imprest\Resources\ImprestTransactionResource\Pages;
 
-use App\Filament\Imprest\Resources\ImprestTransactionResource;
-use App\Models\ImprestTransaction;
-use App\Services\Contracts\Imprest\ImprestTransactionServiceInterface;
 use App\Data\Imprest\ApproveTransactionDto;
 use App\Data\Imprest\VoidTransactionDto;
+use App\Filament\Imprest\Resources\ImprestTransactionResource;
+use App\Services\Contracts\Imprest\ImprestTransactionServiceInterface;
 use Filament\Actions;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
@@ -22,7 +21,7 @@ class ViewImprestTransaction extends ViewRecord
 
         return [
             Actions\EditAction::make()
-                ->visible(fn (): bool => $record->status === 'pending'),
+                ->visible(fn(): bool => $record->status === 'pending'),
 
             Action::make('approve')
                 ->label('Approve')
@@ -31,8 +30,7 @@ class ViewImprestTransaction extends ViewRecord
                 ->requiresConfirmation()
                 ->modalHeading('Approve Transaction')
                 ->modalDescription('Approve this transaction and deduct from fund balance?')
-                ->visible(fn (): bool =>
-                    $record->status === 'pending' && auth()->user()->can('approve', $record)
+                ->visible(fn(): bool => $record->status === 'pending' && auth()->user()->can('approve', $record)
                 )
                 ->action(function () use ($record) {
                     $service = app(ImprestTransactionServiceInterface::class);
@@ -61,8 +59,7 @@ class ViewImprestTransaction extends ViewRecord
                 ])
                 ->requiresConfirmation()
                 ->modalHeading('Void Transaction')
-                ->visible(fn (): bool =>
-                    $record->isVoidable() && auth()->user()->can('void', $record)
+                ->visible(fn(): bool => $record->isVoidable() && auth()->user()->can('void', $record)
                 )
                 ->action(function (array $data) use ($record) {
                     $service = app(ImprestTransactionServiceInterface::class);
@@ -81,8 +78,7 @@ class ViewImprestTransaction extends ViewRecord
                 }),
 
             Actions\DeleteAction::make()
-                ->visible(fn (): bool =>
-                    $record->status === 'pending' && auth()->user()->hasRole('admin')
+                ->visible(fn(): bool => $record->status === 'pending' && auth()->user()->hasRole('admin')
                 ),
         ];
     }

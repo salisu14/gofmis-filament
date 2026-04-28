@@ -49,7 +49,7 @@ class MedicationsTable
             ->filters([
                 Filter::make('has_usage')
                     ->label('Used in Prescriptions')
-                    ->query(fn ($query) => $query->has('prescriptions')),
+                    ->query(fn($query) => $query->has('prescriptions')),
             ])
             ->recordActions([
                 EditAction::make(),

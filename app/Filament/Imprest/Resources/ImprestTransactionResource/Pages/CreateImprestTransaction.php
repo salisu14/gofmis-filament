@@ -2,13 +2,13 @@
 
 namespace App\Filament\Imprest\Resources\ImprestTransactionResource\Pages;
 
-use App\Filament\Imprest\Resources\ImprestTransactionResource;
 use App\Data\Imprest\CreateTransactionDto;
 use App\Enums\PaymentMethod;
 use App\Enums\TransactionCategory;
+use App\Filament\Imprest\Resources\ImprestTransactionResource;
 use App\Services\Contracts\Imprest\ImprestTransactionServiceInterface;
-use Filament\Resources\Pages\CreateRecord;
 use Filament\Notifications\Notification;
+use Filament\Resources\Pages\CreateRecord;
 
 class CreateImprestTransaction extends CreateRecord
 {
@@ -24,8 +24,8 @@ class CreateImprestTransaction extends CreateRecord
             deceasedId: $data['deceased_id'],
             name: $data['name'],
             itemService: $data['item_service'],
-            quantity: (float) $data['quantity'],
-            unitPrice: (float) $data['unit_price'],
+            quantity: (float)$data['quantity'],
+            unitPrice: (float)$data['unit_price'],
             category: TransactionCategory::from($data['category']),
             paymentMethod: PaymentMethod::from($data['payment_method']),
             receiptAttached: $data['receipt_attached'] ?? false,

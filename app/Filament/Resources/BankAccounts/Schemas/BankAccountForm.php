@@ -74,7 +74,7 @@ class BankAccountForm
 
                         Placeholder::make('available_balance')
                             ->label('Available for Disbursement')
-                            ->content(fn ($record) => $record
+                            ->content(fn($record) => $record
                                 ? '₦ ' . number_format($record->ledger_balance - $record->reserved_balance, 2)
                                 : '₦ 0.00'
                             )

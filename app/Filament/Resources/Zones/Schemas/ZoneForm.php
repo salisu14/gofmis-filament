@@ -6,8 +6,8 @@ use App\Models\City;
 use App\Models\State;
 use App\Models\Town;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 
@@ -37,7 +37,7 @@ class ZoneForm
                             ->options(State::all()->pluck('name', 'id'))
                             ->searchable()
                             ->reactive()
-                            ->afterStateUpdated(fn (callable $set) => [
+                            ->afterStateUpdated(fn(callable $set) => [
                                 $set('city_id', null),
                                 $set('town_id', null),
                             ]),
@@ -51,8 +51,8 @@ class ZoneForm
                             })
                             ->searchable()
                             ->reactive()
-                            ->afterStateUpdated(fn (callable $set) => $set('town_id', null))
-                            ->disabled(fn (callable $get) => !$get('state_id')),
+                            ->afterStateUpdated(fn(callable $set) => $set('town_id', null))
+                            ->disabled(fn(callable $get) => !$get('state_id')),
 
                         Select::make('town_id')
                             ->label('Town')
@@ -64,8 +64,20 @@ class ZoneForm
                             })
                             ->searchable()
                             ->required()
-                            ->disabled(fn (callable $get) => !$get('city_id')),
+                            ->disabled(fn(callable $get) => !$get('city_id')),
                     ])->columns(3),
+                
+                Section::make('Coordinator Information')
+                    ->description('Primary contact person for this zone.')
+                    ->schema([
+                        TextInput::make('coordinator_name')
+                            ->label('Full Name')
+                            ->placeholder('Coordinator full name'),
+                        TextInput::make('coordinator_phone')
+                            ->label('Contact Number')
+                            ->tel()
+                            ->placeholder('e.g. +234...'),
+                    ])->columns(2),
             ]);
     }
 }

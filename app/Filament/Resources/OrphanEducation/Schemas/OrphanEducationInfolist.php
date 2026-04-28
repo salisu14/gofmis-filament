@@ -53,16 +53,16 @@ class OrphanEducationInfolist
 
                             TextEntry::make('total_paid')
                                 ->label('Total Paid (To Date)')
-                                ->state(fn (OrphanEducation $record) => $record->total_paid)
+                                ->state(fn(OrphanEducation $record) => $record->total_paid)
                                 ->money('NGN')
                                 ->color('success')
                                 ->weight('bold'),
 
                             TextEntry::make('balance')
                                 ->label('Current Balance')
-                                ->state(fn (OrphanEducation $record) => $record->balance)
+                                ->state(fn(OrphanEducation $record) => $record->balance)
                                 ->money('NGN')
-                                ->color(fn ($state) => $state > 0 ? 'danger' : 'success')
+                                ->color(fn($state) => $state > 0 ? 'danger' : 'success')
                                 ->weight('bold'),
 
                             IconEntry::make('is_fee_supported')
@@ -73,7 +73,7 @@ class OrphanEducationInfolist
                         TextEntry::make('support_amount')
                             ->label('Sponsorship Contribution')
                             ->money('NGN')
-                            ->visible(fn ($record) => $record->is_fee_supported)
+                            ->visible(fn($record) => $record->is_fee_supported)
                             ->placeholder('0.00'),
                     ]),
 
@@ -104,7 +104,7 @@ class OrphanEducationInfolist
                             TextEntry::make('deleted_at')
                                 ->label('Archived On')
                                 ->dateTime()
-                                ->visible(fn ($record) => $record->trashed()),
+                                ->visible(fn($record) => $record->trashed()),
                         ]),
                     ]),
             ]);

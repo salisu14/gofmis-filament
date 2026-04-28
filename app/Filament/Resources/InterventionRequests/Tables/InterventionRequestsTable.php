@@ -32,7 +32,7 @@ class InterventionRequestsTable
 
                 TextColumn::make('status')
                     ->badge()
-                    ->color(fn (string $state): string => match ($state) {
+                    ->color(fn(string $state): string => match ($state) {
                         'fulfilled' => 'success',
                         'pending' => 'warning',
                         'rejected' => 'danger',
@@ -42,7 +42,7 @@ class InterventionRequestsTable
                 TextColumn::make('verification_status')
                     ->label('Verified')
                     ->badge()
-                    ->color(fn ($state) => $state === 'verified' ? 'success' : 'gray'),
+                    ->color(fn($state) => $state === 'verified' ? 'success' : 'gray'),
             ])
             ->filters([
                 SelectFilter::make('status'),

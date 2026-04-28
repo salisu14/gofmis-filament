@@ -59,13 +59,13 @@ class WidowLoanInfolist
                                 ->money('NGN')
                                 ->color('success')
                                 ->weight('bold')
-                                ->state(fn (WidowLoan $record) => $record->repayments()->sum('amount')),
+                                ->state(fn(WidowLoan $record) => $record->repayments()->sum('amount')),
 
                             TextEntry::make('outstanding_balance')
                                 ->label('Remaining Balance')
                                 ->money('NGN')
-                                ->state(fn (WidowLoan $record) => (float) $record->total_payable - (float) $record->repayments()->sum('amount'))
-                                ->color(fn ($state) => $state > 0 ? 'danger' : 'success')
+                                ->state(fn(WidowLoan $record) => (float)$record->total_payable - (float)$record->repayments()->sum('amount'))
+                                ->color(fn($state) => $state > 0 ? 'danger' : 'success')
                                 ->weight('bold'),
                         ]),
                     ]),
@@ -87,7 +87,7 @@ class WidowLoanInfolist
                             TextEntry::make('loan_agreement_url')
                                 ->label('Agreement File')
                                 ->placeholder('No Document Attached')
-                                ->url(fn ($record) => $record->loan_agreement_url ? asset('storage/' . $record->loan_agreement_url) : null)
+                                ->url(fn($record) => $record->loan_agreement_url ? asset('storage/' . $record->loan_agreement_url) : null)
                                 ->openUrlInNewTab()
                                 ->color('primary')
                                 ->icon('heroicon-m-paper-clip'),
@@ -95,7 +95,7 @@ class WidowLoanInfolist
 
                         TextEntry::make('reject_reason')
                             ->label('Rejection Narrative')
-                            ->visible(fn ($record) => $record->status === WidowLoanStatus::REJECTED)
+                            ->visible(fn($record) => $record->status === WidowLoanStatus::REJECTED)
                             ->columnSpanFull()
                             ->placeholder('No specific reason provided'),
                     ]),

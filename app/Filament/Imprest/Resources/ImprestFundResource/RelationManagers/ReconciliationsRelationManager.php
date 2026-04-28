@@ -39,11 +39,11 @@ class ReconciliationsRelationManager extends RelationManager
                 Tables\Columns\TextColumn::make('actual_variance')
                     ->money('NGN')
                     ->alignment('right')
-                    ->color(fn ($record) => $record->isBalanced() ? 'success' : 'danger'),
+                    ->color(fn($record) => $record->isBalanced() ? 'success' : 'danger'),
 
                 Tables\Columns\TextColumn::make('status')
                     ->badge()
-                    ->color(fn (string $state): string => match ($state) {
+                    ->color(fn(string $state): string => match ($state) {
                         'completed' => 'success',
                         'in_progress' => 'warning',
                         'flagged' => 'danger',
@@ -55,7 +55,7 @@ class ReconciliationsRelationManager extends RelationManager
             ])
             ->recordActions([
                 ViewAction::make()
-                    ->url(fn ($record) => ImprestReconciliationResource::getUrl('view', ['record' => $record])),
+                    ->url(fn($record) => ImprestReconciliationResource::getUrl('view', ['record' => $record])),
             ])
             ->defaultSort('reconciliation_date', 'desc');
     }

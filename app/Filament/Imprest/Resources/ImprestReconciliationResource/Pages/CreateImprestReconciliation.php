@@ -2,11 +2,11 @@
 
 namespace App\Filament\Imprest\Resources\ImprestReconciliationResource\Pages;
 
-use App\Filament\Imprest\Resources\ImprestReconciliationResource;
 use App\Data\Imprest\ReconcileFundDto;
+use App\Filament\Imprest\Resources\ImprestReconciliationResource;
 use App\Services\Contracts\Imprest\ImprestReconciliationServiceInterface;
-use Filament\Resources\Pages\CreateRecord;
 use Filament\Notifications\Notification;
+use Filament\Resources\Pages\CreateRecord;
 
 class CreateImprestReconciliation extends CreateRecord
 {
@@ -19,8 +19,8 @@ class CreateImprestReconciliation extends CreateRecord
         $dto = new ReconcileFundDto(
             fundId: $data['fund_id'],
             reconciliationDate: \Carbon\Carbon::parse($data['reconciliation_date']),
-            cashOnHand: (float) $data['cash_on_hand'],
-            receiptsTotal: (float) ($data['receipts_total'] ?? 0),
+            cashOnHand: (float)$data['cash_on_hand'],
+            receiptsTotal: (float)($data['receipts_total'] ?? 0),
             auditorId: auth()->id(),
             custodianId: $data['custodian_id'],
             notes: $data['notes'] ?? null,

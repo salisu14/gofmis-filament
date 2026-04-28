@@ -3,6 +3,9 @@
 namespace App\Filament\Resources\WidowLoans\RelationManagers;
 
 use App\Models\WidowLoan;
+use Filament\Actions\CreateAction;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\EditAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -11,13 +14,11 @@ use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
-use Filament\Actions\CreateAction;
-use Filament\Actions\EditAction;
-use Filament\Actions\DeleteAction;
 
 /* -----------------------------
  | 1. LOAN SCHEDULES MANAGER
  ------------------------------*/
+
 class SchedulesRelationManager extends RelationManager
 {
     protected static ?string $model = WidowLoan::class;

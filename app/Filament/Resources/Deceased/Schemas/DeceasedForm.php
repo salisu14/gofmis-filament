@@ -14,11 +14,11 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Group;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Schema;
-use Filament\Schemas\Components\Grid;
 
 class DeceasedForm
 {
@@ -48,7 +48,7 @@ class DeceasedForm
                                         ->label('Registration No')
                                         ->unique(ignoreRecord: true)
                                         // Lock the field if the record already exists in the database
-                                        ->disabled(fn (?Deceased $record) => $record !== null)
+                                        ->disabled(fn(?Deceased $record) => $record !== null)
                                         // Ensure the value is still sent to the database during creation
                                         ->dehydrated()
                                         ->extraInputAttributes(['style' => 'text-transform: uppercase'])
@@ -84,7 +84,7 @@ class DeceasedForm
                                             ->reactive(),
                                         FileUpload::make('death_cert_url')
                                             ->label('Certificate Scan')
-                                            ->visible(fn ($get) => $get('has_death_cert'))
+                                            ->visible(fn($get) => $get('has_death_cert'))
                                             ->directory('death-certs'),
                                     ])->columns(2),
                             ]),
@@ -99,27 +99,27 @@ class DeceasedForm
                                         ->searchable()
                                         ->reactive()
                                         ->dehydrated(false)
-                                        ->afterStateUpdated(fn ($set) => $set('city_id', null)),
+                                        ->afterStateUpdated(fn($set) => $set('city_id', null)),
 
                                     Select::make('city_id')
                                         ->label('City')
-                                        ->options(fn ($get) => City::where('state_id', $get('state_id'))->pluck('name', 'id'))
+                                        ->options(fn($get) => City::where('state_id', $get('state_id'))->pluck('name', 'id'))
                                         ->searchable()
                                         ->reactive()
                                         ->dehydrated(false)
-                                        ->afterStateUpdated(fn ($set) => $set('town_id', null)),
+                                        ->afterStateUpdated(fn($set) => $set('town_id', null)),
 
                                     Select::make('town_id')
                                         ->label('Town')
-                                        ->options(fn ($get) => Town::where('city_id', $get('city_id'))->pluck('name', 'id'))
+                                        ->options(fn($get) => Town::where('city_id', $get('city_id'))->pluck('name', 'id'))
                                         ->searchable()
                                         ->reactive()
                                         ->dehydrated(false)
-                                        ->afterStateUpdated(fn ($set) => $set('zone_id', null)),
+                                        ->afterStateUpdated(fn($set) => $set('zone_id', null)),
 
                                     Select::make('zone_id')
                                         ->label('Zone')
-                                        ->options(fn ($get) => Zone::where('town_id', $get('town_id'))->pluck('name', 'id'))
+                                        ->options(fn($get) => Zone::where('town_id', $get('town_id'))->pluck('name', 'id'))
                                         ->searchable()
                                         ->required()
                                         ->relationship('zone', 'name')
@@ -132,7 +132,7 @@ class DeceasedForm
 
                                 Group::make()->schema([
                                     TextInput::make('guardian_name')
-                                    ->required(),
+                                        ->required(),
                                     TextInput::make('guardian_phone')->tel(),
                                 ])->columns(2),
                             ]),

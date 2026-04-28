@@ -42,7 +42,7 @@ class InstitutionsTable
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true)
-                    ->formatStateUsing(fn ($state) => $state ? 'Deleted' : 'Active'),
+                    ->formatStateUsing(fn($state) => $state ? 'Deleted' : 'Active'),
 
                 TextColumn::make('created_at')
                     ->dateTime()

@@ -47,11 +47,6 @@ class WidowLoanResource extends Resource
         ];
     }
 
-    public function getActiveRelationManager(): int
-    {
-        return (int) request()->query('relation', 0);
-    }
-
     public static function getPages(): array
     {
         return [
@@ -68,5 +63,10 @@ class WidowLoanResource extends Resource
             ->withoutGlobalScopes([
                 SoftDeletingScope::class,
             ]);
+    }
+
+    public function getActiveRelationManager(): int
+    {
+        return (int)request()->query('relation', 0);
     }
 }

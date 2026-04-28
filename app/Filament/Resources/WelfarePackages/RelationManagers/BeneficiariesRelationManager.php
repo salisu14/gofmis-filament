@@ -51,8 +51,8 @@ class BeneficiariesRelationManager extends RelationManager
                     ->visibleOn('edit'),
 
                 Textarea::make('rejection_reason')
-                    ->visible(fn (Get $get) => $get('status') === BeneficiaryStatus::REJECTED->value)
-                    ->required(fn (Get $get) => $get('status') === BeneficiaryStatus::REJECTED->value),
+                    ->visible(fn(Get $get) => $get('status') === BeneficiaryStatus::REJECTED->value)
+                    ->required(fn(Get $get) => $get('status') === BeneficiaryStatus::REJECTED->value),
             ]);
     }
 
@@ -76,13 +76,13 @@ class BeneficiariesRelationManager extends RelationManager
 
                 TextColumn::make('status')
                     ->badge()
-                    ->color(fn (BeneficiaryStatus $state): string => $state->color())
-                    ->icon(fn (BeneficiaryStatus $state): string => $state->icon()),
+                    ->color(fn(BeneficiaryStatus $state): string => $state->color())
+                    ->icon(fn(BeneficiaryStatus $state): string => $state->icon()),
 
                 TextColumn::make('collection_status')
                     ->badge()
-                    ->color(fn (CollectionStatus $state): string => $state->color())
-                    ->icon(fn (CollectionStatus $state): string => $state->icon()),
+                    ->color(fn(CollectionStatus $state): string => $state->color())
+                    ->icon(fn(CollectionStatus $state): string => $state->icon()),
 
                 TextColumn::make('collected_at')
                     ->dateTime('M d, Y H:i')
@@ -102,13 +102,13 @@ class BeneficiariesRelationManager extends RelationManager
                     ->options(CollectionStatus::class),
 
                 Filter::make('ready_for_collection')
-                    ->query(fn ($query) => $query->readyForCollection())
+                    ->query(fn($query) => $query->readyForCollection())
                     ->toggle(),
             ])
             ->headerActions([
                 CreateAction::make()
                     ->label('Suggest Beneficiary')
-                    ->visible(fn () => $this->getOwnerRecord()->isOpen())
+                    ->visible(fn() => $this->getOwnerRecord()->isOpen())
                     ->mutateDataUsing(function (array $data) {
                         $data['suggested_by'] = auth()->id();
                         $data['status'] = BeneficiaryStatus::PENDING;
@@ -124,7 +124,7 @@ class BeneficiariesRelationManager extends RelationManager
                         ->icon('heroicon-o-check-circle')
                         ->color('success')
                         ->requiresConfirmation()
-                        ->visible(fn (WelfareBeneficiary $record): bool => $record->canBeApproved())
+                        ->visible(fn(WelfareBeneficiary $record): bool => $record->canBeApproved())
                         ->action(function (WelfareBeneficiary $record) {
                             app(BeneficiaryService::class)->approveBeneficiary($record);
                         }),
@@ -137,7 +137,7 @@ class BeneficiariesRelationManager extends RelationManager
                                 ->required()
                                 ->label('Rejection Reason'),
                         ])
-                        ->visible(fn (WelfareBeneficiary $record): bool => $record->canBeRejected())
+                        ->visible(fn(WelfareBeneficiary $record): bool => $record->canBeRejected())
                         ->action(function (WelfareBeneficiary $record, array $data) {
                             app(BeneficiaryService::class)->rejectBeneficiary($record, $data['reason']);
                         }),
@@ -151,7 +151,7 @@ class BeneficiariesRelationManager extends RelationManager
                             Textarea::make('notes')
                                 ->label('Collection Notes'),
                         ])
-                        ->visible(fn (WelfareBeneficiary $record): bool => $record->canBeCollected())
+                        ->visible(fn(WelfareBeneficiary $record): bool => $record->canBeCollected())
                         ->action(function (WelfareBeneficiary $record, array $data) {
                             app(BeneficiaryService::class)->collectPackage(
                                 $record,
@@ -160,10 +160,10 @@ class BeneficiariesRelationManager extends RelationManager
                         }),
 
                     EditAction::make()
-                        ->visible(fn (WelfareBeneficiary $record): bool => $record->isPending()),
+                        ->visible(fn(WelfareBeneficiary $record): bool => $record->isPending()),
 
                     DeleteAction::make()
-                        ->visible(fn (WelfareBeneficiary $record): bool => $record->isPending()),
+                        ->visible(fn(WelfareBeneficiary $record): bool => $record->isPending()),
                 ]),
             ])
             ->toolbarActions([

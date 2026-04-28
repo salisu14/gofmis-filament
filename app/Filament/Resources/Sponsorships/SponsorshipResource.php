@@ -44,7 +44,7 @@ class SponsorshipResource extends Resource
     public static function getRelations(): array
     {
         return [
-                RelationManagers\AllocationsRelationManager::class,
+            RelationManagers\AllocationsRelationManager::class,
         ];
     }
 

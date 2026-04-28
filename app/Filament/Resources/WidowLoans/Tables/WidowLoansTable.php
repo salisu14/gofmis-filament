@@ -11,7 +11,6 @@ use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
-use Illuminate\Support\Facades\DB;
 
 class WidowLoansTable
 {
@@ -33,8 +32,8 @@ class WidowLoansTable
                 TextColumn::make('outstanding_balance')
                     ->label('Remaining Balance')
                     ->money('NGN')
-                    ->state(fn (WidowLoan $record) => (float) $record->total_payable - (float) $record->total_paid)
-                    ->color(fn ($state) => $state > 0 ? 'danger' : 'success')
+                    ->state(fn(WidowLoan $record) => (float)$record->total_payable - (float)$record->total_paid)
+                    ->color(fn($state) => $state > 0 ? 'danger' : 'success')
                     ->weight('bold'),
 
                 TextColumn::make('status')
@@ -43,7 +42,7 @@ class WidowLoansTable
 
                 TextColumn::make('repayment_progress')
                     ->label('Repaid')
-                    ->state(fn (WidowLoan $record) => $record->total_payable > 0
+                    ->state(fn(WidowLoan $record) => $record->total_payable > 0
                         ? round(($record->total_paid / $record->total_payable) * 100) . '%'
                         : '0%')
                     ->badge()
@@ -65,8 +64,8 @@ class WidowLoansTable
                     ->icon('heroicon-m-calendar-days')
                     ->color('warning')
                     ->requiresConfirmation()
-                    ->visible(fn (WidowLoan $record) => $record->status === WidowLoanStatus::APPROVED && $record->schedules()->count() === 0)
-                    ->action(fn (WidowLoan $record) => $record->generateLedger()),
+                    ->visible(fn(WidowLoan $record) => $record->status === WidowLoanStatus::APPROVED && $record->schedules()->count() === 0)
+                    ->action(fn(WidowLoan $record) => $record->generateLedger()),
 
                 ViewAction::make(),
                 EditAction::make(),

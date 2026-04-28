@@ -2,6 +2,9 @@
 
 namespace App\Filament\Resources\InterventionRequests\RelationManagers;
 
+use Filament\Actions\CreateAction;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\EditAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Hidden;
@@ -11,9 +14,6 @@ use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
-use Filament\Actions\CreateAction;
-use Filament\Actions\EditAction;
-use Filament\Actions\DeleteAction;
 
 class InterventionsRelationManager extends RelationManager
 {
@@ -47,7 +47,7 @@ class InterventionsRelationManager extends RelationManager
 
                 // Automatically link the orphan from the parent request
                 Hidden::make('orphan_id')
-                    ->default(fn (RelationManager $livewire) => $livewire->getOwnerRecord()->orphan_id),
+                    ->default(fn(RelationManager $livewire) => $livewire->getOwnerRecord()->orphan_id),
             ]);
     }
 

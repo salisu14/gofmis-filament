@@ -84,8 +84,8 @@ class OrphanEducationForm
                                 ->label('Sponsorship Amount')
                                 ->numeric()
                                 ->prefix('₦')
-                                ->visible(fn (Get $get) => $get('is_fee_supported'))
-                                ->required(fn (Get $get) => $get('is_fee_supported')),
+                                ->visible(fn(Get $get) => $get('is_fee_supported'))
+                                ->required(fn(Get $get) => $get('is_fee_supported')),
                         ])->columns(2),
                     ]),
 

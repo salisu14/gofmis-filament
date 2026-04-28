@@ -19,7 +19,7 @@ class EducationFeeInvoiceForm
                         Select::make('orphan_education_id')
                             ->label('Education Record')
                             ->relationship('education', 'id')
-                            ->getOptionLabelFromRecordUsing(fn ($record) => "{$record->orphan->full_name} — {$record->institution->name} ({$record->level})")
+                            ->getOptionLabelFromRecordUsing(fn($record) => "{$record->orphan->full_name} — {$record->institution->name} ({$record->level})")
                             ->searchable()
                             ->preload()
                             ->required()

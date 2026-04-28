@@ -63,10 +63,10 @@ class CitiesRelationManager extends RelationManager
                     ->label('Manage Towns')
                     ->icon('heroicon-m-map-pin')
                     ->color('info')
-                    ->modalHeading(fn (City $record) => "Towns in {$record->name}")
+                    ->modalHeading(fn(City $record) => "Towns in {$record->name}")
                     ->modalDescription('Add or remove towns belonging to this city.')
                     ->modalSubmitActionLabel('Save Changes')
-                    ->fillForm(fn (City $record): array => [
+                    ->fillForm(fn(City $record): array => [
                         'towns' => $record->towns->toArray(),
                     ])
                     ->schema([
@@ -78,7 +78,7 @@ class CitiesRelationManager extends RelationManager
                                     ->placeholder('Enter town name'),
                             ])
                             ->grid(2)
-                            ->itemLabel(fn (array $state): ?string => $state['name'] ?? null)
+                            ->itemLabel(fn(array $state): ?string => $state['name'] ?? null)
                             ->defaultItems(0)
                             ->reorderableWithButtons()
                             ->collapsible()

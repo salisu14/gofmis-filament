@@ -16,8 +16,7 @@ class EditImprestTransaction extends EditRecord
         return [
             Actions\ViewAction::make(),
             Actions\DeleteAction::make()
-                ->visible(fn (ImprestTransaction $record): bool =>
-                    $record->status === 'pending' && auth()->user()->hasRole('admin')
+                ->visible(fn(ImprestTransaction $record): bool => $record->status === 'pending' && auth()->user()->hasRole('admin')
                 ),
         ];
     }

@@ -9,8 +9,8 @@ use Filament\Widgets\TableWidget as BaseWidget;
 
 class RecentActivityWidget extends BaseWidget
 {
-    protected int|string|array $columnSpan = 'full';
     protected static ?string $heading = 'Recent Audit Activity';
+    protected int|string|array $columnSpan = 'full';
 
     public function table(Table $table): Table
     {
@@ -32,11 +32,11 @@ class RecentActivityWidget extends BaseWidget
 
                 Tables\Columns\TextColumn::make('auditable_type')
                     ->label('Entity')
-                    ->formatStateUsing(fn (string $state): string => class_basename($state)),
+                    ->formatStateUsing(fn(string $state): string => class_basename($state)),
 
                 Tables\Columns\TextColumn::make('action')
                     ->badge()
-                    ->color(fn (string $state): string => match ($state) {
+                    ->color(fn(string $state): string => match ($state) {
                         'created' => 'success',
                         'approved' => 'primary',
                         'voided' => 'danger',

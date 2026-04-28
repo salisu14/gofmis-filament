@@ -34,6 +34,114 @@ class OrphansRelationManager extends RelationManager
     protected static ?string $title = 'Orphans';
     protected static string|null|\BackedEnum $icon = 'heroicon-o-user-group';
 
+    public function table(Table $table): Table
+    {
+        return $table
+            ->columns([
+                Tables\Columns\ImageColumn::make('picture_url')
+                    ->label('Photo')
+                    ->circular()
+                    ->disk('public'),
+
+                Tables\Columns\TextColumn::make('full_name')
+                    ->label('Name')
+                    ->searchable(['first_name', 'middle_name', 'last_name'])
+                    ->weight('bold'),
+
+                Tables\Columns\TextColumn::make('gender')
+                    ->badge(),
+
+                Tables\Columns\TextColumn::make('age')
+                    ->label('Age')
+                    ->state(fn($record) => $record->age ?? 'N/A'),
+
+                Tables\Columns\TextColumn::make('reg_no')
+                    ->label('Reg No')
+                    ->badge(),
+
+                Tables\Columns\IconColumn::make('is_eligible')
+                    ->label('Eligible')
+                    ->boolean()
+                    ->alignCenter(),
+            ])
+            ->headerActions([
+                CreateAction::make()
+                    ->label('Add Orphan')
+                    ->icon('heroicon-m-plus')
+                    ->modalWidth('4xl')
+                    ->mutateDataUsing(function (array $data, RelationManager $livewire): array {
+
+                        $deceased = $livewire->getOwnerRecord();
+
+                        $generated = app(RegistrationNumberService::class)
+                            ->generateOrphanData($deceased);
+
+                        return array_merge($data, $generated);
+                    })
+            ])
+            ->recordActions([
+                // IMPROVED MEDICAL RECORDS ACTION
+                Action::make('manageMedical')
+                    ->label('Medical')
+                    ->icon('heroicon-m-beaker')
+                    ->color('success')
+                    ->modalHeading(fn(Orphan $record) => "Medical History: {$record->full_name}")
+                    ->modalWidth('5xl')
+                    ->modalSubmitActionLabel('Save Updates')
+                    ->form([
+                        Repeater::make('prescriptions')
+                            ->relationship('prescriptions')
+                            ->schema([
+                                Grid::make(3)->schema([
+                                    TextInput::make('doctor_name')
+                                        ->required()
+                                        ->placeholder('Attending Doctor'),
+                                    TextInput::make('illness')
+                                        ->label('Diagnosis')
+                                        ->required()
+                                        ->placeholder('Illness or reason for visit'),
+                                    DatePicker::make('prescription_date')
+                                        ->default(now())
+                                        ->required()
+                                        ->native(false),
+                                ]),
+                                Grid::make(2)->schema([
+                                    TextInput::make('lab_test_cost')
+                                        ->numeric()
+                                        ->prefix('₦')
+                                        ->default(0),
+                                    TextInput::make('drug_cost')
+                                        ->numeric()
+                                        ->prefix('₦')
+                                        ->default(0),
+                                ]),
+                                Select::make('medications')
+                                    ->multiple()
+                                    ->relationship('medications', 'name')
+                                    ->preload()
+                                    ->searchable()
+                                    ->hint('Search by drug name.'),
+                                Textarea::make('note')
+                                    ->label('Prescription Note')
+                                    ->rows(2)
+                                    ->placeholder('Dosage details or observations...')
+                                    ->columnSpanFull(),
+                                Hidden::make('user_id')
+                                    ->default(auth()->id()),
+                            ])
+                            ->itemLabel(fn(array $state): ?string => ($state['illness'] ?? null) . ($state['prescription_date'] ? " (" . date('d/m/Y', strtotime($state['prescription_date'])) . ")" : ""))
+                            ->collapsible()
+                            ->collapsed()
+                            ->cloneable()
+                            ->addActionLabel('New Medical Record'),
+                    ])
+                    ->action(fn(Orphan $record) => $record->touch()),
+
+                EditAction::make()->modalWidth('4xl'),
+                DeleteAction::make(),
+            ]);
+    }
+
     public function form(Schema $schema): Schema
     {
         return $schema
@@ -112,8 +220,8 @@ class OrphansRelationManager extends RelationManager
                         DatePicker::make('married_at')
                             ->label('Marriage Date')
                             ->native(false)
-                            ->visible(fn (Get $get) => $get('is_married'))
-                            ->required(fn (Get $get) => $get('is_married'))
+                            ->visible(fn(Get $get) => $get('is_married'))
+                            ->required(fn(Get $get) => $get('is_married'))
                             ->columnSpanFull(),
                     ]),
 
@@ -145,7 +253,7 @@ class OrphansRelationManager extends RelationManager
                                         ->default(true),
                                 ]),
                             ])
-                            ->itemLabel(fn (array $state): ?string => $state['level'] ?? null)
+                            ->itemLabel(fn(array $state): ?string => $state['level'] ?? null)
                             ->collapsible()
                             ->collapsed()
                             ->addActionLabel('Add Enrollment Record')
@@ -187,7 +295,7 @@ class OrphansRelationManager extends RelationManager
                                             ->live(),
                                         FileUpload::make('birth_certificate_path')
                                             ->label('Certificate Scan')
-                                            ->visible(fn ($get) => $get('has_birth_cert'))
+                                            ->visible(fn($get) => $get('has_birth_cert'))
                                             ->directory('birth-certificates')
                                             ->disk('public')
                                             ->acceptedFileTypes(['application/pdf', 'image/*']),
@@ -200,114 +308,6 @@ class OrphansRelationManager extends RelationManager
                             ->required()
                             ->columnSpanFull(),
                     ]),
-            ]);
-    }
-
-    public function table(Table $table): Table
-    {
-        return $table
-            ->columns([
-                Tables\Columns\ImageColumn::make('picture_url')
-                    ->label('Photo')
-                    ->circular()
-                    ->disk('public'),
-
-                Tables\Columns\TextColumn::make('full_name')
-                    ->label('Name')
-                    ->searchable(['first_name', 'middle_name', 'last_name'])
-                    ->weight('bold'),
-
-                Tables\Columns\TextColumn::make('gender')
-                    ->badge(),
-
-                Tables\Columns\TextColumn::make('age')
-                    ->label('Age')
-                    ->state(fn ($record) => $record->age ?? 'N/A'),
-
-                Tables\Columns\TextColumn::make('reg_no')
-                    ->label('Reg No')
-                    ->badge(),
-
-                Tables\Columns\IconColumn::make('is_eligible')
-                    ->label('Eligible')
-                    ->boolean()
-                    ->alignCenter(),
-            ])
-            ->headerActions([
-                CreateAction::make()
-                    ->label('Add Orphan')
-                    ->icon('heroicon-m-plus')
-                    ->modalWidth('4xl')
-                    ->mutateDataUsing(function (array $data, RelationManager $livewire): array {
-
-                        $deceased = $livewire->getOwnerRecord();
-
-                        $generated = app(RegistrationNumberService::class)
-                            ->generateOrphanData($deceased);
-
-                        return array_merge($data, $generated);
-                    })
-            ])
-            ->recordActions([
-                // IMPROVED MEDICAL RECORDS ACTION
-                Action::make('manageMedical')
-                    ->label('Medical')
-                    ->icon('heroicon-m-beaker')
-                    ->color('success')
-                    ->modalHeading(fn (Orphan $record) => "Medical History: {$record->full_name}")
-                    ->modalWidth('5xl')
-                    ->modalSubmitActionLabel('Save Updates')
-                    ->form([
-                        Repeater::make('prescriptions')
-                            ->relationship('prescriptions')
-                            ->schema([
-                                Grid::make(3)->schema([
-                                    TextInput::make('doctor_name')
-                                        ->required()
-                                        ->placeholder('Attending Doctor'),
-                                    TextInput::make('illness')
-                                        ->label('Diagnosis')
-                                        ->required()
-                                        ->placeholder('Illness or reason for visit'),
-                                    DatePicker::make('prescription_date')
-                                        ->default(now())
-                                        ->required()
-                                        ->native(false),
-                                ]),
-                                Grid::make(2)->schema([
-                                    TextInput::make('lab_test_cost')
-                                        ->numeric()
-                                        ->prefix('₦')
-                                        ->default(0),
-                                    TextInput::make('drug_cost')
-                                        ->numeric()
-                                        ->prefix('₦')
-                                        ->default(0),
-                                ]),
-                                Select::make('medications')
-                                    ->multiple()
-                                    ->relationship('medications', 'name')
-                                    ->preload()
-                                    ->searchable()
-                                    ->hint('Search by drug name.'),
-                                Textarea::make('note')
-                                    ->label('Prescription Note')
-                                    ->rows(2)
-                                    ->placeholder('Dosage details or observations...')
-                                    ->columnSpanFull(),
-                                Hidden::make('user_id')
-                                    ->default(auth()->id()),
-                            ])
-                            ->itemLabel(fn (array $state): ?string => ($state['illness'] ?? null) . ($state['prescription_date'] ? " (" . date('d/m/Y', strtotime($state['prescription_date'])) . ")" : ""))
-                            ->collapsible()
-                            ->collapsed()
-                            ->cloneable()
-                            ->addActionLabel('New Medical Record'),
-                    ])
-                    ->action(fn (Orphan $record) => $record->touch()),
-
-                EditAction::make()->modalWidth('4xl'),
-                DeleteAction::make(),
             ]);
     }
 }

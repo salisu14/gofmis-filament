@@ -8,8 +8,8 @@ use App\Models\Widow;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
@@ -53,7 +53,7 @@ class WidowLoanForm
                                 ->prefix('₦')
                                 ->required()
                                 ->live(onBlur: true)
-                                ->afterStateUpdated(fn ($state, $set) => $set('total_payable', (float)$state)),
+                                ->afterStateUpdated(fn($state, $set) => $set('total_payable', (float)$state)),
 
                             Select::make('repayment_frequency')
                                 ->label('Repayment Frequency')
@@ -73,8 +73,8 @@ class WidowLoanForm
                                 ->required()
                                 ->live(onBlur: true)
                                 ->afterStateUpdated(function ($state, $get, $set) {
-                                    $principal = (float) $get('total_payable');
-                                    $duration = (int) $state;
+                                    $principal = (float)$get('total_payable');
+                                    $duration = (int)$state;
                                     $freq = $get('repayment_frequency');
                                     if ($principal > 0 && $duration > 0) {
                                         $intervals = $freq === LoanRepaymentFrequency::WEEKLY->value || $freq === 'weekly'
@@ -128,7 +128,7 @@ class WidowLoanForm
 
                         Textarea::make('reject_reason')
                             ->label('Rejection Reason')
-                            ->visible(fn ($get) => $get('status') === WidowLoanStatus::REJECTED->value)
+                            ->visible(fn($get) => $get('status') === WidowLoanStatus::REJECTED->value)
                             ->columnSpanFull(),
                     ]),
             ]);

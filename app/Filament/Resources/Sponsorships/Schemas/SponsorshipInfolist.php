@@ -2,7 +2,6 @@
 
 namespace App\Filament\Resources\Sponsorships\Schemas;
 
-use App\Models\Sponsorship;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
@@ -24,7 +23,7 @@ class SponsorshipInfolist
                         TextEntry::make('sponsor.name')
                             ->label('Sponsor')
                             ->weight('bold')
-                            ->hint(fn ($record) => $record->sponsor?->type?->getLabel()),
+                            ->hint(fn($record) => $record->sponsor?->type?->getLabel()),
 
                         TextEntry::make('amount_committed')
                             ->label('Committed Amount')
@@ -55,7 +54,7 @@ class SponsorshipInfolist
                         TextEntry::make('deleted_at')
                             ->label('Archived On')
                             ->dateTime()
-                            ->visible(fn ($record) => $record->trashed()),
+                            ->visible(fn($record) => $record->trashed()),
                     ])->columns(3),
             ]);
     }

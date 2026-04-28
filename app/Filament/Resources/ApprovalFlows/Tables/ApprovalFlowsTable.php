@@ -4,7 +4,6 @@ namespace App\Filament\Resources\ApprovalFlows\Tables;
 
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
-use Filament\Tables\Columns\BadgeColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
@@ -20,11 +19,11 @@ class ApprovalFlowsTable
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('model_type')
                     ->label('Type')
-                    ->formatStateUsing(fn ($state) => str($state)->afterLast('\\')->singular())
+                    ->formatStateUsing(fn($state) => str($state)->afterLast('\\')->singular())
                     ->sortable(),
                 TextColumn::make('status')
                     ->badge()
-                    ->color(fn ($state) => match($state) {
+                    ->color(fn($state) => match ($state) {
                         'pending' => 'warning',
                         'approved' => 'success',
                         'rejected' => 'danger',
@@ -33,7 +32,7 @@ class ApprovalFlowsTable
                     ->sortable(),
                 TextColumn::make('current_step')
                     ->label('Step')
-                    ->formatStateUsing(fn ($state, $record) => "{$state} / {$record->total_steps}")
+                    ->formatStateUsing(fn($state, $record) => "{$state} / {$record->total_steps}")
                     ->sortable(),
                 TextColumn::make('approvalSteps')
                     ->label('Progress')

@@ -25,15 +25,15 @@ class ApprovalFlowForm
                         Grid::make(3)->schema([
                             Placeholder::make('model_type')
                                 ->label('Approvable Type')
-                                ->content(fn ($record) => $record ? str($record->model_type)->afterLast('\\')->headline() : '-'),
+                                ->content(fn($record) => $record ? str($record->model_type)->afterLast('\\')->headline() : '-'),
 
                             Placeholder::make('approvable_id')
                                 ->label('Entity Reference')
-                                ->content(fn ($record) => $record->model_id ?? '-'),
+                                ->content(fn($record) => $record->model_id ?? '-'),
 
                             Placeholder::make('progress')
                                 ->label('Overall Progress')
-                                ->content(fn ($record) => $record ? "Step {$record->current_step} of {$record->total_steps}" : '-'),
+                                ->content(fn($record) => $record ? "Step {$record->current_step} of {$record->total_steps}" : '-'),
                         ]),
                     ]),
 
@@ -64,7 +64,7 @@ class ApprovalFlowForm
                         Textarea::make('rejection_reason')
                             ->label('Final Rejection Comments')
                             ->placeholder('Provide a reason if the flow is terminated...')
-                            ->visible(fn ($get) => $get('status') === 'rejected')
+                            ->visible(fn($get) => $get('status') === 'rejected')
                             ->columnSpanFull(),
                     ]),
 
@@ -107,7 +107,7 @@ class ApprovalFlowForm
                             ->addable(false)
                             ->deletable(false)
                             ->reorderable(false)
-                            ->itemLabel(fn (array $state): ?string => "Step " . ($state['step_number'] ?? '') . ": " . ($state['role_name'] ?? ''))
+                            ->itemLabel(fn(array $state): ?string => "Step " . ($state['step_number'] ?? '') . ": " . ($state['role_name'] ?? ''))
                             ->collapsible()
                     ]),
             ]);

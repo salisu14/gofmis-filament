@@ -83,7 +83,7 @@ class ItemsRelationManager extends RelationManager
                 TextColumn::make('quantity_fulfilled')
                     ->label('Fulfilled')
                     ->alignCenter()
-                    ->color(fn ($record) => $record->is_fully_fulfilled ? 'success' : 'warning'),
+                    ->color(fn($record) => $record->is_fully_fulfilled ? 'success' : 'warning'),
 
                 IconColumn::make('is_fully_fulfilled')
                     ->label('Done')

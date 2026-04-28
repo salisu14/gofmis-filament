@@ -56,8 +56,7 @@ class DeceasedInfolist
                             ->numeric(),
                         TextEntry::make('widows_count')
                             ->label('Widows Registered')
-                            ->state(fn ($record) =>
-                            method_exists($record, 'widows')
+                            ->state(fn($record) => method_exists($record, 'widows')
                                 ? $record->widows()->count()
                                 : 0
                             )
@@ -68,8 +67,7 @@ class DeceasedInfolist
                             ->numeric(),
                         TextEntry::make('orphans_count')
                             ->label('Orphans Registered')
-                            ->state(fn ($record) =>
-                            method_exists($record, 'orphans')
+                            ->state(fn($record) => method_exists($record, 'orphans')
                                 ? $record->orphans()->count()
                                 : 0
                             )

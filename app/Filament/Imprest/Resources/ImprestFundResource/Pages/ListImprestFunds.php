@@ -20,7 +20,7 @@ class ListImprestFunds extends ListRecords
 
             ExportAction::make()
                 ->exporter(TransactionExporter::class)
-                ->fileName(fn (): string => 'transactions-' . now()->format('Y-m-d')),
+                ->fileName(fn(): string => 'transactions-' . now()->format('Y-m-d')),
         ];
     }
 }

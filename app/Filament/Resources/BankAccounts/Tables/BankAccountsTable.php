@@ -50,9 +50,9 @@ class BankAccountsTable
 
                 TextColumn::make('available_balance')
                     ->label('Available')
-                    ->state(fn (BankAccount $record) => $record->ledger_balance - $record->reserved_balance)
+                    ->state(fn(BankAccount $record) => $record->ledger_balance - $record->reserved_balance)
                     ->money('NGN')
-                    ->color(fn ($state) => $state > 0 ? 'success' : 'danger')
+                    ->color(fn($state) => $state > 0 ? 'success' : 'danger')
                     ->weight('bold')
                     ->alignEnd(),
 

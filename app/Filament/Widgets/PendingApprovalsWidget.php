@@ -38,16 +38,21 @@ class PendingApprovalsWidget extends BaseWidget
 //            ->limit(10);
 //    }
 
+    public function getTableRecordKey($record): string
+    {
+        return $record->id;
+    }
+
     protected function getTableColumns(): array
     {
         return [
             TextColumn::make('model_type')
                 ->label('Type')
-                ->formatStateUsing(fn ($state) => str($state)->afterLast('\\')->singular())
+                ->formatStateUsing(fn($state) => str($state)->afterLast('\\')->singular())
                 ->sortable(),
             TextColumn::make('current_step')
                 ->label('Step')
-                ->formatStateUsing(fn ($state, $record) => "{$state} / {$record->total_steps}")
+                ->formatStateUsing(fn($state, $record) => "{$state} / {$record->total_steps}")
                 ->sortable(),
             TextColumn::make('status')
                 ->badge()
@@ -67,13 +72,8 @@ class PendingApprovalsWidget extends BaseWidget
     {
         return [
             ViewAction::make()
-                ->url(fn (ApprovalFlow $record) => route('filament.admin.resources.approval-flows.index', ['activeTab' => 'details'])),
+                ->url(fn(ApprovalFlow $record) => route('filament.admin.resources.approval-flows.index', ['activeTab' => 'details'])),
         ];
-    }
-
-    public function getTableRecordKey($record): string
-    {
-        return $record->id;
     }
 }
 

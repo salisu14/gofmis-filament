@@ -110,7 +110,7 @@ class PrescriptionsRelationManager extends RelationManager
                 TextColumn::make('total_cost')
                     ->label('Total Cost')
                     ->money('NGN')
-                    ->state(fn ($record) => (float)$record->lab_test_cost + (float)$record->drug_cost)
+                    ->state(fn($record) => (float)$record->lab_test_cost + (float)$record->drug_cost)
                     ->color('success'),
             ])
             ->headerActions([

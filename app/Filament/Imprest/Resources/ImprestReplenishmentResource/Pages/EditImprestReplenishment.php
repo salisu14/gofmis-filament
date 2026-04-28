@@ -16,8 +16,7 @@ class EditImprestReplenishment extends EditRecord
         return [
             Actions\ViewAction::make(),
             Actions\DeleteAction::make()
-                ->visible(fn (ImprestReplenishment $record): bool =>
-                    $record->status === 'draft'
+                ->visible(fn(ImprestReplenishment $record): bool => $record->status === 'draft'
                 ),
         ];
     }

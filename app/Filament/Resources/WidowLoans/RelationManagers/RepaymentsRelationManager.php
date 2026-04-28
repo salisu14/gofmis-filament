@@ -72,7 +72,7 @@ class RepaymentsRelationManager extends RelationManager
                     ->icon('heroicon-m-printer')
                     ->color('info')
                     ->modalHeading('Repayment Receipt')
-                    ->modalContent(fn (WidowLoanRepayment $record) => view('components.loan-receipt', [
+                    ->modalContent(fn(WidowLoanRepayment $record) => view('components.loan-receipt', [
                         'record' => $record,
                         'widow' => $record->widowLoan->widow,
                         'balance' => $record->widowLoan->total_payable - $record->widowLoan->repayments()->where('paid_at', '<=', $record->paid_at)->sum('amount'),

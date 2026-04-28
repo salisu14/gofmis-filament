@@ -55,7 +55,7 @@ class WidowInfolist
 
                         TextEntry::make('married_at')
                             ->dateTime()
-                            ->visible(fn (Widow $record): bool => $record->is_married),
+                            ->visible(fn(Widow $record): bool => $record->is_married),
 
                         TextEntry::make('skills')
                             ->badge()

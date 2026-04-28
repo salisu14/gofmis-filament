@@ -28,7 +28,7 @@ class PrescriptionsTable
                     ->searchable()
                     ->sortable()
                     ->weight('bold')
-                    ->description(fn (Prescription $record) => str_replace('App\Models\\', '', $record->prescribable_type)),
+                    ->description(fn(Prescription $record) => str_replace('App\Models\\', '', $record->prescribable_type)),
 
                 TextColumn::make('illness')
                     ->label('Diagnosis')
@@ -44,7 +44,7 @@ class PrescriptionsTable
                 TextColumn::make('total_cost')
                     ->label('Total Cost')
                     ->money('NGN')
-                    ->state(fn (Prescription $record) => $record->total_cost)
+                    ->state(fn(Prescription $record) => $record->total_cost)
                     ->color('success')
                     ->weight('bold'),
 
@@ -70,8 +70,8 @@ class PrescriptionsTable
                     ])
                     ->query(function ($query, array $data) {
                         return $query
-                            ->when($data['from'], fn ($q) => $q->whereDate('prescription_date', '>=', $data['from']))
-                            ->when($data['until'], fn ($q) => $q->whereDate('prescription_date', '<=', $data['until']));
+                            ->when($data['from'], fn($q) => $q->whereDate('prescription_date', '>=', $data['from']))
+                            ->when($data['until'], fn($q) => $q->whereDate('prescription_date', '<=', $data['until']));
                     }),
             ])
             ->recordActions([

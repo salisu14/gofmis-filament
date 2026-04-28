@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 class CreateOrphan extends CreateRecord
 {
     protected static string $resource = OrphanResource::class;
+
     /**
      * Intercepts the creation process to use the custom RegisterOrphanAction.
      * This ensures that registration numbers, educational records,

@@ -19,13 +19,15 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\Toggle;;
+use Filament\Forms\Components\Toggle;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
+
+;
 
 class WidowsRelationManager extends RelationManager
 {
@@ -179,7 +181,7 @@ class WidowsRelationManager extends RelationManager
 
                         return array_merge($data, $generated);
                     })
-                    ->hidden(fn (RelationManager $livewire) => $livewire->getRelationship()->count() >= 4),
+                    ->hidden(fn(RelationManager $livewire) => $livewire->getRelationship()->count() >= 4),
             ])
             ->recordActions([
                 // NEW: MEDICAL RECORDS ACTION
@@ -187,7 +189,7 @@ class WidowsRelationManager extends RelationManager
                     ->label('Medical Records')
                     ->icon('heroicon-m-beaker')
                     ->color('success')
-                    ->modalHeading(fn (Widow $record) => "Prescriptions for {$record->full_name}")
+                    ->modalHeading(fn(Widow $record) => "Prescriptions for {$record->full_name}")
                     ->modalWidth('5xl')
                     ->modalSubmitActionLabel('Save Records')
                     ->schema([
@@ -229,7 +231,7 @@ class WidowsRelationManager extends RelationManager
                                 Hidden::make('user_id')
                                     ->default(auth()->id()),
                             ])
-                            ->itemLabel(fn (array $state): ?string => $state['illness'] ?? null)
+                            ->itemLabel(fn(array $state): ?string => $state['illness'] ?? null)
                             ->collapsible()
                             ->collapsed()
                             ->cloneable()

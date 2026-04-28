@@ -19,15 +19,14 @@ class ViewImprestReplenishment extends ViewRecord
 
         return [
             Actions\EditAction::make()
-                ->visible(fn (): bool => $record->status === 'draft'),
+                ->visible(fn(): bool => $record->status === 'draft'),
 
             Action::make('approve')
                 ->label('Approve')
                 ->icon('heroicon-m-check')
                 ->color('success')
                 ->requiresConfirmation()
-                ->visible(fn (): bool =>
-                    $record->status === 'submitted' && auth()->user()->can('approve', $record->fund)
+                ->visible(fn(): bool => $record->status === 'submitted' && auth()->user()->can('approve', $record->fund)
                 )
                 ->action(function () use ($record) {
                     $service = app(ImprestReplenishmentServiceInterface::class);
@@ -48,8 +47,7 @@ class ViewImprestReplenishment extends ViewRecord
                 ->requiresConfirmation()
                 ->modalHeading('Process Replenishment')
                 ->modalDescription('Restore fund to authorized amount?')
-                ->visible(fn (): bool =>
-                    $record->status === 'approved' && auth()->user()->can('replenish', $record->fund)
+                ->visible(fn(): bool => $record->status === 'approved' && auth()->user()->can('replenish', $record->fund)
                 )
                 ->action(function () use ($record) {
                     $service = app(ImprestReplenishmentServiceInterface::class);
@@ -74,8 +72,7 @@ class ViewImprestReplenishment extends ViewRecord
                         ->label('Rejection Reason'),
                 ])
                 ->requiresConfirmation()
-                ->visible(fn (): bool =>
-                    in_array($record->status, ['submitted', 'approved']) &&
+                ->visible(fn(): bool => in_array($record->status, ['submitted', 'approved']) &&
                     auth()->user()->can('approve', $record->fund)
                 )
                 ->action(function (array $data) use ($record) {

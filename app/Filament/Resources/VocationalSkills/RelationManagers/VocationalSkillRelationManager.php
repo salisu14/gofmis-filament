@@ -5,7 +5,6 @@ namespace App\Filament\Resources\VocationalSkills\RelationManagers;
 use App\Filament\Resources\VocationalSkills\VocationalSkillResource;
 use Filament\Actions\AttachAction;
 use Filament\Actions\BulkActionGroup;
-use Filament\Actions\CreateAction;
 use Filament\Actions\DetachAction;
 use Filament\Actions\DetachBulkAction;
 use Filament\Actions\EditAction;
@@ -76,7 +75,7 @@ class VocationalSkillRelationManager extends RelationManager
                 AttachAction::make()
                     ->label('Attach Student')
                     ->preloadRecordSelect()
-                    ->schema(fn (AttachAction $action): array => [
+                    ->schema(fn(AttachAction $action): array => [
                         $action->getRecordSelect(),
                         TextInput::make('specify')
                             ->label('Specific Proficiency')

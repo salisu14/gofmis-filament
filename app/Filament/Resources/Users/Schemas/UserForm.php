@@ -26,9 +26,9 @@ class UserForm
                             ->maxLength(255),
                         TextInput::make('password')
                             ->password()
-                            ->dehydrateStateUsing(fn ($state) => Hash::make($state))
-                            ->dehydrated(fn ($state) => filled($state))
-                            ->required(fn (string $context): bool => $context === 'create'),
+                            ->dehydrateStateUsing(fn($state) => Hash::make($state))
+                            ->dehydrated(fn($state) => filled($state))
+                            ->required(fn(string $context): bool => $context === 'create'),
                     ])->columns(2),
 
                 Section::make('Identity & Roles')
@@ -36,7 +36,7 @@ class UserForm
                         Select::make('employee_id')
                             ->label('Link to Employee')
                             ->relationship('employee', 'first_name') // We'll improve this to full name shortly
-                            ->getOptionLabelFromRecordUsing(fn ($record) => "{$record->first_name} {$record->last_name} ({$record->employee_number})")
+                            ->getOptionLabelFromRecordUsing(fn($record) => "{$record->first_name} {$record->last_name} ({$record->employee_number})")
                             ->searchable()
                             ->preload(),
 

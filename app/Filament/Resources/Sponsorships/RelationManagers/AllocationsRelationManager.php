@@ -47,7 +47,7 @@ class AllocationsRelationManager extends RelationManager
                                     ->where('orphan_id', $sponsorship->orphan_id)
                                     ->with('institution')
                                     ->get()
-                                    ->mapWithKeys(fn ($edu) => [
+                                    ->mapWithKeys(fn($edu) => [
                                         $edu->id => "{$edu->institution->name} — {$edu->level} (" . ($edu->institution->type->value ?? 'N/A') . ")"
                                     ])
                                     ->toArray();

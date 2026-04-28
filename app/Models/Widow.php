@@ -38,6 +38,11 @@ class Widow extends Model
         'skills' => 'array',
     ];
 
+    public function idCards(): MorphMany
+    {
+        return $this->morphMany(IdCard::class, 'cardable');
+    }
+
     public function prescriptions(): MorphMany
     {
         return $this->morphMany(Prescription::class, 'prescribable');
@@ -46,6 +51,18 @@ class Widow extends Model
     public function deceased(): BelongsTo
     {
         return $this->belongsTo(Deceased::class);
+    }
+
+    public function zone(): \Illuminate\Database\Eloquent\Relations\HasOneThrough|Widow
+    {
+        return $this->hasOneThrough(
+            Zone::class,
+            Deceased::class,
+            'id',        // Foreign key on Deceased table (local key on Widow relation)
+            'id',        // Foreign key on Zone table
+            'deceased_id', // Foreign key on Widow table
+            'zone_id'     // Foreign key on Deceased table
+        );
     }
 
     public function loans(): HasMany

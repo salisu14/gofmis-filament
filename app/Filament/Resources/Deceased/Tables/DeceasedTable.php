@@ -25,7 +25,7 @@ class DeceasedTable
                 TextColumn::make('full_name')
                     ->searchable(['first_name', 'last_name', 'middle_name'])
                     ->sortable()
-                    ->description(fn ($record) => "Reg: {$record->reg_no}"),
+                    ->description(fn($record) => "Reg: {$record->reg_no}"),
 
                 TextColumn::make('nin')
                     ->label('NIN')
@@ -38,7 +38,7 @@ class DeceasedTable
 
                 TextColumn::make('zone.name')
                     ->label('Location')
-                    ->description(fn ($record) => $record->zone?->town?->name . ', ' . $record->zone?->town?->city?->name),
+                    ->description(fn($record) => $record->zone?->town?->name . ', ' . $record->zone?->town?->city?->name),
 
                 TextColumn::make('orphans_count')
                     ->counts('orphans')
@@ -72,7 +72,7 @@ class DeceasedTable
                 // 4. Query by Specific Cause of Death
                 SelectFilter::make('death_cause')
                     ->label('Cause of Death')
-                    ->options(fn () => Deceased::query()
+                    ->options(fn() => Deceased::query()
                         ->distinct()
                         ->whereNotNull('death_cause')
                         ->pluck('death_cause', 'death_cause')
@@ -88,7 +88,7 @@ class DeceasedTable
                             ->placeholder('Select Year'),
                     ])
                     ->query(function ($query, array $data) {
-                        return $query->when($data['year'], fn ($q) => $q->whereYear('date_registered', $data['year']));
+                        return $query->when($data['year'], fn($q) => $q->whereYear('date_registered', $data['year']));
                     }),
 
                 // 1 & 5. Query by Number of Orphans and Widows
@@ -103,8 +103,8 @@ class DeceasedTable
                     ])
                     ->query(function ($query, array $data) {
                         return $query
-                            ->when($data['min_orphans'], fn ($q) => $q->where('number_of_orphans_left', '>=', $data['min_orphans']))
-                            ->when($data['min_widows'], fn ($q) => $q->where('number_of_widows_left', '>=', $data['min_widows']));
+                            ->when($data['min_orphans'], fn($q) => $q->where('number_of_orphans_left', '>=', $data['min_orphans']))
+                            ->when($data['min_widows'], fn($q) => $q->where('number_of_widows_left', '>=', $data['min_widows']));
                     }),
 
                 // 8. Query by Age (Life Expectancy Analysis)
@@ -119,16 +119,16 @@ class DeceasedTable
                     ])
                     ->query(function ($query, array $data) {
                         return $query
-                            ->when($data['age_from'], fn ($q) => $q->where('age', '>=', $data['age_from']))
-                            ->when($data['age_to'], fn ($q) => $q->where('age', '<=', $data['age_to']));
+                            ->when($data['age_from'], fn($q) => $q->where('age', '>=', $data['age_from']))
+                            ->when($data['age_to'], fn($q) => $q->where('age', '<=', $data['age_to']));
                     }),
 
                 // 7. Query by Intervention Received
                 TernaryFilter::make('has_interventions')
                     ->label('Intervention Received')
                     ->queries(
-                        true: fn ($query) => $query->whereHas('interventions'),
-                        false: fn ($query) => $query->whereDoesntHave('interventions'),
+                        true: fn($query) => $query->whereHas('interventions'),
+                        false: fn($query) => $query->whereDoesntHave('interventions'),
                     ),
 
                 TernaryFilter::make('has_death_cert')

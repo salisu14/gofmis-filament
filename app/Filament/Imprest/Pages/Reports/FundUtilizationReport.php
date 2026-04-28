@@ -4,6 +4,7 @@ namespace App\Filament\Imprest\Pages\Reports;
 
 use App\Models\ImprestFund;
 use App\Services\Contracts\Imprest\ImprestReconciliationServiceInterface;
+use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Concerns\InteractsWithForms;
@@ -14,7 +15,6 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Table;
-use Filament\Actions\Action;
 
 class FundUtilizationReport extends Page implements HasForms, HasTable
 {
@@ -25,9 +25,8 @@ class FundUtilizationReport extends Page implements HasForms, HasTable
     protected static string|null|\UnitEnum $navigationGroup = 'Reports';
     protected static ?string $navigationLabel = 'Fund Utilization';
     protected static ?int $navigationSort = 1;
-    protected string $view = 'filament.imprest.pages.reports.fund-utilization'; // Use default filament view
-
-    public ?array $data = [];
+        public ?array $data = []; // Use default filament view
+protected string $view = 'filament.imprest.pages.reports.fund-utilization';
 
     public function mount(): void
     {
@@ -72,7 +71,7 @@ class FundUtilizationReport extends Page implements HasForms, HasTable
         return $table
             ->query(
                 \App\Models\ImprestTransaction::query()
-                    ->when($fundId, fn ($q) => $q->where('fund_id', $fundId))
+                    ->when($fundId, fn($q) => $q->where('fund_id', $fundId))
                     ->whereBetween('date', [$start, $end])
                     ->where('status', 'active')
                     ->with('fund')
@@ -89,6 +88,12 @@ class FundUtilizationReport extends Page implements HasForms, HasTable
             ->paginated([10, 25, 50]);
     }
 
+    public function generateReport(): void
+    {
+        // This triggers re-render with new table data
+        $this->resetTable();
+    }
+
     protected function getHeaderActions(): array
     {
         return [
@@ -97,12 +102,6 @@ class FundUtilizationReport extends Page implements HasForms, HasTable
                 ->icon('heroicon-m-arrow-path')
                 ->action('generateReport'),
         ];
-    }
-
-    public function generateReport(): void
-    {
-        // This triggers re-render with new table data
-        $this->resetTable();
     }
 
     protected function getSummaryData(): ?array

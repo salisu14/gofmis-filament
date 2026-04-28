@@ -50,8 +50,7 @@ class SubmitForApprovalAction
                     ->body("Widow loan for {$record->widow->full_name} has been submitted for approval.")
                     ->send();
             })
-            ->visible(fn (WidowLoan $record) => 
-                $record->status === \App\Enums\WidowLoanStatus::DRAFT && 
+            ->visible(fn(WidowLoan $record) => $record->status === \App\Enums\WidowLoanStatus::DRAFT &&
                 !$record->approvalFlow &&
                 auth()->user()->can('submit_widow_loans')
             );

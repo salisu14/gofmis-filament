@@ -22,7 +22,7 @@ class ApproveWidowLoanAction
                 Section::make('Approval Details')
                     ->schema([
                         View::make('filament.components.approval-flow-info')
-                            ->viewData(fn (WidowLoan $record) => [
+                            ->viewData(fn(WidowLoan $record) => [
                                 'flow' => $record->approvalFlow,
                                 'currentStep' => $record->getCurrentApprovalStep(),
                             ]),
@@ -42,8 +42,7 @@ class ApproveWidowLoanAction
                     ->body("Widow loan for {$record->widow->full_name} has been approved.")
                     ->send();
             })
-            ->visible(fn (WidowLoan $record) => 
-                $record->isAwaitingApproval() && 
+            ->visible(fn(WidowLoan $record) => $record->isAwaitingApproval() &&
                 auth()->user()->can('approve_widow_loans')
             );
     }
