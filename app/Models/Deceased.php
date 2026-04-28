@@ -70,6 +70,14 @@ class Deceased extends Model
             ->withTimestamps();
     }
 
+    /**
+     * Get all zone transfers for this deceased.
+     */
+    public function zoneTransfers(): HasMany
+    {
+        return $this->hasMany(ZoneTransfer::class);
+    }
+
     protected static function boot(): void
     {
         parent::boot();
