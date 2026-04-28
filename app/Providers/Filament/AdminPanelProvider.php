@@ -263,9 +263,45 @@ class AdminPanelProvider extends PanelProvider
             })
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')
             ->widgets([
-                AccountWidget::class,
-                FilamentInfoWidget::class,
-                IdCardPrintQueueWidget::class,
+                // ============================================
+                // ROW 1: Small Card Widgets (3-4 per row)
+                // ============================================
+                AccountWidget::class,                    // 1 col - User info
+                FilamentInfoWidget::class,              // 1 col - Filament version
+
+                // ============================================
+                // ROW 2: Key Stats Cards (4 per row)
+                // ============================================
+                \App\Filament\Widgets\StatsOverviewWidget::class,        // 4 cols
+                \App\Filament\Widgets\LoanRepaymentStatsWidget::class,  // 4 cols
+
+                // ============================================
+                // ROW 3: Financial & Demographics (2 per row)
+                // ============================================
+                \App\Filament\Widgets\FinancialOverviewWidget::class,   // 2 cols - wide
+                \App\Filament\Widgets\GenderDistributionWidget::class,    // 2 cols - chart
+
+                // ============================================
+                // ROW 4: Charts (2 per row)
+                // ============================================
+                \App\Filament\Widgets\AgeDistributionChartWidget::class, // 2 cols - chart
+
+                // ============================================
+                // ROW 5: Queue & Pending (full width tables)
+                // ============================================
+                \App\Filament\Widgets\IdCardPrintQueueWidget::class,    // full
+                \App\Filament\Widgets\PendingApprovalsWidget::class,     // full
+
+                // ============================================
+                // ROW 6-9: Detailed Data Tables (full width)
+                // ============================================
+                \App\Filament\Widgets\LoanRepaymentWidget::class,           // full
+                \App\Filament\Widgets\LoanBeneficiariesWidget::class,        // full
+                \App\Filament\Widgets\EducationInterventionWidget::class,   // full
+                \App\Filament\Widgets\HealthcareInterventionWidget::class,   // full
+                \App\Filament\Widgets\WelfareInterventionWidget::class,      // full
+                \App\Filament\Widgets\SpecialInterventionWidget::class,      // full
+                \App\Filament\Widgets\OverAgedOrphansWidget::class,        // full
             ])
             ->middleware([
                 EncryptCookies::class,

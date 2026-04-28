@@ -23,7 +23,7 @@ class WidowLoan extends Model
 
     protected $table = 'widow_loans';
 
-    protected static function booted()
+    protected static function booted(): void
     {
         parent::booted();
 
@@ -184,13 +184,13 @@ class WidowLoan extends Model
             $isWeekly = $this->repayment_frequency === LoanRepaymentFrequency::WEEKLY;
             $intervalsPerMonth = $isWeekly ? 4 : 1;
             $totalIntervals = $this->duration_months * $intervalsPerMonth;
-            
+
             $installmentAmount = $this->total_payable / $totalIntervals;
-            
+
             $startDate = $this->disbursed_at ?: now();
 
             for ($i = 1; $i <= $totalIntervals; $i++) {
-                $dueDate = $isWeekly 
+                $dueDate = $isWeekly
                     ? $startDate->copy()->addWeeks($i)
                     : $startDate->copy()->addMonths($i);
 
@@ -219,9 +219,9 @@ class WidowLoan extends Model
 
         foreach ($schedules as $schedule) {
             $runningSum += (float) $schedule->amount_due;
-            
+
             // Allow a small margin for float precision if needed, but here simple <= should work
-            if ($runningSum <= $totalPaid + 0.01) { 
+            if ($runningSum <= $totalPaid + 0.01) {
                 $schedule->update(['is_paid' => true]);
             } else {
                 break; // Stop once we exceed total paid

@@ -63,6 +63,19 @@ class WelfarePackage extends Model
         return $this->hasMany(WelfareBeneficiary::class);
     }
 
+
+    public function deceased()
+    {
+        return $this->hasManyThrough(
+            Deceased::class,
+            WelfareBeneficiary::class,
+            'welfare_package_id', // FK on WelfareBeneficiary
+            'id',                 // PK on Deceased
+            'id',                 // PK on WelfarePackage
+            'deceased_id'         // FK on WelfareBeneficiary → Deceased
+        );
+    }
+
     // Scopes
     public function scopeOpen($query)
     {

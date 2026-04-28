@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\DB;
 
 class Prescription extends Model
 {
@@ -32,6 +33,11 @@ class Prescription extends Model
         'drug_cost' => 'decimal:2',
         'prescription_date' => 'date',
     ];
+
+    public static function totalCostQuery(): \Illuminate\Database\Query\Expression|\Illuminate\Contracts\Database\Query\Expression
+    {
+        return DB::raw('COALESCE(lab_test_cost, 0) + COALESCE(drug_cost, 0)');
+    }
 
     // Polymorphic: The Patient (Orphan or Widow)
     public function prescribable(): MorphTo
