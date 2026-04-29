@@ -41,7 +41,6 @@ class IdCardForm
                 Section::make('Card Details')
                     ->schema([
                         TextInput::make('card_number')
-                            ->required()
                             ->unique(ignoreRecord: true)
                             ->placeholder('Auto-generated if left empty')
                             ->disabledOn('edit'),
