@@ -46,8 +46,8 @@ class OrphanClass extends Model
     /**
      * Get the educational enrollments currently assigned to this class.
      */
-    public function enrollments(): HasMany
-    {
-        return $this->hasMany(OrphanEducation::class, 'level');
-    }
+//    public function enrollments(): HasMany
+//    {
+//        return $this->hasMany(OrphanEducation::class, 'level');
+//    }
 }

@@ -78,6 +78,11 @@ class AdminPanelProvider extends PanelProvider
                                     ->url('/admin/orphans')
                                     ->isActiveWhen(fn() => request()->is('admin/orphans*')),
 
+                                NavigationItem::make('Orphan Classes')
+                                    ->icon('heroicon-o-building-office')
+                                    ->url('/admin/orphan-classes')
+                                    ->isActiveWhen(fn() => request()->is('admin/orphan-classes*')),
+
                                 NavigationItem::make('Zone Transfers')
                                     ->icon('heroicon-o-arrows-right-left')
                                     ->url('/admin/zone-transfers')
