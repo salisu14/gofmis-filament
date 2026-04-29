@@ -27,6 +27,7 @@ class DatabaseSeeder extends Seeder
             ImprestPermissionSeeder::class,
             MedicationsTableSeeder::class,
             WelfarePackageSeeder::class,
+            IdCardTemplateSeeder::class,
         ]);
     }
 }

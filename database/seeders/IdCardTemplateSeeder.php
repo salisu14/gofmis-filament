@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\IdCardTemplate;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
 
 class IdCardTemplateSeeder extends Seeder
 {
@@ -13,6 +14,7 @@ class IdCardTemplateSeeder extends Seeder
     public function run(): void
     {
         IdCardTemplate::create([
+            'id'   => Str::uuid(),
             'name' => 'Standard Widow Card',
             'type' => 'widow',
             'layout_config' => [
@@ -26,6 +28,7 @@ class IdCardTemplateSeeder extends Seeder
         ]);
 
         IdCardTemplate::create([
+            'id'   => Str::uuid(),
             'name' => 'Standard Orphan Card',
             'type' => 'orphan',
             'layout_config' => [

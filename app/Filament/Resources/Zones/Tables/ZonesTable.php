@@ -21,6 +21,12 @@ class ZonesTable
                     ->sortable()
                     ->weight('bold'),
 
+                TextColumn::make('coordinator.name')
+                    ->label('Coordinator')
+                    ->searchable()
+                    ->sortable()
+                    ->weight('bold'),
+
                 TextColumn::make('town.name')
                     ->label('Town')
                     ->searchable()
