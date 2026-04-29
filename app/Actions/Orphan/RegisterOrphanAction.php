@@ -5,6 +5,7 @@ namespace App\Actions\Orphan;
 use App\Data\Orphan\OrphanData;
 use App\Models\Deceased;
 use App\Models\Orphan;
+use App\Models\OrphanVocationalSkill;
 use App\Services\OrphanEligibilityService;
 use App\Services\RegistrationNumberService;
 use App\Traits\HasImageUpload;
@@ -29,10 +30,21 @@ class RegisterOrphanAction
         $deceased = Deceased::findOrFail($data->deceasedId);
 
         return DB::transaction(function () use ($data, $deceased) {
+            $registrationData = $this->regNoService->generateOrphanData($deceased);
 
             $picturePath = $data->picture instanceof UploadedFile
                 ? $this->uploadImage($data->picture, 'orphans')
                 : $data->picture;
+
+            if (is_array($picturePath)) {
+                $picturePath = reset($picturePath) ?: null;
+            }
+
+            $birthCertificatePath = $data->birthCertificatePath;
+
+            if (is_array($birthCertificatePath)) {
+                $birthCertificatePath = reset($birthCertificatePath) ?: null;
+            }
 
             $age = Carbon::parse($data->birthDate)->age;
 
@@ -42,14 +54,15 @@ class RegisterOrphanAction
                 'middle_name' => $data->middleName,
                 'gender' => $data->gender,
                 'nin' => $data->nin,
-                'reg_no' => $this->regNoService->generateOrphanRegNo($deceased),
+                'reg_no' => $registrationData['reg_no'],
                 'birth_date' => $data->birthDate,
                 'age' => $age,
                 'address' => $data->address,
                 'picture_url' => $picturePath,
                 'deceased_id' => $deceased->id,
+                'child_sequence' => $registrationData['child_sequence'],
                 'has_birth_cert' => $data->hasBirthCert,
-                'birth_certificate_path' => $data->birthCertificatePath,
+                'birth_certificate_path' => $birthCertificatePath,
                 'status' => 'draft',
             ]);
 
@@ -68,14 +81,38 @@ class RegisterOrphanAction
 
             // VOCATIONAL SKILLS
             if (!empty($data->vocationalSkills)) {
-                $syncData = collect($data->vocationalSkills)
-                    ->filter(fn ($skill) => !empty($skill['id']))
-                    ->mapWithKeys(fn ($skill) => [
-                        $skill['id'] => ['specify' => $skill['specify'] ?? null]
-                    ])
-                    ->toArray();
+                $orphan->vocationalSkills()->detach();
 
-                $orphan->vocationalSkills()->sync($syncData);
+                $skillRows = collect($data->vocationalSkills)
+                    ->map(function ($skill) use ($orphan) {
+                        if (is_array($skill)) {
+                            $skillId = $skill['id'] ?? null;
+                            $specify = $skill['specify'] ?? null;
+                        } else {
+                            $skillId = $skill;
+                            $specify = null;
+                        }
+
+                        if (!$skillId) {
+                            return null;
+                        }
+
+                        return [
+                            'id' => (string) \Illuminate\Support\Str::uuid(),
+                            'orphan_id' => $orphan->id,
+                            'vocational_skill_id' => $skillId,
+                            'specify' => $specify,
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ];
+                    })
+                    ->filter()
+                    ->values()
+                    ->all();
+
+                if (!empty($skillRows)) {
+                    OrphanVocationalSkill::query()->insert($skillRows);
+                }
             }
 
             // UPDATE COUNT (SAFE)

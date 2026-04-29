@@ -27,8 +27,12 @@ class CreateOrphan extends CreateRecord
             firstName: $data['first_name'],
             lastName: $data['last_name'],
             middleName: $data['middle_name'] ?: null,
-            gender: $data['gender'],
-            birthDate: $data['birth_date'],
+            gender: $data['gender'] instanceof \App\Enums\Gender
+                ? $data['gender']->value
+                : (string) $data['gender'],
+            birthDate: $data['birth_date'] instanceof \Carbon\Carbon
+                ? $data['birth_date']->toDateString()
+                : $data['birth_date'],
             picture: $data['picture_url'], // Passed as UploadedFile or path string
             nin: $data['nin'] ?? null,
             guardianName: $data['guardian_name'] ?? null,

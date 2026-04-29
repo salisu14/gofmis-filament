@@ -25,15 +25,15 @@ class RegisterWidowAction
         $deceased = Deceased::findOrFail($data->deceasedId);
 
         return DB::transaction(function () use ($data, $deceased) {
+            $registrationData = $this->regNoService->generateWidowData($deceased);
 
             $widow = Widow::create([
                 'first_name' => $data->firstName,
                 'last_name'  => $data->lastName,
                 'middle_name'=> $data->middleName,
                 'nin'        => $data->nin,
-
-                // ✅ Standardize like Orphan
-                'reg_no' => $this->regNoService->generateWidowData($deceased),
+                'reg_no' => $registrationData['reg_no'],
+                'child_sequence' => $registrationData['child_sequence'],
 
                 'address'     => $data->address,
                 'skills'      => $data->skills ?? [],

@@ -31,9 +31,13 @@ class CoordinatorPanelProvider extends PanelProvider
             ->colors([
                 'primary' => Color::Emerald,
             ])
+            ->spa(hasPrefetching: true)
             ->brandName('Coordinator Portal - Garko Foundation')
             ->brandLogo(asset('storage/logos/gof_logo.jpeg'))
             ->brandLogoHeight('3rem')
+            //            ->brandLogo(fn () => view('filament.resources.brand', [
+//                'title' => 'Coordinator Portal',
+//            ]))
             ->favicon(asset('images/favicon.ico'))
 
             // Only show coordinator-specific resources
@@ -51,10 +55,11 @@ class CoordinatorPanelProvider extends PanelProvider
 
             ->widgets([
                 \App\Filament\Coordinator\Widgets\ZoneStatsWidget::class,         // sort 1 - full width
-//                \App\Filament\Coordinator\Widgets\LoanRepaymentStatsWidget::class, // sort 2 - full width (if you want it)
                 \App\Filament\Coordinator\Widgets\QuickActionsWidget::class,      // sort 3 - 2 cols
                 \App\Filament\Coordinator\Widgets\RecentActivityWidget::class,      // sort 4 - 2 cols
+                \App\Filament\Coordinator\Widgets\LoanBeneficiariesWidget::class, // sort 2 - full width
                 \App\Filament\Coordinator\Widgets\PendingItemsWidget::class,        // sort 5 - 2 cols
+
             ])
 
             ->middleware([

@@ -50,6 +50,33 @@ class Orphan extends Model
         'married_at' => 'datetime',
     ];
 
+    /**
+     * Mark orphan (girl) as married and revoke eligibility.
+     */
+    public function markAsMarried(?string $notes = null): void
+    {
+        $this->update([
+            'is_married' => true,
+            'married_at' => now(),
+            'is_eligible' => false,
+        ]);
+
+        // Deactivate ID cards
+        $this->idCards()->where('status', 'active')->update(['status' => 'inactive']);
+
+        // Cancel pending intervention requests
+        $this->interventionRequests()
+            ->whereIn('status', ['pending', 'draft'])
+            ->update(['status' => 'cancelled', 'notes' => 'Beneficiary got married']);
+
+        // Log the event
+        activity()
+            ->performedOn($this)
+            ->causedBy(auth()->user())
+            ->withProperties(['notes' => $notes])
+            ->log('orphan_marked_married');
+    }
+
     public function idCards(): MorphMany
     {
         return $this->morphMany(IdCard::class, 'cardable');
@@ -117,10 +144,20 @@ class Orphan extends Model
         return $query->where('is_eligible', true);
     }
 
+    public function isEligibleForIntervention(): bool
+    {
+        if ($this->is_married) {
+            return false;
+        }
+
+        return $this->is_eligible;
+    }
+
     public static function getNonEligibleOrphans()
     {
         return Orphan::withoutGlobalScope(EligibleOrphanScope::class)
             ->where('is_eligible', false)
+            ->where('is_married', true)
             ->get();
     }
 

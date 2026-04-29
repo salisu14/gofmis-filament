@@ -4,11 +4,16 @@ namespace App\Filament\Coordinator\Resources;
 
 use App\Filament\Coordinator\Concerns\ZoneScoped;
 use App\Models\Widow;
+use Filament\Actions\Action;
+use Filament\Actions\BulkAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms;
+use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Textarea;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
@@ -160,10 +165,12 @@ class WidowResource extends Resource
 
                             Forms\Components\FileUpload::make('picture_url')
                                 ->label('Profile Photo')
-                                ->image()
+                                ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
                                 ->avatar()
                                 ->directory('widow-photos')
-                                ->disk('public'),
+                                ->disk('public')
+                                ->visibility('public')
+                                ->maxSize(5120),
                         ]),
                     ]),
 
@@ -183,7 +190,9 @@ class WidowResource extends Resource
                 Tables\Columns\ImageColumn::make('picture_url')
                     ->label('')
                     ->circular()
-                    ->disk('public'),
+                    ->disk('public')
+                    ->visibility('public')
+                    ->checkFileExistence(false),
 
                 Tables\Columns\TextColumn::make('full_name')
                     ->searchable(['first_name', 'last_name', 'middle_name'])
@@ -231,10 +240,67 @@ class WidowResource extends Resource
             ->recordActions([
                 ViewAction::make(),
                 EditAction::make(),
+
+                Action::make('markAsMarried')
+                    ->label('Mark Married')
+                    ->icon('heroicon-m-heart')
+                    ->color('danger')
+                    ->requiresConfirmation()
+                    ->modalHeading('Mark as Married')
+                    ->modalDescription('This will revoke all benefits and eligibility. This action cannot be undone.')
+                    ->modalSubmitActionLabel('Yes, Mark as Married')
+                    ->visible(fn($record) => !$record->is_married)
+                    ->schema([
+                        DatePicker::make('married_at')
+                            ->label('Marriage Date')
+                            ->default(now())
+                            ->required(),
+                        Textarea::make('notes')
+                            ->label('Notes')
+                            ->placeholder('Optional notes about the marriage...')
+                            ->rows(2),
+                    ])
+                    ->action(function ($record, array $data) {
+                        $record->update([
+                            'is_married' => true,
+                            'married_at' => $data['married_at'] ?? now(),
+                        ]);
+
+                        // Call the model method to handle side effects
+                        $record->markAsMarried($data['notes'] ?? null);
+
+                        Notification::make()
+                            ->title('Marked as Married')
+                            ->body("{$record->full_name} has been marked as married and removed from benefits.")
+                            ->success()
+                            ->send();
+                    }),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
+
+                    BulkAction::make('markAsMarried')
+                        ->label('Mark Selected as Married')
+                        ->icon('heroicon-m-heart')
+                        ->color('danger')
+                        ->requiresConfirmation()
+                        ->modalHeading('Mark Multiple as Married')
+                        ->modalDescription('This will revoke benefits for all selected beneficiaries.')
+                        ->action(function ($records) {
+                            foreach ($records as $record) {
+                                if (!$record->is_married) {
+                                    $record->markAsMarried();
+                                }
+                            }
+
+                            Notification::make()
+                                ->title('Completed')
+                                ->body("{$records->count()} beneficiaries marked as married.")
+                                ->success()
+                                ->send();
+                        })
+                        ->deselectRecordsAfterCompletion(),
                 ]),
             ]);
     }

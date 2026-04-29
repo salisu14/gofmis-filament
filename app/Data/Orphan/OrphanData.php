@@ -2,6 +2,7 @@
 
 namespace App\Data\Orphan;
 
+use App\Enums\Gender;
 use Illuminate\Http\UploadedFile;
 use Spatie\LaravelData\Data;
 
@@ -13,9 +14,9 @@ class OrphanData extends Data
         public string       $firstName,
         public string       $lastName,
         public ?string      $middleName,
-        public string       $gender,
+        public  Gender|string $gender,
         public string       $birthDate,
-        public UploadedFile $picture,
+        public ?string $picture = null,
 
         // Optional
         public ?string      $nin = null,

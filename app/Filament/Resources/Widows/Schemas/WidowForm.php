@@ -109,10 +109,12 @@ class WidowForm
                     ->schema([
                         FileUpload::make('picture_url')
                             ->label('Profile Picture')
-                            ->image()
+                            ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
                             ->avatar()
                             ->directory('widow-photos')
                             ->disk('public')
+                            ->visibility('public')
+                            ->maxSize(5120)
                             ->columnSpanFull(),
                     ]),
             ]);

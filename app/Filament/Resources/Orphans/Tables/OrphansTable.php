@@ -20,7 +20,10 @@ use Filament\Actions\EditAction;
 use Filament\Actions\ForceDeleteBulkAction;
 use Filament\Actions\RestoreBulkAction;
 use Filament\Actions\ViewAction;
+use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Notifications\Notification;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
@@ -42,6 +45,7 @@ class OrphansTable
                     ->circular()
                     ->disk('public')
                     ->visibility('public')
+                    ->checkFileExistence(false)
                     ->defaultImageUrl('https://via.placeholder.com/40'),
                 TextColumn::make('full_name')
                     ->label('Name')
@@ -200,6 +204,41 @@ class OrphansTable
                         ->openUrlInNewTab()
                         ->visible(fn(Orphan $record): bool => $record->idCards()->where('status', 'active')->exists()
                         ),
+
+                    Action::make('markAsMarried')
+                        ->label('Mark Married')
+                        ->icon('heroicon-m-heart')
+                        ->color('danger')
+                        ->requiresConfirmation()
+                        ->modalHeading('Mark as Married')
+                        ->modalDescription('This will revoke all benefits and eligibility. This action cannot be undone.')
+                        ->modalSubmitActionLabel('Yes, Mark as Married')
+                        ->visible(fn($record) => !$record->is_married && (($record->gender->value ?? $record->gender) === Gender::FEMALE->value))
+                        ->schema([
+                            DatePicker::make('married_at')
+                                ->label('Marriage Date')
+                                ->default(now())
+                                ->required(),
+                            Textarea::make('notes')
+                                ->label('Notes')
+                                ->placeholder('Optional notes about the marriage...')
+                                ->rows(2),
+                        ])
+                        ->action(function ($record, array $data) {
+                            $record->update([
+                                'is_married' => true,
+                                'married_at' => $data['married_at'] ?? now(),
+                            ]);
+
+                            // Call the model method to handle side effects
+                            $record->markAsMarried($data['notes'] ?? null);
+
+                            Notification::make()
+                                ->title('Marked as Married')
+                                ->body("{$record->full_name} has been marked as married and removed from benefits.")
+                                ->success()
+                                ->send();
+                        }),
 
                     DeleteAction::make(),
                 ])

@@ -29,6 +29,7 @@ class Widow extends Model
         'deceased_id',
         'child_sequence',
         'full_name',
+        'married_at',
     ];
 
     protected $casts = [
@@ -37,6 +38,33 @@ class Widow extends Model
         'married_at' => 'datetime',
         'skills' => 'array',
     ];
+
+    /**
+     * Mark widow as married and revoke eligibility.
+     */
+    public function markAsMarried(?string $notes = null): void
+    {
+        $this->update([
+            'is_married' => true,
+            'married_at' => now(),
+            'is_eligible' => false,
+        ]);
+
+        // Deactivate ID cards
+        $this->idCards()->where('status', 'active')->update(['status' => 'inactive']);
+
+        // Cancel pending intervention requests
+        $this->interventionRequests()
+            ->whereIn('status', ['pending', 'draft'])
+            ->update(['status' => 'cancelled', 'notes' => 'Beneficiary got married']);
+
+        // Log the event
+        activity()
+            ->performedOn($this)
+            ->causedBy(auth()->user())
+            ->withProperties(['notes' => $notes])
+            ->log('widow_marked_married');
+    }
 
     public function idCards(): MorphMany
     {

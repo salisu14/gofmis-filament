@@ -126,12 +126,12 @@ class OrphanForm
 
                         FileUpload::make('picture_url')
                             ->label('Profile Picture')
-                            ->image()
+                            ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
                             ->avatar()
                             ->directory('orphans')
                             ->disk('public')
                             ->visibility('public')
-                            ->fetchFileInformation(false)
+                            ->maxSize(5120)
                             ->columnSpanFull(),
 
                         Section::make('Birth Certificate')
@@ -146,7 +146,6 @@ class OrphanForm
                                     ->directory('birth-certificates')
                                     ->disk('public')
                                     ->visibility('public')
-                                    ->fetchFileInformation(false)
                                     ->acceptedFileTypes(['application/pdf', 'image/*']),
                             ])->columns(2),
                     ]),
