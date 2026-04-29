@@ -50,10 +50,6 @@ class Orphan extends Model
         'married_at' => 'datetime',
     ];
 
-    /* -----------------------------
-     | Core Relationships
-     ------------------------------*/
-
     public function idCards(): MorphMany
     {
         return $this->morphMany(IdCard::class, 'cardable');
@@ -79,30 +75,22 @@ class Orphan extends Model
         return $this->hasMany(Intervention::class);
     }
 
-    public function zone(): \Illuminate\Database\Eloquent\Relations\HasOneThrough|Orphan
+    public function zone(): \Illuminate\Database\Eloquent\Relations\HasOneThrough
     {
         return $this->hasOneThrough(
             Zone::class,
             Deceased::class,
-            'id',        // Foreign key on Deceased table (local key on Orphan relation)
-            'id',        // Foreign key on Zone table
-            'deceased_id', // Foreign key on Orphan table
-            'zone_id'     // Foreign key on Deceased table
+            'id',           // Foreign key on Deceased
+            'id',           // Foreign key on Zone
+            'deceased_id',  // Local key on Orphan
+            'zone_id'       // Local key on Deceased
         );
     }
-
-    /* -----------------------------
-     | EDUCATION (NEW UNIFIED MODEL)
-     ------------------------------*/
 
     public function educations(): HasMany
     {
         return $this->hasMany(OrphanEducation::class);
     }
-
-    /* -----------------------------
-     | VOCATIONAL SKILLS (KEEP THIS INDEPENDENT)
-     ------------------------------*/
 
     public function vocationalSkills(): BelongsToMany
     {
@@ -111,8 +99,7 @@ class Orphan extends Model
             'orphan_vocational_skills',
             'orphan_id',
             'vocational_skill_id'
-        )->withPivot(['specify'])
-            ->withTimestamps();
+        )->withPivot(['specify'])->withTimestamps();
     }
 
     public function getPaidAmountAttribute(): float
@@ -130,22 +117,31 @@ class Orphan extends Model
         return $query->where('is_eligible', true);
     }
 
-    public static function getNonEligibleOrphans(): Orphan
+    public static function getNonEligibleOrphans()
     {
         return Orphan::withoutGlobalScope(EligibleOrphanScope::class)
             ->where('is_eligible', false)
             ->get();
     }
 
-    /* -----------------------------
-     | AUTO NAME GENERATION
-     ------------------------------*/
-
     protected static function boot(): void
     {
         parent::boot();
 
         static::addGlobalScope(new EligibleOrphanScope);
+
+        // ✅ FIXED: Use whereHas to filter through deceased relationship
+        static::addGlobalScope('zone', function ($query) {
+            $user = auth()->user();
+
+            if (!$user || $user->hasAnyRole(['admin', 'super_admin'])) {
+                return;
+            }
+
+            $query->whereHas('deceased', function ($q) use ($user) {
+                $q->where('zone_id', $user->zone_id);
+            });
+        });
 
         static::creating(function ($model) {
             $model->full_name = trim(implode(' ', array_filter([

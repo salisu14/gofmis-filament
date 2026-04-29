@@ -24,6 +24,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TrashedFilter;
@@ -39,7 +40,9 @@ class OrphansTable
                 ImageColumn::make('picture_url')
                     ->label('Image')
                     ->circular()
-                    ->disk('public'),
+                    ->disk('public')
+                    ->visibility('public')
+                    ->defaultImageUrl('https://via.placeholder.com/40'),
                 TextColumn::make('full_name')
                     ->label('Name')
                     ->searchable(['first_name', 'last_name', 'middle_name'])
@@ -161,8 +164,10 @@ class OrphansTable
                         'pending' => 'Pending',
                         'inactive' => 'Inactive',
                     ]),
-            ])->deferFilters(false)
-            ->actions([
+            ], layout: FiltersLayout::Modal)
+            ->deferFilters(false)
+            ->filtersFormColumns(3)
+            ->recordActions([
                 ActionGroup::make([
                     ViewAction::make(),
                     EditAction::make(),

@@ -6,4 +6,5 @@ return [
     App\Providers\ImprestServiceProvider::class,
     App\Providers\Filament\ImprestPanelProvider::class,
     App\Providers\WelfareServiceProvider::class,
+    App\Providers\Filament\CoordinatorPanelProvider::class,
 ];

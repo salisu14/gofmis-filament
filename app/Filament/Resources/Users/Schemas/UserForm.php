@@ -33,25 +33,18 @@ class UserForm
 
                 Section::make('Identity & Roles')
                     ->schema([
-                        Select::make('employee_id')
-                            ->label('Link to Employee')
-                            ->relationship('employee', 'first_name') // We'll improve this to full name shortly
-                            ->getOptionLabelFromRecordUsing(fn($record) => "{$record->first_name} {$record->last_name} ({$record->employee_number})")
-                            ->searchable()
-                            ->preload(),
-
                         Select::make('roles')
                             ->relationship('roles', 'name')
                             ->multiple()
                             ->preload()
                             ->searchable(),
 
-                        Select::make('salesperson_code')
-                            ->label('Default Salesperson / Purchaser')
-                            ->helperText('Used to auto-populate the Salesperson field on orders and invoices.')
-                            ->relationship('defaultSalesperson', 'name')
+                        Select::make('zone_id')
+                            ->relationship('zone', 'name')
                             ->searchable()
-                            ->preload(),
+                            ->preload()
+                            ->placeholder('Select a zone')
+                            ->helperText('Assign a zone to this user'),
                     ])->columns(2),
             ]);
     }

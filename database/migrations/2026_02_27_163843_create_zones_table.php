@@ -17,6 +17,12 @@ return new class extends Migration
 
             $table->text('address')->nullable();
 
+            $table->foreignUuid('coordinator_id')
+                ->nullable()
+                ->unique()
+                ->constrained('users')
+                ->nullOnDelete();
+
             $table->foreignUuid('town_id')
                 ->nullable()
                 ->constrained('towns')

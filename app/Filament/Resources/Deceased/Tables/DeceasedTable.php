@@ -213,6 +213,7 @@ class DeceasedTable
                     }),
                 // ============================================
             ])
+            ->filtersFormColumns(2)
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),

@@ -27,6 +27,16 @@ class OrphanResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'full_name';
 
+    protected static function applyZoneScope(Builder $query, string $zoneId): Builder
+    {
+        return $query->whereHas('deceased', fn($q) => $q->where('zone_id', $zoneId));
+    }
+
+    protected static function getRecordZoneId($record): ?string
+    {
+        return $record->deceased?->zone_id;
+    }
+
     public static function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()

@@ -46,4 +46,14 @@ class Zone extends Model
     {
         return $this->town?->city?->state;
     }
+
+    public function coordinator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'coordinator_id');
+    }
+
+    public function users(): HasMany
+    {
+        return $this->hasMany(User::class);
+    }
 }

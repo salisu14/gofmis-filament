@@ -82,6 +82,16 @@ class Deceased extends Model
     {
         parent::boot();
 
+        static::addGlobalScope('zone', function ($query) {
+            $user = auth()->user();
+
+            if (!$user || $user->hasAnyRole(['admin', 'super_admin'])) {
+                return;
+            }
+
+            $query->where('zone_id', $user->zone_id);
+        });
+
         static::creating(function ($model) {
             $model->full_name = trim(implode(' ', array_filter([
                 $model->first_name,

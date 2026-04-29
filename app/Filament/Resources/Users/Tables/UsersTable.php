@@ -21,14 +21,15 @@ class UsersTable
                 TextColumn::make('email')
                     ->searchable()
                     ->sortable(),
+                TextColumn::make('zone.name')
+                    ->searchable()
+                    ->sortable()
+                    ->placeholder('No zone assigned')
+                    ->toggleable(),
                 TextColumn::make('roles.name')
                     ->badge()
                     ->color('primary')
                     ->toggleable(),
-                TextColumn::make('employee.employee_number')
-                    ->label('Employee No.')
-                    ->searchable()
-                    ->sortable(),
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()

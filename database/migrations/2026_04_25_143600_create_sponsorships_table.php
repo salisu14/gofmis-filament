@@ -18,6 +18,12 @@ return new class extends Migration
                 ->constrained()
                 ->cascadeOnDelete();
 
+            $table->foreignUuid('sponsor_id')
+                ->after('orphan_id')
+                ->nullable() // Nullable for transition
+                ->constrained('sponsors')
+                ->nullOnDelete();
+
             $table->string('sponsor_name');
             $table->decimal('amount_committed', 12, 2);
             $table->date('start_date');

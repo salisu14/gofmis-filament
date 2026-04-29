@@ -128,8 +128,10 @@ class OrphanForm
                             ->label('Profile Picture')
                             ->image()
                             ->avatar()
-                            ->directory('widow-photos')
+                            ->directory('orphans')
                             ->disk('public')
+                            ->visibility('public')
+                            ->fetchFileInformation(false)
                             ->columnSpanFull(),
 
                         Section::make('Birth Certificate')
@@ -143,6 +145,8 @@ class OrphanForm
                                     ->visible(fn($get) => $get('has_birth_cert'))
                                     ->directory('birth-certificates')
                                     ->disk('public')
+                                    ->visibility('public')
+                                    ->fetchFileInformation(false)
                                     ->acceptedFileTypes(['application/pdf', 'image/*']),
                             ])->columns(2),
                     ]),

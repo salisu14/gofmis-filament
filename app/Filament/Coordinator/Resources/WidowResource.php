@@ -1,0 +1,251 @@
+<?php
+
+namespace App\Filament\Coordinator\Resources;
+
+use App\Filament\Coordinator\Concerns\ZoneScoped;
+use App\Models\Widow;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\EditAction;
+use Filament\Actions\ViewAction;
+use Filament\Forms;
+use Filament\Resources\Resource;
+use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Schema;
+use Filament\Tables;
+use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+
+
+class WidowResource extends Resource
+{
+    use ZoneScoped;
+
+    protected static ?string $model = Widow::class;
+    protected static string|null|\BackedEnum $navigationIcon = 'heroicon-o-heart';
+    protected static string|null|\UnitEnum $navigationGroup = 'Beneficiary Registration';
+    protected static ?int $navigationSort = 3;
+
+    /**
+     * Zone Scoping Logic
+     */
+    protected static function applyZoneScope(Builder $query, string $zoneId): Builder
+    {
+        return $query->whereHas('deceased', fn (Builder $q) => $q->where('zone_id', $zoneId));
+    }
+
+    protected static function getRecordZoneId($record): ?string
+    {
+        return $record->deceased?->zone_id;
+    }
+
+    /* -------------------------------------------------------------------------
+     | PERMISSIONS
+     ------------------------------------------------------------------------- */
+
+    public static function canCreate(): bool
+    {
+        return auth()->user()?->hasAnyRole(['coordinator', 'admin', 'super_admin']) ?? false;
+    }
+
+    public static function canEdit($record): bool
+    {
+        $user = auth()->user();
+        if (!$user) return false;
+        if ($user->hasAnyRole(['admin', 'super_admin'])) return true;
+
+        return $record->deceased?->zone_id === $user->zone_id;
+    }
+
+    public static function canDelete($record): bool
+    {
+        return auth()->user()?->hasRole(['admin', 'super_admin']) ?? false;
+    }
+
+    /* -------------------------------------------------------------------------
+     | FORM SCHEMA
+     ------------------------------------------------------------------------- */
+
+    public static function form(Schema $schema): Schema
+    {
+        $coordinatorZoneId = auth()->user()?->zone_id;
+
+        return $schema
+            ->schema([
+                Section::make('Household Context')
+                    ->description('Identify the late spouse and verify the zone registration.')
+                    ->icon('heroicon-m-home-modern')
+                    ->schema([
+                        Forms\Components\Select::make('deceased_id')
+                            ->label('Late Spouse (Deceased Head)')
+                            ->relationship(
+                                'deceased',
+                                'full_name',
+                                fn (Builder $query) => $query->when($coordinatorZoneId, fn ($q) => $q->where('zone_id', $coordinatorZoneId))
+                            )
+                            ->getOptionLabelFromRecordUsing(fn ($record) => "{$record->full_name} ({$record->reg_no})")
+                            ->searchable()
+                            ->preload()
+                            ->required()
+                            ->columnSpanFull(),
+                    ]),
+
+                Section::make('Personal Information')
+                    ->description('Primary identification and demographic details.')
+                    ->icon('heroicon-m-user-circle')
+                    ->schema([
+                        Grid::make(3)->schema([
+                            Forms\Components\TextInput::make('first_name')->required()->maxLength(100),
+                            Forms\Components\TextInput::make('middle_name')->maxLength(100),
+                            Forms\Components\TextInput::make('last_name')->required()->maxLength(100),
+                        ]),
+
+                        Grid::make(3)->schema([
+                            Forms\Components\TextInput::make('nin')
+                                ->label('NIN')
+                                ->unique(ignoreRecord: true)
+                                ->placeholder('11-digit identity number')
+                                ->maxLength(11)
+                                ->required(),
+
+                            Forms\Components\TextInput::make('reg_no')
+                                ->label('Registration Number')
+                                ->placeholder('Auto-generated')
+                                ->disabled()
+                                ->dehydrated(false),
+
+                            Forms\Components\TextInput::make('child_sequence')
+                                ->label('Sequence Order')
+                                ->helperText('Wife order (1st, 2nd, etc.)')
+                                ->numeric()
+                                ->disabled()
+                                ->dehydrated(false),
+                        ]),
+                    ]),
+
+                Section::make('Professional & Marital Status')
+                    ->icon('heroicon-m-briefcase')
+                    ->schema([
+                        Forms\Components\TagsInput::make('skills')
+                            ->label('Vocational Skills / Profession')
+                            ->placeholder('Add skill (e.g. Tailoring)')
+                            ->columnSpanFull(),
+
+                        Grid::make(3)->schema([
+                            Forms\Components\Toggle::make('is_married')
+                                ->label('Has Remarried')
+                                ->live(),
+
+                            Forms\Components\DatePicker::make('married_at')
+                                ->label('New Marriage Date')
+                                ->native(false)
+                                ->visible(fn (Get $get) => (bool) $get('is_married'))
+                                ->required(fn (Get $get) => (bool) $get('is_married')),
+
+                            Forms\Components\Toggle::make('is_eligible')
+                                ->label('Eligible for Support')
+                                ->default(true),
+                        ]),
+                    ]),
+
+                Section::make('Location & Profile')
+                    ->schema([
+                        Grid::make(2)->schema([
+                            Forms\Components\Textarea::make('address')
+                                ->placeholder('Current residential address...')
+                                ->rows(3)
+                                ->required(),
+
+                            Forms\Components\FileUpload::make('picture_url')
+                                ->label('Profile Photo')
+                                ->image()
+                                ->avatar()
+                                ->directory('widow-photos')
+                                ->disk('public'),
+                        ]),
+                    ]),
+
+                Forms\Components\Hidden::make('registered_by')
+                    ->default(auth()->id()),
+            ]);
+    }
+
+    /* -------------------------------------------------------------------------
+     | TABLE CONFIGURATION
+     ------------------------------------------------------------------------- */
+
+    public static function table(Table $table): Table
+    {
+        return $table
+            ->columns([
+                Tables\Columns\ImageColumn::make('picture_url')
+                    ->label('')
+                    ->circular()
+                    ->disk('public'),
+
+                Tables\Columns\TextColumn::make('full_name')
+                    ->searchable(['first_name', 'last_name', 'middle_name'])
+                    ->sortable()
+                    ->weight('bold')
+                    ->description(fn (Widow $record) => "Reg: {$record->reg_no}"),
+
+                Tables\Columns\TextColumn::make('deceased.full_name')
+                    ->label('Deceased Spouse')
+                    ->searchable()
+                    ->description(fn (Widow $record) => $record->deceased?->reg_no),
+
+                Tables\Columns\TextColumn::make('nin')
+                    ->label('NIN')
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+
+                Tables\Columns\IconColumn::make('is_eligible')
+                    ->label('Eligible')
+                    ->boolean()
+                    ->alignCenter(),
+
+                Tables\Columns\IconColumn::make('is_married')
+                    ->label('Remarried')
+                    ->boolean()
+                    ->alignCenter(),
+
+                Tables\Columns\TextColumn::make('loans_count')
+                    ->counts('widowLoans')
+                    ->label('Loans')
+                    ->badge()
+                    ->color('info')
+                    ->alignCenter(),
+
+                Tables\Columns\TextColumn::make('created_at')
+                    ->label('Registered')
+                    ->since()
+                    ->sortable(),
+            ])
+            ->defaultSort('created_at', 'desc')
+            ->filters([
+                Tables\Filters\TernaryFilter::make('is_eligible')->label('Eligible Only'),
+                Tables\Filters\TernaryFilter::make('is_married')->label('Remarried Only'),
+            ])
+            ->recordActions([
+                ViewAction::make(),
+                EditAction::make(),
+            ])
+            ->toolbarActions([
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
+                ]),
+            ]);
+    }
+
+    public static function getPages(): array
+    {
+        return [
+            'index' => \App\Filament\Coordinator\Resources\WidowResource\Pages\ListWidows::route('/'),
+            'create' => \App\Filament\Coordinator\Resources\WidowResource\Pages\CreateWidow::route('/create'),
+            'edit' => \App\Filament\Coordinator\Resources\WidowResource\Pages\EditWidow::route('/{record}/edit'),
+            'view' => \App\Filament\Coordinator\Resources\WidowResource\Pages\ViewWidow::route('/{record}'),
+        ];
+    }
+}

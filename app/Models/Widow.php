@@ -28,7 +28,7 @@ class Widow extends Model
         'is_married',
         'deceased_id',
         'child_sequence',
-         'full_name',
+        'full_name',
     ];
 
     protected $casts = [
@@ -53,15 +53,15 @@ class Widow extends Model
         return $this->belongsTo(Deceased::class);
     }
 
-    public function zone(): \Illuminate\Database\Eloquent\Relations\HasOneThrough|Widow
+    public function zone(): \Illuminate\Database\Eloquent\Relations\HasOneThrough
     {
         return $this->hasOneThrough(
             Zone::class,
             Deceased::class,
-            'id',        // Foreign key on Deceased table (local key on Widow relation)
-            'id',        // Foreign key on Zone table
-            'deceased_id', // Foreign key on Widow table
-            'zone_id'     // Foreign key on Deceased table
+            'id',          // Foreign key on Deceased (refers to Widow's deceased_id)
+            'id',          // Foreign key on Zone
+            'deceased_id', // Local key on Widow
+            'zone_id'      // Local key on Deceased
         );
     }
 
@@ -75,10 +75,8 @@ class Widow extends Model
         return $this->hasMany(WidowLoan::class);
     }
 
-    // Check if widow can apply for a new loan
     public function canApplyForLoan(): bool
     {
-        // 1. Must not have an active loan
         $activeLoan = $this->widowLoans()->whereNotIn('status', [
             \App\Enums\WidowLoanStatus::COMPLETED->value,
             \App\Enums\WidowLoanStatus::REJECTED->value,
@@ -88,7 +86,6 @@ class Widow extends Model
             return false;
         }
 
-        // 2. Remarriage Policy: Must not be remarried
         if ($this->is_married) {
             return false;
         }
@@ -99,6 +96,19 @@ class Widow extends Model
     protected static function boot(): void
     {
         parent::boot();
+
+        // ✅ FIXED: Use whereHas to filter through deceased relationship
+        static::addGlobalScope('zone', function ($query) {
+            $user = auth()->user();
+
+            if (!$user || $user->hasAnyRole(['admin', 'super_admin'])) {
+                return;
+            }
+
+            $query->whereHas('deceased', function ($q) use ($user) {
+                $q->where('zone_id', $user->zone_id);
+            });
+        });
 
         static::creating(function ($model) {
             $model->full_name = trim(implode(' ', array_filter([

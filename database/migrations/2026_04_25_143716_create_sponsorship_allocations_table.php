@@ -22,6 +22,12 @@ return new class extends Migration
                 ->constrained()
                 ->cascadeOnDelete();
 
+            $table->foreignUuid('sponsor_id')
+                ->after('sponsorship_id')
+                ->nullable()
+                ->constrained('sponsors')
+                ->nullOnDelete();
+
             $table->decimal('amount_allocated', 12, 2);
 
             $table->softDeletes();

@@ -79,7 +79,7 @@ class AdminPanelProvider extends PanelProvider
                                     ->isActiveWhen(fn() => request()->is('admin/orphans*')),
 
                                 NavigationItem::make('Zone Transfers')
-                                    ->icon('heroicon-o-arrow-uturn-right')
+                                    ->icon('heroicon-o-arrows-right-left')
                                     ->url('/admin/zone-transfers')
                                     ->isActiveWhen(fn() => request()->is('admin/zone-transfers*')),
                             ])
@@ -266,8 +266,8 @@ class AdminPanelProvider extends PanelProvider
                 // ============================================
                 // ROW 1: Small Card Widgets (3-4 per row)
                 // ============================================
-                AccountWidget::class,                    // 1 col - User info
-                FilamentInfoWidget::class,              // 1 col - Filament version
+//                AccountWidget::class,                    // 1 col - User info
+//                FilamentInfoWidget::class,              // 1 col - Filament version
 
                 // ============================================
                 // ROW 2: Key Stats Cards (4 per row)

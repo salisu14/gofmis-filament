@@ -4,8 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     /**
      * Run the migrations.
      */
@@ -14,18 +13,24 @@ return new class extends Migration
         Schema::create('widow_loans', function (Blueprint $table) {
             $table->uuid('id')->primary();
 
-            $table->foreignUuid('widow_id')->constrained()->cascadeOnDelete();
+            // Relationship to the widow
+            $table->foreignUuid('widow_id')
+                ->constrained('widows')
+                ->cascadeOnDelete();
 
-            // Loan details
+            // Core Loan Financials
             $table->decimal('principal_amount', 15, 2);
-            $table->integer('duration_months')->nullable();
-
-            // Computed / tracking
             $table->decimal('total_payable', 15, 2)->nullable();
+
+            // Tracking Columns (Synchronized with Ledger logic)
             $table->decimal('total_paid', 15, 2)->default(0);
             $table->decimal('outstanding_balance', 15, 2)->nullable();
 
-            // Status lifecycle
+            // Schedule Configuration
+            $table->integer('duration_months')->nullable();
+            $table->string('repayment_frequency')->default('weekly');
+
+            // Status Lifecycle
             $table->enum('status', [
                 'draft',
                 'pending',
@@ -36,21 +41,27 @@ return new class extends Migration
                 'defaulted',
             ])->default('draft');
 
-            // Disbursement
+            // Process Timestamps & Integration
             $table->timestamp('disbursed_at')->nullable();
+            $table->uuid('approval_flow_id')->nullable(); // Used by multi-step approval system
 
-            // Approval integration
-            $table->uuid('approval_flow_id')->nullable(); // plugin uses this
-
+            // Narrative & Documentation
             $table->text('purpose')->nullable();
-
             $table->boolean('fully_repaid')->default(false);
-
             $table->string('loan_agreement_url', 255)->nullable();
             $table->text('reject_reason')->nullable();
 
+            $table->date('date_issued')->nullable();
+            $table->date('due_date')->nullable();
+
+            // Standard Metadata
             $table->timestamps();
             $table->softDeletes();
+
+            // Indexes for faster lookups in the Finance dashboard
+            $table->index('status');
+            $table->index('widow_id');
+            $table->index('fully_repaid');
         });
     }
 

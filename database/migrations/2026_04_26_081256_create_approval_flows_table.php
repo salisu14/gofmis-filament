@@ -11,9 +11,17 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('approval_flows', function (Blueprint $table) {
-            $table->id();
-            $table->timestamps();
+        Schema::table('approval_flows', function (Blueprint $table) {
+            $table->uuid('id')->primary()->first();
+            $table->string('model_type')->after('id');
+            $table->uuid('model_id')->after('model_type');
+            $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending')->after('model_id');
+            $table->integer('current_step')->default(1)->after('status');
+            $table->integer('total_steps')->default(1)->after('current_step');
+            $table->uuid('approver_id')->nullable()->after('total_steps');
+            $table->text('rejection_reason')->nullable()->after('approver_id');
+            $table->timestamp('approved_at')->nullable()->after('rejection_reason');
+            $table->timestamp('rejected_at')->nullable()->after('approved_at');
         });
     }
 

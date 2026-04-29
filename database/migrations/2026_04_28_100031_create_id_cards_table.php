@@ -16,6 +16,7 @@ return new class extends Migration
             $table->foreignUuid('template_id')->constrained('id_card_templates');
             $table->string('card_number')->unique();
             $table->string('qr_code_path');
+            $table->string('pdf_path')->nullable();
             $table->timestamp('issued_at');
             $table->timestamp('expires_at')->nullable();
             $table->timestamp('printed_at')->nullable();
