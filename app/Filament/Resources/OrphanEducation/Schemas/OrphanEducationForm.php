@@ -40,10 +40,12 @@ class OrphanEducationForm
                         ]),
 
                         Grid::make(2)->schema([
-                            TextInput::make('level')
+                            Select::make('orphan_class_id')
                                 ->label('Level / Grade')
                                 ->placeholder('e.g. Primary 5, SS 2')
-                                ->required(),
+                                ->relationship('orphanClass', 'name')
+                                ->searchable()
+                                ->preload(),
 
                             TextInput::make('class_level')
                                 ->label('Class / Section')

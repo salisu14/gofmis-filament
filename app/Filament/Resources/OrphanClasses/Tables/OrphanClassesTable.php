@@ -24,12 +24,12 @@ class OrphanClassesTable
                     ->weight('bold'),
 
                 // Displaying the number of orphans assigned to this level
-//                TextColumn::make('enrollments_count')
-//                    ->counts('enrollments')
-//                    ->label('Students')
-//                    ->badge()
-//                    ->color('info')
-//                    ->alignCenter(),
+                TextColumn::make('enrollments_count')
+                    ->counts('enrollments')
+                    ->label('Students')
+                    ->badge()
+                    ->color('info')
+                    ->alignCenter(),
 
                 TextColumn::make('creator.name')
                     ->label('Created By')

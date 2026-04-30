@@ -25,7 +25,11 @@ return new class extends Migration {
             $table->decimal('support_amount', 12, 2)->nullable();
 
             // Enrollment Context
-            $table->string('level')->nullable();        // Primary 3, etc.
+            $table->foreignUuid('orphan_class_id')  // class id: Primary 3, etc.
+                ->nullable()
+                ->constrained('orphan_classes')
+                ->cascadeOnDelete();
+
             $table->string('class_level')->nullable();
 
             $table->boolean('is_current')->default(true);
@@ -35,6 +39,7 @@ return new class extends Migration {
             $table->softDeletes();
             $table->timestamps();
 
+            $table->index('orphan_class_id');
             $table->index(['orphan_id', 'is_current']);
         });
     }

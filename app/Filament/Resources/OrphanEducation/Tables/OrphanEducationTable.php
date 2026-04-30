@@ -31,7 +31,7 @@ class OrphanEducationTable
                     ->label('Institution')
                     ->searchable()
                     ->sortable()
-                    ->description(fn(OrphanEducation $record) => "Level: {$record->level}"),
+                    ->description(fn(OrphanEducation $record) => "Level: {$record->orphanClass->name}"),
 
                 TextColumn::make('total_paid')
                     ->label('Paid')

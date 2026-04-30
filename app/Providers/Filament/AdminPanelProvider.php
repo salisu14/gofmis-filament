@@ -230,20 +230,6 @@ class AdminPanelProvider extends PanelProvider
                                     ->isActiveWhen(fn() => request()->is('admin/education-fee-invoices*')),
                             ])
                     )
-//                    ->group(
-//                        NavigationGroup::make('Human Resources')
-//                            ->items([
-//                                NavigationItem::make('Payroll Periods')
-//                                    ->icon('heroicon-o-calendar-date-range')
-//                                    ->url('/admin/payroll-periods')
-//                                    ->isActiveWhen(fn() => request()->is('admin/payroll-periods*')),
-//
-//                                NavigationItem::make('Purchase Receipts')
-//                                    ->icon('heroicon-o-receipt-percent')
-//                                    ->url('/admin/purchase-receipts')
-//                                    ->isActiveWhen(fn() => request()->is('admin/purchase-receipts*')),
-//                            ])
-//                    )
 
                     // Setup & Administration
                     ->group(
@@ -322,8 +308,8 @@ class AdminPanelProvider extends PanelProvider
             ->authMiddleware([
                 Authenticate::class,
             ])->navigationGroups([
+                'Beneficiary Management',
                 'ID Card Management',
-                'Beneficiaries',
                 'Finance',
                 'Settings',
             ]);

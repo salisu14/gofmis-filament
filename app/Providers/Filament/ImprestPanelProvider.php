@@ -38,7 +38,7 @@ class ImprestPanelProvider extends PanelProvider
                 'warning' => Color::Amber,
                 'success' => Color::Teal,
             ])
-            ->brandName('Imprest Management')
+            ->brandName('GOF - Impress Management')
             ->brandLogo(fn () => view('filament.imprest.logo'))
             ->favicon(asset('favicon.ico'))
             ->discoverResources(in: app_path('Filament/Imprest/Resources'), for: 'App\\Filament\\Imprest\\Resources')

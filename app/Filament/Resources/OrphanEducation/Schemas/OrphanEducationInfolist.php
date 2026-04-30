@@ -30,7 +30,7 @@ class OrphanEducationInfolist
                                 ->label('Institution')
                                 ->weight('semibold'),
 
-                            TextEntry::make('level')
+                            TextEntry::make('orphanClass.name')
                                 ->label('Level / Grade')
                                 ->badge()
                                 ->color('gray'),

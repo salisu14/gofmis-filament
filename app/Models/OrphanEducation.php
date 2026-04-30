@@ -17,7 +17,7 @@ class OrphanEducation extends Model
     protected $fillable = [
         'orphan_id',
         'institution_id',
-        'level',
+        'orphan_class_id',
         'class_level',
         'school_fee',
         'fee_frequency',
@@ -40,6 +40,11 @@ class OrphanEducation extends Model
     public function orphan(): BelongsTo
     {
         return $this->belongsTo(Orphan::class);
+    }
+
+    public function orphanClass(): BelongsTo
+    {
+        return $this->belongsTo(OrphanClass::class, 'orphan_class_id');
     }
 
     public function institution(): BelongsTo
