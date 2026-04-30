@@ -26,17 +26,6 @@ class DeceasedResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
-    protected static function applyZoneScope(Builder $query, string $zoneId): Builder
-    {
-        return $query->where('zone_id', $zoneId);
-    }
-
-    protected static function getRecordZoneId($record): ?string
-    {
-        return $record->zone_id;
-    }
-
-
     public static function form(Schema $schema): Schema
     {
         return DeceasedForm::configure($schema);

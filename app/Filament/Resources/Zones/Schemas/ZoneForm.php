@@ -65,19 +65,37 @@ class ZoneForm
                             ->searchable()
                             ->required()
                             ->disabled(fn(callable $get) => !$get('city_id')),
+
+                        Select::make('coordinator_id')
+                            ->label('Coordinator')
+                            ->relationship(
+                                name: 'coordinator',
+                                titleAttribute: 'name',
+                                modifyQueryUsing: fn ($query) => $query->role('coordinator')
+                            )
+                            ->searchable()
+                            ->preload()
+                            ->required()
+                            ->rules([
+                                function () {
+                                    return function ($attribute, $value, $fail) {
+
+                                        if (! $value) {
+                                            return;
+                                        }
+
+                                        // check if coordinator already assigned to another zone
+                                        $exists = \App\Models\Zone::where('coordinator_id', $value)->exists();
+
+                                        if ($exists) {
+                                            $fail('This user is already assigned to another zone.');
+                                        }
+                                    };
+                                }
+                            ])
                     ])->columns(3),
-                
-                Section::make('Coordinator Information')
-                    ->description('Primary contact person for this zone.')
-                    ->schema([
-                        TextInput::make('coordinator_name')
-                            ->label('Full Name')
-                            ->placeholder('Coordinator full name'),
-                        TextInput::make('coordinator_phone')
-                            ->label('Contact Number')
-                            ->tel()
-                            ->placeholder('e.g. +234...'),
-                    ])->columns(2),
+
+
             ]);
     }
 }

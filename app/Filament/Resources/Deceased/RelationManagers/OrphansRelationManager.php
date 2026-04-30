@@ -88,7 +88,7 @@ class OrphansRelationManager extends RelationManager
                     ->modalHeading(fn(Orphan $record) => "Medical History: {$record->full_name}")
                     ->modalWidth('5xl')
                     ->modalSubmitActionLabel('Save Updates')
-                    ->form([
+                    ->schema([
                         Repeater::make('prescriptions')
                             ->relationship('prescriptions')
                             ->schema([

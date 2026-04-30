@@ -38,13 +38,6 @@ class UserForm
                             ->multiple()
                             ->preload()
                             ->searchable(),
-
-                        Select::make('zone_id')
-                            ->relationship('zone', 'name')
-                            ->searchable()
-                            ->preload()
-                            ->placeholder('Select a zone')
-                            ->helperText('Assign a zone to this user'),
                     ])->columns(2),
             ]);
     }

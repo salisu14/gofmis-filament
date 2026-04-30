@@ -9,6 +9,7 @@ use App\Filament\Resources\Orphans\Actions\GenerateIdCardAction;
 use App\Models\Institution;
 use App\Models\InterventionType;
 use App\Models\Orphan;
+use App\Models\OrphanClass;
 use App\Models\OrphanEducation;
 use App\Models\Zone;
 use Filament\Actions\Action;
@@ -120,15 +121,20 @@ class OrphansTable
                 // 4. Query by Class (Academic Level)
                 SelectFilter::make('academic_level')
                     ->label('Class / Level')
-                    ->options(fn() => OrphanEducation::query()
-                        ->distinct()
-                        ->pluck('level', 'level')
-                        ->filter()
-                        ->toArray())
-                    ->query(fn(Builder $query, array $data) => $query->when(
-                        $data['value'],
-                        fn(Builder $query, $value) => $query->whereHas('educations', fn($q) => $q->where('level', $value))
-                    )),
+                    ->options(fn () => OrphanClass::query()
+                        ->orderBy('name')
+                        ->pluck('name', 'id')
+                        ->toArray()
+                    )
+                    ->query(function (Builder $query, array $data) {
+                        $query->when(
+                            $data['value'] ?? null,
+                            fn (Builder $query, $value) =>
+                            $query->whereHas('educations', fn ($q) =>
+                            $q->where('orphan_class_id', $value)
+                            )
+                        );
+                    }),
 
                 // 5. Query by Vulnerability (Linked to Deceased Parent)
                 SelectFilter::make('vulnerability_filter')

@@ -200,5 +200,7 @@ return [
          */
 
         'store' => 'default',
+
+        'super_admin' => 'Super Admin',
     ],
 ];

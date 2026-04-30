@@ -16,6 +16,7 @@ use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 class WidowResource extends Resource
@@ -57,6 +58,36 @@ class WidowResource extends Resource
             'create' => CreateWidow::route('/create'),
             'view' => ViewWidow::route('/{record}'),
             'edit' => EditWidow::route('/{record}/edit'),
+        ];
+    }
+
+    public static function isGloballySearchable(): bool
+    {
+        return true;
+    }
+
+    public static function getGloballySearchableAttributes(): array
+    {
+        return [
+            'first_name',
+            'middle_name',
+            'last_name',
+            'full_name',
+            'reg_no',
+            'nin',
+        ];
+    }
+    public static function getGlobalSearchResultTitle(Model $record): string
+    {
+        return $record->full_name ?? $record->name ?? 'Record';
+    }
+
+    public static function getGlobalSearchResultDetails(Model $record): array
+    {
+        return [
+            'Reg No' => $record->reg_no ?? null,
+            'NIN' => $record->nin ?? null,
+            'Class' => $record->orphanClass->name ?? null,
         ];
     }
 

@@ -7,6 +7,7 @@ use App\Filament\Resources\Zones\Pages\EditZone;
 use App\Filament\Resources\Zones\Pages\ListZones;
 use App\Filament\Resources\Zones\Schemas\ZoneForm;
 use App\Filament\Resources\Zones\Tables\ZonesTable;
+use App\Models\User;
 use App\Models\Zone;
 use BackedEnum;
 use Filament\Resources\Resource;
@@ -35,7 +36,7 @@ class ZoneResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            RelationManagers\DeceasedRelationManager::class,
         ];
     }
 
@@ -46,5 +47,20 @@ class ZoneResource extends Resource
             'create' => CreateZone::route('/create'),
             'edit' => EditZone::route('/{record}/edit'),
         ];
+    }
+
+    protected function afterSave(): void
+    {
+        $zone = $this->record;
+
+        // clear previous coordinator
+        User::where('zone_id', $zone->id)
+            ->update(['zone_id' => null]);
+
+        // assign new coordinator
+        if ($this->data['coordinator_id'] ?? null) {
+            User::where('id', $this->data['coordinator_id'])
+                ->update(['zone_id' => $zone->id]);
+        }
     }
 }

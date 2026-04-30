@@ -17,6 +17,7 @@ use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 class OrphanResource extends Resource
@@ -74,6 +75,37 @@ class OrphanResource extends Resource
             'create' => CreateOrphan::route('/create'),
             'view' => ViewOrphan::route('/{record}'),
             'edit' => EditOrphan::route('/{record}/edit'),
+        ];
+    }
+
+    public static function isGloballySearchable(): bool
+    {
+        return true;
+    }
+
+    public static function getGloballySearchableAttributes(): array
+    {
+        return [
+            'first_name',
+            'middle_name',
+            'last_name',
+            'full_name',
+            'reg_no',
+            'nin',
+        ];
+    }
+
+    public static function getGlobalSearchResultTitle(Model $record): string
+    {
+        return $record->full_name ?? $record->name ?? 'Record';
+    }
+
+    public static function getGlobalSearchResultDetails(Model $record): array
+    {
+        return [
+            'Reg No' => $record->reg_no ?? null,
+            'NIN' => $record->nin ?? null,
+            'Class' => $record->orphanClass->name ?? null,
         ];
     }
 

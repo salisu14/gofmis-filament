@@ -22,7 +22,7 @@ class SponsorshipAllocation extends Model
         'amount_allocated' => 'decimal:2',
     ];
 
-    protected static function booted()
+    protected static function booted(): void
     {
         static::creating(function ($allocation) {
             if (!$allocation->sponsor_id && $allocation->sponsorship_id) {

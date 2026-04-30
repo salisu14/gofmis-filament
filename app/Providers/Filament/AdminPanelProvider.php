@@ -43,11 +43,6 @@ class AdminPanelProvider extends PanelProvider
             ->pages([
                 Dashboard::class,
             ])
-            ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')
-            ->widgets([
-                AccountWidget::class,
-                FilamentInfoWidget::class,
-            ])
             ->authMiddleware([
                 Authenticate::class,
             ])->navigation(function (NavigationBuilder $builder): NavigationBuilder {
@@ -78,15 +73,74 @@ class AdminPanelProvider extends PanelProvider
                                     ->url('/admin/orphans')
                                     ->isActiveWhen(fn() => request()->is('admin/orphans*')),
 
+                                NavigationItem::make('Zone Transfers')
+                                    ->icon('heroicon-o-arrows-right-left')
+                                    ->url('/admin/zone-transfers')
+                                    ->isActiveWhen(fn() => request()->is('admin/zone-transfers*')),
+                            ])
+                    )
+                    // Education Module
+                    ->group(
+                        NavigationGroup::make('Education')
+                            ->items([
+                                NavigationItem::make('Institution')
+                                    ->icon('heroicon-o-document-duplicate')
+                                    ->url('/admin/institutions')
+                                    ->isActiveWhen(fn() => request()->is('admin/institutions*')),
+
                                 NavigationItem::make('Orphan Classes')
                                     ->icon('heroicon-o-building-office')
                                     ->url('/admin/orphan-classes')
                                     ->isActiveWhen(fn() => request()->is('admin/orphan-classes*')),
 
-                                NavigationItem::make('Zone Transfers')
-                                    ->icon('heroicon-o-arrows-right-left')
-                                    ->url('/admin/zone-transfers')
-                                    ->isActiveWhen(fn() => request()->is('admin/zone-transfers*')),
+                                NavigationItem::make('Orphan Education')
+                                    ->icon('heroicon-o-academic-cap')
+                                    ->url('/admin/orphan-education')
+                                    ->isActiveWhen(fn() => request()->is('admin/orphan-education*')),
+
+                                NavigationItem::make('Vocational Skills')
+                                    ->icon('heroicon-o-presentation-chart-line')
+                                    ->url('/admin/vocational-skills')
+                                    ->isActiveWhen(fn() => request()->is('admin/vocational-skills*')),
+
+                                NavigationItem::make('Education Fee Invoices')
+                                    ->icon('heroicon-o-banknotes')
+                                    ->url('/admin/education-fee-invoices')
+                                    ->isActiveWhen(fn() => request()->is('admin/education-fee-invoices*')),
+                            ])
+                    )
+                    // Interventions
+                    ->group(
+                        NavigationGroup::make('Interventions')
+                            ->items([
+                                // Categories
+                                NavigationItem::make('Categories')
+                                    ->icon('heroicon-o-document-currency-dollar')
+                                    ->url('/admin/categories')
+                                    ->isActiveWhen(fn() => request()->is('admin/categories*')),
+
+                                // Intervention Type
+                                NavigationItem::make('Intervention Types')
+                                    ->icon('heroicon-o-presentation-chart-line')
+                                    ->url('/admin/intervention-types')
+                                    ->isActiveWhen(fn() => request()->is('admin/intervention-types*')),
+
+                                // Intervention Request
+                                NavigationItem::make('Intervention Requests')
+                                    ->icon('heroicon-o-squares-2x2')
+                                    ->url('/admin/intervention-requests')
+                                    ->isActiveWhen(fn() => request()->is('admin/intervention-requests*')),
+
+                                // Welfare Package
+                                NavigationItem::make('Welfare Packages')
+                                    ->icon('heroicon-o-building-storefront')
+                                    ->url('/admin/welfare-packages')
+                                    ->isActiveWhen(fn() => request()->is('admin/welfare-packages*')),
+
+                                NavigationItem::make('Bank Accounts')
+                                    ->icon('heroicon-o-document-currency-dollar')
+                                    ->url('/admin/bank-accounts')
+                                    ->isActiveWhen(fn() => request()->is('admin/bank-accounts*')),
                             ])
                     )
                     // ID Card
@@ -104,7 +158,7 @@ class AdminPanelProvider extends PanelProvider
                                     ->isActiveWhen(fn() => request()->is('admin/id-card-print-batches*')),
                             ])
                     )
-                    // Address Module
+                    // Sponsorship Module
                     ->group(
                         NavigationGroup::make('Sponsorship')
                             ->items([
@@ -154,42 +208,6 @@ class AdminPanelProvider extends PanelProvider
 
                             ])
                     )
-
-                    // Interventions
-                    ->group(
-                        NavigationGroup::make('Interventions')
-                            ->items([
-                                // Categories
-                                NavigationItem::make('Categories')
-                                    ->icon('heroicon-o-document-currency-dollar')
-                                    ->url('/admin/categories')
-                                    ->isActiveWhen(fn() => request()->is('admin/categories*')),
-
-                                // Intervention Type
-                                NavigationItem::make('Intervention Types')
-                                    ->icon('heroicon-o-presentation-chart-line')
-                                    ->url('/admin/intervention-types')
-                                    ->isActiveWhen(fn() => request()->is('admin/intervention-types*')),
-
-                                // Intervention Request
-                                NavigationItem::make('Intervention Requests')
-                                    ->icon('heroicon-o-squares-2x2')
-                                    ->url('/admin/intervention-requests')
-                                    ->isActiveWhen(fn() => request()->is('admin/intervention-requests*')),
-
-                                // Welfare Package
-                                NavigationItem::make('Welfare Packages')
-                                    ->icon('heroicon-o-building-storefront')
-                                    ->url('/admin/welfare-packages')
-                                    ->isActiveWhen(fn() => request()->is('admin/welfare-packages*')),
-
-                                NavigationItem::make('Bank Accounts')
-                                    ->icon('heroicon-o-document-currency-dollar')
-                                    ->url('/admin/bank-accounts')
-                                    ->isActiveWhen(fn() => request()->is('admin/bank-accounts*')),
-                            ])
-                    )
-
                     // Address Module
                     ->group(
                         NavigationGroup::make('Address')
@@ -206,31 +224,6 @@ class AdminPanelProvider extends PanelProvider
                                     ->isActiveWhen(fn() => request()->is('admin/zones*')),
                             ])
                     )
-                    ->group(
-                        NavigationGroup::make('Education')
-                            ->items([
-                                NavigationItem::make('Institution')
-                                    ->icon('heroicon-o-document-duplicate')
-                                    ->url('/admin/institutions')
-                                    ->isActiveWhen(fn() => request()->is('admin/institutions*')),
-
-                                NavigationItem::make('Orphan Education')
-                                    ->icon('heroicon-o-academic-cap')
-                                    ->url('/admin/orphan-education')
-                                    ->isActiveWhen(fn() => request()->is('admin/orphan-education*')),
-
-                                NavigationItem::make('Vocational Skills')
-                                    ->icon('heroicon-o-presentation-chart-line')
-                                    ->url('/admin/vocational-skills')
-                                    ->isActiveWhen(fn() => request()->is('admin/vocational-skills*')),
-
-                                NavigationItem::make('Education Fee Invoices')
-                                    ->icon('heroicon-o-banknotes')
-                                    ->url('/admin/education-fee-invoices')
-                                    ->isActiveWhen(fn() => request()->is('admin/education-fee-invoices*')),
-                            ])
-                    )
-
                     // Setup & Administration
                     ->group(
                         NavigationGroup::make('Auth')
@@ -255,44 +248,30 @@ class AdminPanelProvider extends PanelProvider
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')
             ->widgets([
                 // ============================================
-                // ROW 1: Small Card Widgets (3-4 per row)
+                // SECTION 1: KEY METRICS & CHARTS (Compact/Grid Layout)
                 // ============================================
-//                AccountWidget::class,                    // 1 col - User info
-//                FilamentInfoWidget::class,              // 1 col - Filament version
+                \App\Filament\Widgets\StatsOverviewWidget::class,
+                \App\Filament\Widgets\LoanRepaymentStatsWidget::class,
+                \App\Filament\Widgets\FinancialOverviewWidget::class,
+                \App\Filament\Widgets\GenderDistributionWidget::class,
+                \App\Filament\Widgets\AgeDistributionChartWidget::class,
 
                 // ============================================
-                // ROW 2: Key Stats Cards (4 per row)
+                // SECTION 2: ACTIONABLE QUEUES (Full Width)
                 // ============================================
-                \App\Filament\Widgets\StatsOverviewWidget::class,        // 4 cols
-                \App\Filament\Widgets\LoanRepaymentStatsWidget::class,  // 4 cols
+                \App\Filament\Widgets\IdCardPrintQueueWidget::class,
+                \App\Filament\Widgets\PendingApprovalsWidget::class,
 
                 // ============================================
-                // ROW 3: Financial & Demographics (2 per row)
+                // SECTION 3: DETAILED DATA TABLES (Full Width)
                 // ============================================
-                \App\Filament\Widgets\FinancialOverviewWidget::class,   // 2 cols - wide
-                \App\Filament\Widgets\GenderDistributionWidget::class,    // 2 cols - chart
-
-                // ============================================
-                // ROW 4: Charts (2 per row)
-                // ============================================
-                \App\Filament\Widgets\AgeDistributionChartWidget::class, // 2 cols - chart
-
-                // ============================================
-                // ROW 5: Queue & Pending (full width tables)
-                // ============================================
-                \App\Filament\Widgets\IdCardPrintQueueWidget::class,    // full
-                \App\Filament\Widgets\PendingApprovalsWidget::class,     // full
-
-                // ============================================
-                // ROW 6-9: Detailed Data Tables (full width)
-                // ============================================
-                \App\Filament\Widgets\LoanRepaymentWidget::class,           // full
-                \App\Filament\Widgets\LoanBeneficiariesWidget::class,        // full
-                \App\Filament\Widgets\EducationInterventionWidget::class,   // full
-                \App\Filament\Widgets\HealthcareInterventionWidget::class,   // full
-                \App\Filament\Widgets\WelfareInterventionWidget::class,      // full
-                \App\Filament\Widgets\SpecialInterventionWidget::class,      // full
-                \App\Filament\Widgets\OverAgedOrphansWidget::class,        // full
+                \App\Filament\Widgets\LoanRepaymentWidget::class,
+                \App\Filament\Widgets\LoanBeneficiariesWidget::class,
+                \App\Filament\Widgets\EducationInterventionWidget::class,
+                \App\Filament\Widgets\HealthcareInterventionWidget::class,
+                \App\Filament\Widgets\WelfareInterventionWidget::class,
+                \App\Filament\Widgets\SpecialInterventionWidget::class,
+                \App\Filament\Widgets\OverAgedOrphansWidget::class,
             ])
             ->middleware([
                 EncryptCookies::class,
