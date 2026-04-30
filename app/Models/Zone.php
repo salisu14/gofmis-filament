@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Validation\ValidationException;
 
 class Zone extends Model
 {
@@ -18,7 +18,8 @@ class Zone extends Model
         'city',
         'state',
         'coordinator_name',
-        'coordinator_phone'
+        'coordinator_phone',
+        'coordinator_id'
     ];
 
     /**
@@ -48,13 +49,49 @@ class Zone extends Model
         return $this->town?->city?->state;
     }
 
+    // ==================================================
+    // FIX: Add these accessors to populate the dropdowns
+    // ==================================================
+    public function getStateIdAttribute()
+    {
+        return $this->town?->city?->state_id;
+    }
+
+    public function getCityIdAttribute()
+    {
+        return $this->town?->city_id;
+    }
+
     public function coordinator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'coordinator_id');
     }
 
+    public function coordinatorHistory(): HasMany
+    {
+        return $this->hasMany(ZoneCoordinatorHistory::class);
+    }
+
     public function users(): HasMany
     {
         return $this->hasMany(User::class, 'zone_id');
+    }
+
+    protected static function booted(): void
+    {
+        static::saving(function ($zone) {
+
+            if ($zone->coordinator_id) {
+                $exists = Zone::where('coordinator_id', $zone->coordinator_id)
+                    ->where('id', '!=', $zone->id)
+                    ->exists();
+
+                if ($exists) {
+                    throw ValidationException::withMessages([
+                        'coordinator_id' => 'This user is already assigned to another zone.',
+                    ]);
+                }
+            }
+        });
     }
 }

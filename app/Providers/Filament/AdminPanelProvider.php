@@ -37,6 +37,7 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->globalSearch()
             ->spa(hasPrefetching: true)
+            ->sidebarCollapsibleOnDesktop()
             ->brandName('Garko Orphans Foundation MIS')
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
@@ -59,12 +60,12 @@ class AdminPanelProvider extends PanelProvider
                         NavigationGroup::make('Deceased')
                             ->items([
                                 NavigationItem::make('Deceased')
-                                    ->icon('heroicon-o-list-bullet')
+                                    ->icon('heroicon-o-user-minus')
                                     ->url('/admin/deceaseds')
                                     ->isActiveWhen(fn() => request()->is('admin/deceaseds*')),
 
                                 NavigationItem::make('Widows')
-                                    ->icon('heroicon-o-user')
+                                    ->icon('heroicon-o-heart')
                                     ->url('/admin/widows')
                                     ->isActiveWhen(fn() => request()->is('admin/widows*')),
 
@@ -84,7 +85,7 @@ class AdminPanelProvider extends PanelProvider
                         NavigationGroup::make('Education')
                             ->items([
                                 NavigationItem::make('Institution')
-                                    ->icon('heroicon-o-document-duplicate')
+                                    ->icon('heroicon-o-building-library')
                                     ->url('/admin/institutions')
                                     ->isActiveWhen(fn() => request()->is('admin/institutions*')),
 

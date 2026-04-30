@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Zones\Schemas;
 use App\Models\City;
 use App\Models\State;
 use App\Models\Town;
+use Filament\Actions\Action;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -34,65 +35,105 @@ class ZoneForm
                     ->schema([
                         Select::make('state_id')
                             ->label('State')
-                            ->options(State::all()->pluck('name', 'id'))
+                            ->options(State::query()->pluck('name', 'id'))
                             ->searchable()
-                            ->reactive()
-                            ->afterStateUpdated(fn(callable $set) => [
-                                $set('city_id', null),
-                                $set('town_id', null),
-                            ]),
+                            ->live()
+                            ->afterStateUpdated(function ($state, callable $set) {
+                                $set('city_id', null);
+                                $set('town_id', null);
+                            })
+                            ->default(fn ($record) => $record?->town?->city?->state_id),
 
                         Select::make('city_id')
                             ->label('City')
                             ->options(function (callable $get) {
-                                $stateId = $get('state_id');
-                                if (!$stateId) return [];
-                                return City::where('state_id', $stateId)->pluck('name', 'id');
+                                return City::when(
+                                    $get('state_id'),
+                                    fn ($q) => $q->where('state_id', $get('state_id'))
+                                )->pluck('name', 'id');
                             })
                             ->searchable()
-                            ->reactive()
-                            ->afterStateUpdated(fn(callable $set) => $set('town_id', null))
-                            ->disabled(fn(callable $get) => !$get('state_id')),
+                            ->live()
+                            ->afterStateUpdated(fn ($set) => $set('town_id', null))
+                            ->default(fn ($record) => $record?->town?->city_id)
+                            ->disabled(fn ($get) => ! $get('state_id')),
 
                         Select::make('town_id')
                             ->label('Town')
-                            ->relationship('town', 'name')
                             ->options(function (callable $get) {
-                                $cityId = $get('city_id');
-                                if (!$cityId) return [];
-                                return Town::where('city_id', $cityId)->pluck('name', 'id');
+                                return Town::when(
+                                    $get('city_id'),
+                                    fn ($q) => $q->where('city_id', $get('city_id'))
+                                )->pluck('name', 'id');
                             })
                             ->searchable()
                             ->required()
-                            ->disabled(fn(callable $get) => !$get('city_id')),
+                            ->reactive()
+                            ->default(fn ($record) => $record?->town_id)
+                            ->disabled(fn ($get) => ! $get('city_id')),
 
                         Select::make('coordinator_id')
                             ->label('Coordinator')
                             ->relationship(
                                 name: 'coordinator',
                                 titleAttribute: 'name',
-                                modifyQueryUsing: fn ($query) => $query->role('coordinator')
+                                modifyQueryUsing: fn($query) => $query->role('coordinator')
                             )
                             ->searchable()
                             ->preload()
                             ->required()
-                            ->rules([
-                                function () {
-                                    return function ($attribute, $value, $fail) {
+                            ->live(debounce: 500)
+                            ->afterStateUpdated(function ($state, $set, $get, $record) {
 
-                                        if (! $value) {
-                                            return;
-                                        }
+                                if (!$state) return;
 
-                                        // check if coordinator already assigned to another zone
-                                        $exists = \App\Models\Zone::where('coordinator_id', $value)->exists();
+                                \Filament\Notifications\Notification::make()
+                                    ->warning()
+                                    ->title('Confirm Coordinator Change')
+                                    ->body('Changing coordinator will replace the current one.')
+                                    ->actions([
+                                        Action::make('confirm')
+                                            ->label('Confirm')
+                                            ->color('danger')
+                                            ->action(function () use ($state, $record) {
+                                                app(\App\Services\ZoneCoordinatorService::class)
+                                                    ->assignCoordinator($record, $state, auth()->id());
+                                            }),
 
-                                        if ($exists) {
-                                            $fail('This user is already assigned to another zone.');
-                                        }
-                                    };
-                                }
-                            ])
+                                        Action::make('cancel')
+                                            ->label('Cancel')
+                                            ->close(),
+                                    ])
+                                    ->send();
+                            }),
+
+//                        Select::make('coordinator_id')
+//                            ->label('Coordinator')
+//                            ->relationship(
+//                                name: 'coordinator',
+//                                titleAttribute: 'name',
+//                                modifyQueryUsing: fn ($query) => $query->role('coordinator')
+//                            )
+//                            ->searchable()
+//                            ->preload()
+//                            ->required()
+//                            ->rules([
+//                                function () {
+//                                    return function ($attribute, $value, $fail) {
+//
+//                                        if (! $value) {
+//                                            return;
+//                                        }
+//
+//                                        // check if coordinator already assigned to another zone
+//                                        $exists = \App\Models\Zone::where('coordinator_id', $value)->exists();
+//
+//                                        if ($exists) {
+//                                            $fail('This user is already assigned to another zone.');
+//                                        }
+//                                    };
+//                                }
+//                            ])
                     ])->columns(3),
 
 
