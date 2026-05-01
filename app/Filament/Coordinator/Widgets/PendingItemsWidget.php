@@ -19,8 +19,17 @@ class PendingItemsWidget extends Widget
     {
         $zoneId = auth()->user()?->zone_id;
 
+        // ✅ Always return all keys with default values
         if (!$zoneId) {
-            return ['counts' => [], 'items' => collect()];
+            return [
+                'counts' => [
+                    'loans' => 0,
+                    'education' => 0,
+                    'healthcare' => 0,
+                    'welfare' => 0,
+                ],
+                'items' => collect(),
+            ];
         }
 
         // Counts — global scopes on Widow/Orphan auto-filter by zone

@@ -1,5 +1,4 @@
 <?php
-// app/Http/Middleware/EnsureCoordinator.php
 
 namespace App\Http\Middleware;
 
@@ -17,19 +16,34 @@ class EnsureCoordinator
             abort(401, 'Authentication required.');
         }
 
-        // Use Spatie permission check
-        if (!$user->hasAnyRole(['coordinator', 'admin', 'super_admin'])) {
+        $isAdmin = $user->hasAnyRole(['admin', 'super_admin']);
+        $isCoordinator = $user->hasRole('coordinator');
+
+        // Allow only coordinator/admin
+        if (! $isAdmin && ! $isCoordinator) {
             abort(403, 'Access denied. Coordinators only.');
         }
 
+        // Load zone once (important for performance)
+        $user->loadMissing('coordinatedZone');
+
         // For coordinators (not admins), require zone assignment
-        if ($user->hasAnyRole('coordinator') && !$user->zone_id) {
+        if ($isCoordinator && ! $user->coordinatedZone) {
             abort(403, 'No zone assigned. Contact administrator.');
         }
 
-        // Bind coordinator's zone to request
-        $request->attributes->set('coordinator_zone_id', $user->zone_id);
-        $request->attributes->set('user_is_admin', $user->hasRole(['admin', 'super_admin']));
+        // Bind zone safely
+        $request->attributes->set('coordinator_zone_id', $user->zoneId());
+//        $request->attributes->set(
+//            'coordinator_zone_id',
+//            $user->coordinatedZone?->id // ✅ correct
+//        );
+
+
+        $request->attributes->set(
+            'user_is_admin',
+            $isAdmin // ✅ fixed
+        );
 
         return $next($request);
     }

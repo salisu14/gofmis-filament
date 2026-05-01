@@ -18,12 +18,40 @@ class ZoneStatsWidget extends BaseWidget
     protected function getStats(): array
     {
         $user = auth()->user();
-        $zoneId = $user->zone_id;
-        $zoneName = $user->zone?->name ?? 'Unknown Zone';
+
+        // ✅ Fixed: Removed duplicate $zoneId assignment, use coordinatedZone
+        $zoneId = $user?->coordinatedZone?->id;
+        $zoneName = $user?->coordinatedZone?->name ?? 'Unknown Zone';
+
+        // If no zone assigned, show empty stats
+        if (!$zoneId) {
+            return [
+                Stat::make($zoneName, 'Your Zone')
+                    ->description($user?->name ?? 'No User')
+                    ->descriptionIcon('heroicon-m-map-pin')
+                    ->color('gray'),
+
+                Stat::make('Families', '0')
+                    ->description('No zone assigned')
+                    ->color('gray'),
+
+                Stat::make('Orphans', '0')
+                    ->description('No zone assigned')
+                    ->color('gray'),
+
+                Stat::make('Widows', '0')
+                    ->description('No zone assigned')
+                    ->color('gray'),
+
+                Stat::make('Active Loans', '0')
+                    ->description('No zone assigned')
+                    ->color('gray'),
+            ];
+        }
 
         return [
             Stat::make($zoneName, 'Your Zone')
-                ->description($user->name)
+                ->description($user?->name)
                 ->descriptionIcon('heroicon-m-map-pin')
                 ->color('primary')
                 ->extraAttributes(['class' => 'col-span-2']),

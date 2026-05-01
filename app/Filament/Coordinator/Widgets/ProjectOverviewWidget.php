@@ -14,8 +14,16 @@ class ProjectOverviewWidget extends BaseWidget
 
     protected function getStats(): array
     {
-        $zoneId = auth()->user()?->zone_id;
-        $baseQuery = Project::query()->when($zoneId, fn($q) => $q->where('zone_id', $zoneId));
+        // ✅ FIXED: Use coordinatedZone instead of zone_id
+        $zoneId = auth()->user()?->coordinatedZone?->id;
+        $isAdmin = auth()->user()?->hasRole(['admin', 'super-admin']);
+
+        $baseQuery = Project::query();
+
+        // Only filter by zone for non-admin coordinators who have a coordinated zone
+        if (!$isAdmin && $zoneId) {
+            $baseQuery->where('zone_id', $zoneId);
+        }
 
         return [
             Stat::make('Total Projects', $baseQuery->clone()->count())

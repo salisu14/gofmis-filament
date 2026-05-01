@@ -114,6 +114,11 @@ class Orphan extends Model
         );
     }
 
+    public function getCoordinatorNameAttribute(): ?string
+    {
+        return $this->deceased?->zone?->coordinator?->name;
+    }
+
     public function educations(): HasMany
     {
         return $this->hasMany(OrphanEducation::class);
@@ -161,13 +166,12 @@ class Orphan extends Model
             ->get();
     }
 
-    protected static function boot(): void
+    protected static function booted(): void
     {
-        parent::boot();
+        parent::booted();
 
         static::addGlobalScope(new EligibleOrphanScope);
 
-        // ✅ FIXED: Use whereHas to filter through deceased relationship
         static::addGlobalScope('zone', function ($query) {
             $user = auth()->user();
 
@@ -175,8 +179,15 @@ class Orphan extends Model
                 return;
             }
 
-            $query->whereHas('deceased', function ($q) use ($user) {
-                $q->where('zone_id', $user->zone_id);
+            // ✅ FIXED: Use coordinatedZone instead of zone_id
+            $zoneId = $user->coordinatedZone?->id;
+
+            if (!$zoneId) {
+                return $query->whereRaw('1 = 0');
+            }
+
+            $query->whereHas('deceased', function ($q) use ($zoneId) {
+                $q->where('zone_id', $zoneId);
             });
         });
 

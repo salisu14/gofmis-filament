@@ -53,6 +53,23 @@ class Deceased extends Model
         return $this->belongsTo(Zone::class);
     }
 
+    public function coordinator(): \Illuminate\Database\Eloquent\Relations\HasOneThrough|Deceased
+    {
+        return $this->hasOneThrough(
+            User::class,
+            Zone::class,
+            'id',             // Foreign key on Zone
+            'id',             // Foreign key on User
+            'zone_id',        // Local key on Deceased
+            'coordinator_id'  // Local key on Zone
+        );
+    }
+
+    public function getCoordinatorNameAttribute(): ?string
+    {
+        return $this->zone?->coordinator?->name;
+    }
+
     public function orphans(): HasMany
     {
         return $this->hasMany(Orphan::class);
@@ -78,9 +95,9 @@ class Deceased extends Model
         return $this->hasMany(ZoneTransfer::class);
     }
 
-    protected static function boot(): void
+    protected static function booted(): void
     {
-        parent::boot();
+        parent::booted();
 
         static::addGlobalScope('zone', function ($query) {
             $user = auth()->user();
@@ -89,7 +106,14 @@ class Deceased extends Model
                 return;
             }
 
-            $query->where('zone_id', $user->zone_id);
+            // ✅ FIXED: Get zone_id from coordinatedZone relationship
+            $zoneId = $user->coordinatedZone?->id;
+
+            if (!$zoneId) {
+                return $query->whereRaw('1 = 0');
+            }
+
+            $query->where('zone_id', $zoneId);
         });
 
         static::creating(function ($model) {

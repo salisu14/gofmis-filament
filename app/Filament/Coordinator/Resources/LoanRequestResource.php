@@ -39,7 +39,8 @@ class LoanRequestResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        $zoneId = auth()->user()?->zone_id;
+        // ✅ FIXED: Use coordinatedZone instead of zone_id
+        $zoneId = auth()->user()?->coordinatedZone?->id;
         $isAdmin = auth()->user()?->hasRole(['admin', 'super-admin']);
 
         $query = parent::getEloquentQuery();
@@ -63,9 +64,12 @@ class LoanRequestResource extends Resource
         $user = auth()->user();
         if ($user->hasRole(['admin', 'super-admin'])) return true;
 
+        // ✅ FIXED: Use coordinatedZone for zone comparison
+        $zoneId = $user?->coordinatedZone?->id;
+
         // Coordinators can only edit draft/pending loans they created
         return $record->status === WidowLoanStatus::DRAFT &&
-            $record->widow?->deceased?->zone_id === $user->zone_id;
+            $record->widow?->deceased?->zone_id === $zoneId;
     }
 
     public static function canDelete($record): bool
@@ -76,7 +80,8 @@ class LoanRequestResource extends Resource
     public static function form(Schema $schema): Schema
     {
         $user = auth()->user();
-        $zoneId = $user->zone_id;
+        // ✅ FIXED: Use coordinatedZone instead of zone_id
+        $zoneId = $user?->coordinatedZone?->id;
 
         return $schema
             ->schema([
@@ -203,7 +208,7 @@ class LoanRequestResource extends Resource
                         'warning' => 'pending',
                         'info' => 'approved',
                         'success' => 'disbursed',
-                        'success' => 'completed',
+                        'primary' => 'completed',
                         'danger' => 'rejected',
                     ]),
 
@@ -231,10 +236,11 @@ class LoanRequestResource extends Resource
                         'rejected' => 'Rejected',
                     ]),
 
-                Tables\Filters\Filter::make('my_requests')
+                Tables\Filters\Filter::make('my_zone')
                     ->label('My Zone Only')
                     ->query(function (Builder $query) {
-                        $zoneId = auth()->user()?->zone_id;
+                        // ✅ FIXED: Use coordinatedZone instead of zone_id
+                        $zoneId = auth()->user()?->coordinatedZone?->id;
                         if ($zoneId) {
                             $query->whereHas('widow.deceased', fn($q) => $q->where('zone_id', $zoneId));
                         }
@@ -257,9 +263,6 @@ class LoanRequestResource extends Resource
                     ->visible(fn($record) => $record->status === WidowLoanStatus::DRAFT)
                     ->action(function (WidowLoan $record) {
                         $record->update(['status' => WidowLoanStatus::PENDING]);
-
-                        // Create approval flow if your system uses it
-                        // $record->createApprovalFlow();
 
                         Notification::make()
                             ->title('Submitted Successfully')
@@ -285,9 +288,7 @@ class LoanRequestResource extends Resource
 
     public static function getRelations(): array
     {
-        return [
-            // Add if you want to show repayments/schedules in view page
-        ];
+        return [];
     }
 
     public static function getPages(): array

@@ -67,7 +67,19 @@ class User extends Authenticatable
         return $this->belongsTo(Zone::class);
     }
 
-    // Zone this user coordinates (if they are a coordinator)
+    public function hasZone(): bool
+    {
+        return $this->coordinatedZone()->exists();
+    }
+
+    public function zoneId(): ?string
+    {
+        return $this->coordinatedZone?->id;
+    }
+
+    /**
+     * The zone this user coordinates (if they are a coordinator).
+     */
     public function coordinatedZone(): HasOne
     {
         return $this->hasOne(Zone::class, 'coordinator_id');

@@ -12,7 +12,7 @@
                     <div class="flex items-center justify-center p-1.5 rounded-full bg-warning-100 dark:bg-warning-900/30">
                         <x-heroicon-m-banknotes class="w-4 h-4 text-warning-600 shrink-0" />
                     </div>
-                    <span class="text-2xl font-bold text-warning-700 dark:text-warning-300">{{ $counts['loans'] }}</span>
+                    <span class="text-2xl font-bold text-warning-700 dark:text-warning-300">{{ data_get($counts, 'loans', 0) }}</span>
                 </div>
                 <p class="text-xs text-warning-600 dark:text-warning-400 mt-1">Pending Loans</p>
             </div>

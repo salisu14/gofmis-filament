@@ -36,8 +36,9 @@ class EducationRequestResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        $zoneId = auth()->user()?->zone_id;
-        $isAdmin = (bool) request()->attributes->get('user_is_admin', false);
+        // ✅ FIXED: Use coordinatedZone instead of zone_id
+        $zoneId = auth()->user()?->coordinatedZone?->id;
+        $isAdmin = auth()->user()?->hasRole(['admin', 'super-admin']);
 
         $query = parent::getEloquentQuery()
             ->whereHas('type', fn($q) => $q->where('name', 'like', '%education%'));
@@ -53,25 +54,31 @@ class EducationRequestResource extends Resource
 
     public static function canCreate(): bool
     {
-        return auth()->check();
+        return auth()->user()?->hasAnyRole(['coordinator', 'admin', 'super-admin']) ?? false;
     }
 
     public static function canEdit($record): bool
     {
-        if ((bool) request()->attributes->get('user_is_admin', false)) return true;
+        $user = auth()->user();
+        if ($user->hasRole(['admin', 'super-admin'])) return true;
 
-        return $record->status === 'pending';
+        // ✅ FIXED: Use coordinatedZone for zone comparison
+        $zoneId = $user?->coordinatedZone?->id;
+
+        return $record->status === 'pending' &&
+            $record->orphan?->deceased?->zone_id === $zoneId;
     }
 
     public static function canDelete($record): bool
     {
-        return (bool) request()->attributes->get('user_is_admin', false);
+        return auth()->user()?->hasRole(['admin', 'super-admin']) ?? false;
     }
 
     public static function form(Schema $schema): Schema
     {
         $user = auth()->user();
-        $zoneId = $user->zone_id;
+        // ✅ FIXED: Use coordinatedZone instead of zone_id
+        $zoneId = $user?->coordinatedZone?->id;
 
         return $schema
             ->schema([
@@ -215,6 +222,17 @@ class EducationRequestResource extends Resource
                         'rejected' => 'Rejected',
                         'completed' => 'Completed',
                     ]),
+
+                // ✅ FIXED: Use coordinatedZone instead of zone_id
+                Tables\Filters\Filter::make('my_zone')
+                    ->label('My Zone Only')
+                    ->query(function (Builder $query) {
+                        $zoneId = auth()->user()?->coordinatedZone?->id;
+                        if ($zoneId) {
+                            $query->whereHas('orphan.deceased', fn($q) => $q->where('zone_id', $zoneId));
+                        }
+                    })
+                    ->default(),
 
                 Tables\Filters\Filter::make('this_month')
                     ->label('This Month')

@@ -34,8 +34,8 @@ class WidowInfolist
 
                         Grid::make(3)
                             ->schema([
-                                TextEntry::make('nin'),
-                                TextEntry::make('reg_no'),
+                                TextEntry::make('nin')->copyable(),
+                                TextEntry::make('reg_no')->copyable(),
                                 TextEntry::make('child_sequence'),
                             ]),
 
@@ -51,6 +51,14 @@ class WidowInfolist
                                     ->boolean(),
                                 IconEntry::make('is_married')
                                     ->boolean(),
+
+                                TextEntry::make('zone.name')
+                                    ->label('Zone')
+                                    ->badge('success'),
+
+                                TextEntry::make('deceased.zone.coordinator.name')
+                                    ->label('Coordinator')
+                                    ->badge('primary'),
                             ]),
 
                         TextEntry::make('married_at')
@@ -63,6 +71,7 @@ class WidowInfolist
 
                         TextEntry::make('deceased.full_name')
                             ->label('Deceased'),
+
                     ]),
             ]);
     }

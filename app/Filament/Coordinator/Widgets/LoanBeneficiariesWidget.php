@@ -1,4 +1,5 @@
 <?php
+// app/Filament/Coordinator/Widgets/LoanBeneficiariesWidget.php
 
 namespace App\Filament\Coordinator\Widgets;
 
@@ -17,7 +18,8 @@ class LoanBeneficiariesWidget extends BaseWidget
 
     public function table(Table $table): Table
     {
-        $zoneId = auth()->user()?->zone_id;
+        // ✅ FIXED: Use coordinatedZone instead of zone_id
+        $zoneId = auth()->user()?->coordinatedZone?->id;
         $isAdmin = auth()->user()?->hasRole(['admin', 'super-admin']);
 
         return $table

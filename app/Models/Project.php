@@ -50,6 +50,11 @@ class Project extends Model
         return $this->belongsTo(Zone::class);
     }
 
+    public function getCoordinatorNameAttribute(): ?string
+    {
+        return $this->zone?->coordinator?->name;
+    }
+
     public function deceased(): BelongsTo
     {
         return $this->belongsTo(Deceased::class);

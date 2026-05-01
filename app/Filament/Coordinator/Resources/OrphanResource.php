@@ -48,7 +48,9 @@ class OrphanResource extends Resource
      */
     protected static function applyZoneScope(Builder $query, string $zoneId): Builder
     {
-        return $query->whereHas('deceased', fn (Builder $q) => $q->where('zone_id', $zoneId));
+        return $query->whereHas('deceased', function ($q) use ($zoneId) {
+            $q->where('zone_id', $zoneId);
+        });
     }
 
     protected static function getRecordZoneId($record): ?string

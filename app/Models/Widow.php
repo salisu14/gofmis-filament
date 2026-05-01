@@ -81,6 +81,11 @@ class Widow extends Model
         return $this->belongsTo(Deceased::class);
     }
 
+    public function getCoordinatorNameAttribute(): ?string
+    {
+        return $this->deceased?->zone?->coordinator?->name;
+    }
+
     public function zone(): \Illuminate\Database\Eloquent\Relations\HasOneThrough
     {
         return $this->hasOneThrough(
@@ -121,11 +126,10 @@ class Widow extends Model
         return true;
     }
 
-    protected static function boot(): void
+    protected static function booted(): void
     {
-        parent::boot();
+        parent::booted();
 
-        // ✅ FIXED: Use whereHas to filter through deceased relationship
         static::addGlobalScope('zone', function ($query) {
             $user = auth()->user();
 
@@ -133,8 +137,15 @@ class Widow extends Model
                 return;
             }
 
-            $query->whereHas('deceased', function ($q) use ($user) {
-                $q->where('zone_id', $user->zone_id);
+            // ✅ FIXED: Use coordinatedZone instead of zone_id
+            $zoneId = $user->coordinatedZone?->id;
+
+            if (!$zoneId) {
+                return $query->whereRaw('1 = 0');
+            }
+
+            $query->whereHas('deceased', function ($q) use ($zoneId) {
+                $q->where('zone_id', $zoneId);
             });
         });
 

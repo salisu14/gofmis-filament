@@ -57,6 +57,11 @@ class WidowsTable
                     ->label('Zone')
                     ->searchable(),
 
+                TextColumn::make('deceased.zone.coordinator.name')
+                    ->label('Coordinator')
+                    ->sortable()
+                    ->searchable(),
+
                 IconColumn::make('is_eligible')
                     ->label('Eligible')
                     ->boolean()

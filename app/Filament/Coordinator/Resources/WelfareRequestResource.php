@@ -1,5 +1,5 @@
 <?php
-// app/Filament/Coordinator\Resources\WelfareRequestResource.php
+// app/Filament/Coordinator/Resources/WelfareRequestResource.php
 
 namespace App\Filament\Coordinator\Resources;
 
@@ -40,7 +40,8 @@ class WelfareRequestResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        $zoneId = auth()->user()?->zone_id;
+        // ✅ FIXED: Use coordinatedZone instead of zone_id
+        $zoneId = auth()->user()?->coordinatedZone?->id;
         $isAdmin = auth()->user()?->hasRole(['admin', 'super-admin']);
 
         $query = parent::getEloquentQuery();
@@ -62,7 +63,11 @@ class WelfareRequestResource extends Resource
         $user = auth()->user();
         if ($user->hasRole(['admin', 'super-admin'])) return true;
 
-        return $record->status === BeneficiaryStatus::PENDING;
+        // ✅ FIXED: Use coordinatedZone for zone comparison
+        $zoneId = $user?->coordinatedZone?->id;
+
+        return $record->status === BeneficiaryStatus::PENDING &&
+            $record->deceased?->zone_id === $zoneId;
     }
 
     public static function canDelete($record): bool
@@ -73,7 +78,8 @@ class WelfareRequestResource extends Resource
     public static function form(Schema $schema): Schema
     {
         $user = auth()->user();
-        $zoneId = $user->zone_id;
+        // ✅ FIXED: Use coordinatedZone instead of zone_id
+        $zoneId = $user?->coordinatedZone?->id;
 
         // Get active/open welfare packages
         $activePackages = WelfarePackage::active()->orWhere->open()->get();
@@ -215,6 +221,17 @@ class WelfareRequestResource extends Resource
                 Tables\Filters\SelectFilter::make('welfare_package_id')
                     ->label('Package')
                     ->relationship('welfarePackage', 'name'),
+
+                // ✅ FIXED: Use coordinatedZone instead of zone_id
+                Tables\Filters\Filter::make('my_zone')
+                    ->label('My Zone Only')
+                    ->query(function (Builder $query) {
+                        $zoneId = auth()->user()?->coordinatedZone?->id;
+                        if ($zoneId) {
+                            $query->whereHas('deceased', fn($q) => $q->where('zone_id', $zoneId));
+                        }
+                    })
+                    ->default(),
 
                 Tables\Filters\Filter::make('not_collected')
                     ->label('Not Yet Collected')

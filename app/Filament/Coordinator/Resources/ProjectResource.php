@@ -5,10 +5,16 @@ namespace App\Filament\Coordinator\Resources;
 
 use App\Enums\ProjectStatus;
 use App\Enums\ProjectType;
+use App\Filament\Coordinator\Concerns\ZoneScoped;
+use App\Filament\Coordinator\Resources\ProjectResource\Pages\CreateProject;
+use App\Filament\Coordinator\Resources\ProjectResource\Pages\EditProject;
+use App\Filament\Coordinator\Resources\ProjectResource\Pages\ListProjects;
+use App\Filament\Coordinator\Resources\ProjectResource\Pages\ViewProject;
 use App\Models\Project;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms;
+use Filament\Forms\Components\Select;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
@@ -18,26 +24,49 @@ use Illuminate\Database\Eloquent\Builder;
 
 class ProjectResource extends Resource
 {
+    use ZoneScoped;
+
     protected static ?string $model = Project::class;
-    protected static string|null|\BackedEnum $navigationIcon = 'heroicon-o-building-office-2';
+    protected static string|null|\BackedEnum $navigationIcon = 'heroicon-o-wrench-screwdriver';
     protected static string|null|\UnitEnum $navigationGroup = 'Projects';
     protected static ?int $navigationSort = 5;
 
-    public static function getEloquentQuery(): Builder
+    protected static function applyZoneScope(Builder $query, string $zoneId): Builder
     {
-        $query = parent::getEloquentQuery();
-        $zoneId = auth()->user()?->zone_id;
+        return $query->whereHas('deceased', function ($q) use ($zoneId) {
+            $q->where('zone_id', $zoneId);
+        });
+    }
 
-        if (!$zoneId || auth()->user()?->hasAnyRole(['admin', 'super_admin'])) {
-            return $query;
-        }
+    protected static function getRecordZoneId($record): ?string
+    {
+        return $record->deceased?->zone_id;
+    }
 
-        return $query->where('zone_id', $zoneId);
+    public static function canCreate(): bool
+    {
+        return auth()->user()?->hasAnyRole(['coordinator', 'admin', 'super_admin']) ?? false;
+    }
+
+    public static function canEdit($record): bool
+    {
+        $user = auth()->user();
+        if (!$user) return false;
+        if ($user->hasAnyRole(['admin', 'super_admin'])) return true;
+
+        return $record->deceased?->zone_id === $user->zone_id;
+    }
+
+    public static function canDelete($record): bool
+    {
+        return auth()->user()?->hasRole(['admin', 'super_admin']) ?? false;
     }
 
     public static function form(Schema $schema): Schema
     {
-        $zoneId = auth()->user()?->zone_id;
+        // ✅ FIXED: Use coordinatedZone instead of zone_id
+        $zoneId = auth()->user()?->coordinatedZone?->id;
+        $coordinatorZoneId = auth()->user()?->zone_id;
 
         return $schema
             ->schema([
@@ -56,14 +85,27 @@ class ProjectResource extends Resource
                         Forms\Components\Hidden::make('zone_id')
                             ->default($zoneId),
 
-                        Forms\Components\Select::make('deceased_id')
+                        Select::make('deceased_id')
                             ->label('Beneficiary Family')
-                            ->relationship('deceased', 'full_name', fn($q) =>
-                            $q->where('zone_id', $zoneId)
+                            ->relationship(
+                                'deceased',
+                                'full_name',
+                                fn (Builder $query) => $query->when($coordinatorZoneId, fn ($q) => $q->where('zone_id', $coordinatorZoneId))
                             )
+                            ->getOptionLabelFromRecordUsing(fn ($record) => "{$record->full_name} ({$record->reg_no})")
                             ->searchable()
                             ->preload()
-                            ->required(),
+                            ->required()
+                            ->columnSpanFull(),
+
+//                        Forms\Components\Select::make('deceased_id')
+//                            ->label('Beneficiary Family')
+//                            ->relationship('deceased', 'full_name', fn($q) =>
+//                            $q->where('zone_id', $zoneId)  // Now $zoneId has correct value
+//                            )
+//                            ->searchable()
+//                            ->preload()
+//                            ->required(),
 
                         Forms\Components\Textarea::make('description')
                             ->rows(3)
@@ -129,10 +171,10 @@ class ProjectResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListProjects::route('/'),
-            'create' => Pages\CreateProject::route('/create'),
-            'edit' => Pages\EditProject::route('/{record}/edit'),
-            'view' => Pages\ViewProject::route('/{record}'),
+            'index' => ListProjects::route('/'),
+            'create' => CreateProject::route('/create'),
+            'edit' => EditProject::route('/{record}/edit'),
+            'view' => ViewProject::route('/{record}'),
         ];
     }
 }

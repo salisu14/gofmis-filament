@@ -1,5 +1,5 @@
 <?php
-// app/Filament\Coordinator\Widgets\RecentActivityWidget.php (Revised)
+// app/Filament/Coordinator/Widgets/RecentActivityWidget.php
 
 namespace App\Filament\Coordinator\Widgets;
 
@@ -21,18 +21,22 @@ class RecentActivityWidget extends Widget
 
     protected function getViewData(): array
     {
-        $zoneId = auth()->user()?->zone_id;
-        if (!$zoneId) {
+        // ✅ FIXED: Use coordinatedZone instead of zone_id
+        $zoneId = auth()->user()?->coordinatedZone?->id;
+        $isAdmin = auth()->user()?->hasRole(['admin', 'super-admin']);
+
+        if (!$isAdmin && !$zoneId) {
             return ['activities' => collect()];
         }
 
         $activities = collect();
 
         // Deceased registrations
-        Deceased::where('zone_id', $zoneId)
-            ->latest()
-            ->limit(5)
-            ->get()
+        $deceasedQuery = Deceased::query();
+        if (!$isAdmin && $zoneId) {
+            $deceasedQuery->where('zone_id', $zoneId);
+        }
+        $deceasedQuery->latest()->limit(5)->get()
             ->each(fn($item) => $activities->push([
                 'type' => 'deceased_registered',
                 'label' => 'Deceased Registered',
@@ -44,11 +48,11 @@ class RecentActivityWidget extends Widget
             ]));
 
         // Orphan registrations
-        Orphan::whereHas('deceased', fn($q) => $q->where('zone_id', $zoneId))
-            ->with('deceased')
-            ->latest()
-            ->limit(5)
-            ->get()
+        $orphanQuery = Orphan::query()->with('deceased');
+        if (!$isAdmin && $zoneId) {
+            $orphanQuery->whereHas('deceased', fn($q) => $q->where('zone_id', $zoneId));
+        }
+        $orphanQuery->latest()->limit(5)->get()
             ->each(fn($item) => $activities->push([
                 'type' => 'orphan_registered',
                 'label' => 'Orphan Registered',
@@ -60,11 +64,11 @@ class RecentActivityWidget extends Widget
             ]));
 
         // Widow registrations
-        Widow::whereHas('deceased', fn($q) => $q->where('zone_id', $zoneId))
-            ->with('deceased')
-            ->latest()
-            ->limit(5)
-            ->get()
+        $widowQuery = Widow::query()->with('deceased');
+        if (!$isAdmin && $zoneId) {
+            $widowQuery->whereHas('deceased', fn($q) => $q->where('zone_id', $zoneId));
+        }
+        $widowQuery->latest()->limit(5)->get()
             ->each(fn($item) => $activities->push([
                 'type' => 'widow_registered',
                 'label' => 'Widow Registered',
@@ -76,11 +80,11 @@ class RecentActivityWidget extends Widget
             ]));
 
         // Loan requests
-        WidowLoan::whereHas('widow.deceased', fn($q) => $q->where('zone_id', $zoneId))
-            ->with('widow')
-            ->latest()
-            ->limit(5)
-            ->get()
+        $loanQuery = WidowLoan::query()->with('widow');
+        if (!$isAdmin && $zoneId) {
+            $loanQuery->whereHas('widow.deceased', fn($q) => $q->where('zone_id', $zoneId));
+        }
+        $loanQuery->latest()->limit(5)->get()
             ->each(fn($item) => $activities->push([
                 'type' => 'loan_requested',
                 'label' => 'Loan Requested',
@@ -92,20 +96,21 @@ class RecentActivityWidget extends Widget
             ]));
 
         // Healthcare requests
-        Prescription::where(function (Builder $q) use ($zoneId) {
-            $q->whereHas('prescribable', function (Builder $q2) use ($zoneId) {
-                $q2->where(function (Builder $q3) use ($zoneId) {
-                    $q3->where('prescribable_type', \App\Models\Orphan::class)
-                        ->whereHas('deceased', fn($q4) => $q4->where('zone_id', $zoneId));
-                })->orWhere(function (Builder $q3) use ($zoneId) {
-                    $q3->where('prescribable_type', \App\Models\Widow::class)
-                        ->whereHas('deceased', fn($q4) => $q4->where('zone_id', $zoneId));
+        $prescriptionQuery = Prescription::query();
+        if (!$isAdmin && $zoneId) {
+            $prescriptionQuery->where(function (Builder $q) use ($zoneId) {
+                $q->whereHas('prescribable', function (Builder $q2) use ($zoneId) {
+                    $q2->where(function (Builder $q3) use ($zoneId) {
+                        $q3->where('prescribable_type', \App\Models\Orphan::class)
+                            ->whereHas('deceased', fn($q4) => $q4->where('zone_id', $zoneId));
+                    })->orWhere(function (Builder $q3) use ($zoneId) {
+                        $q3->where('prescribable_type', \App\Models\Widow::class)
+                            ->whereHas('deceased', fn($q4) => $q4->where('zone_id', $zoneId));
+                    });
                 });
             });
-        })
-            ->latest()
-            ->limit(5)
-            ->get()
+        }
+        $prescriptionQuery->latest()->limit(5)->get()
             ->each(fn($item) => $activities->push([
                 'type' => 'healthcare_requested',
                 'label' => 'Healthcare Request',
@@ -117,12 +122,13 @@ class RecentActivityWidget extends Widget
             ]));
 
         // Education requests
-        InterventionRequest::whereHas('orphan.deceased', fn($q) => $q->where('zone_id', $zoneId))
+        $educationQuery = InterventionRequest::query()
             ->whereHas('type', fn($q) => $q->where('name', 'like', '%education%'))
-            ->with('orphan', 'type')
-            ->latest()
-            ->limit(5)
-            ->get()
+            ->with('orphan', 'type');
+        if (!$isAdmin && $zoneId) {
+            $educationQuery->whereHas('orphan.deceased', fn($q) => $q->where('zone_id', $zoneId));
+        }
+        $educationQuery->latest()->limit(5)->get()
             ->each(fn($item) => $activities->push([
                 'type' => 'education_requested',
                 'label' => 'Education Request',
@@ -134,11 +140,11 @@ class RecentActivityWidget extends Widget
             ]));
 
         // Welfare requests
-        WelfareBeneficiary::whereHas('deceased', fn($q) => $q->where('zone_id', $zoneId))
-            ->with('deceased', 'welfarePackage')
-            ->latest()
-            ->limit(5)
-            ->get()
+        $welfareQuery = WelfareBeneficiary::query()->with('deceased', 'welfarePackage');
+        if (!$isAdmin && $zoneId) {
+            $welfareQuery->whereHas('deceased', fn($q) => $q->where('zone_id', $zoneId));
+        }
+        $welfareQuery->latest()->limit(5)->get()
             ->each(fn($item) => $activities->push([
                 'type' => 'welfare_requested',
                 'label' => 'Welfare Request',

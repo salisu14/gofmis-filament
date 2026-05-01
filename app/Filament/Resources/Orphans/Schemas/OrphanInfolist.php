@@ -55,6 +55,7 @@ class OrphanInfolist
                             }),
                         TextEntry::make('nin')
                             ->label('NIN')
+                            ->copyable()
                             ->placeholder('Not Provided'),
                         TextEntry::make('deceased.full_name')
                             ->label('Parent Record')
@@ -89,6 +90,15 @@ class OrphanInfolist
                         TextEntry::make('married_at')
                             ->dateTime()
                             ->visible(fn($record) => $record->is_married),
+
+                        TextEntry::make('zone.name')
+                            ->label('Zone')
+                            ->badge('success'),
+
+                        TextEntry::make('deceased.zone.coordinator.name')
+                            ->label('Coordinator')
+                            ->badge('primary'),
+
                         TextEntry::make('address')
                             ->columnSpanFull(),
                     ])->columns(4),

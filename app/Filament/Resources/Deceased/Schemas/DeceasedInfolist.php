@@ -43,6 +43,7 @@ class DeceasedInfolist
                 Section::make('Location & Contact')
                     ->schema([
                         TextEntry::make('zone.name')->label('Zone'),
+                        TextEntry::make('coordinator.name')->label('Coordinator')->copyable(),
                         TextEntry::make('address')->columnSpanFull(),
                         TextEntry::make('guardian_name')->label('Guardian'),
                         TextEntry::make('guardian_phone')->copyable(),

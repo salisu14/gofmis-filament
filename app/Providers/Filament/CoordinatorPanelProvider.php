@@ -47,6 +47,7 @@ class CoordinatorPanelProvider extends PanelProvider
                 \App\Filament\Coordinator\Resources\WidowResource::class,
                 \App\Filament\Coordinator\Resources\LoanRequestResource::class,
                 \App\Filament\Coordinator\Resources\EducationRequestResource::class,
+                \App\Filament\Coordinator\Resources\ProjectResource::class,
             ])
 
             ->pages([
@@ -59,6 +60,7 @@ class CoordinatorPanelProvider extends PanelProvider
                 \App\Filament\Coordinator\Widgets\RecentActivityWidget::class,      // sort 4 - 2 cols
                 \App\Filament\Coordinator\Widgets\LoanBeneficiariesWidget::class, // sort 2 - full width
                 \App\Filament\Coordinator\Widgets\PendingItemsWidget::class,        // sort 5 - 2 cols
+                \App\Filament\Coordinator\Widgets\ProjectOverviewWidget::class,        // sort 6 - full width
 
             ])
 
@@ -81,6 +83,7 @@ class CoordinatorPanelProvider extends PanelProvider
             ->navigationGroups([
                 'Beneficiary Registration',
                 'Requests & Interventions',
+                'Projects',
             ])
 
             ->sidebarCollapsibleOnDesktop()

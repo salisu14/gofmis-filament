@@ -82,6 +82,15 @@ class OrphansTable
                     ->label('Eligible')
                     ->boolean()
                     ->alignCenter(),
+
+                TextColumn::make('zone.name')
+                    ->label('Zone')
+                    ->searchable(),
+
+                TextColumn::make('deceased.zone.coordinator.name')
+                    ->label('Coordinator')
+                    ->sortable()
+                    ->searchable(),
             ])
             ->defaultSort('created_at', 'desc')
             ->filters([
