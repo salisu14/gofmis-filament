@@ -15,11 +15,8 @@ class Zone extends Model
     protected $fillable = [
         'name',
         'address',
-        'city',
-        'state',
-        'coordinator_name',
-        'coordinator_phone',
-        'coordinator_id'
+        'coordinator_id',
+        'town_id', // ✅ make sure this exists
     ];
 
     /**
@@ -67,7 +64,7 @@ class Zone extends Model
         return $this->belongsTo(User::class, 'coordinator_id');
     }
 
-    public function coordinatorHistory(): HasMany
+    public function coordinatorHistories(): HasMany
     {
         return $this->hasMany(ZoneCoordinatorHistory::class);
     }

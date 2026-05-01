@@ -37,6 +37,7 @@ class ZoneResource extends Resource
     {
         return [
             RelationManagers\DeceasedRelationManager::class,
+            RelationManagers\CoordinatorHistoryRelationManager::class,
         ];
     }
 
@@ -47,20 +48,5 @@ class ZoneResource extends Resource
             'create' => CreateZone::route('/create'),
             'edit' => EditZone::route('/{record}/edit'),
         ];
-    }
-
-    protected function afterSave(): void
-    {
-        $zone = $this->record;
-
-        // clear previous coordinator
-        User::where('zone_id', $zone->id)
-            ->update(['zone_id' => null]);
-
-        // assign new coordinator
-        if ($this->data['coordinator_id'] ?? null) {
-            User::where('id', $this->data['coordinator_id'])
-                ->update(['zone_id' => $zone->id]);
-        }
     }
 }

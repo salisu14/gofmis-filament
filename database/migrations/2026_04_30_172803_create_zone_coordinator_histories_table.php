@@ -12,8 +12,19 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('zone_coordinator_histories', function (Blueprint $table) {
-            $table->id();
+            $table->uuid('id')->primary();
+
+            $table->foreignUuid('zone_id')->constrained()->cascadeOnDelete();
+            $table->foreignUuid('user_id')->constrained()->cascadeOnDelete();
+
+            $table->timestamp('assigned_at');
+            $table->timestamp('unassigned_at')->nullable();
+
+            $table->foreignUuid('changed_by')->nullable()->constrained('users')->nullOnDelete();
+
             $table->timestamps();
+
+            $table->index(['zone_id', 'unassigned_at']);
         });
     }
 

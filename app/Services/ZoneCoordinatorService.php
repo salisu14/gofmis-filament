@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Zone;
 use App\Models\ZoneCoordinatorHistory;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Throwable;
 
 class ZoneCoordinatorService
@@ -16,17 +17,22 @@ class ZoneCoordinatorService
     {
         DB::transaction(function () use ($zone, $userId, $changedBy) {
 
+            $exists = Zone::where('coordinator_id', $userId)
+                ->where('id', '!=', $zone->id)
+                ->exists();
+
+            if ($exists) {
+                throw ValidationException::withMessages([
+                    'coordinator_id' => 'This user is already assigned to another zone.',
+                ]);
+            }
+
             // Close previous coordinator history
             ZoneCoordinatorHistory::where('zone_id', $zone->id)
                 ->whereNull('unassigned_at')
                 ->update([
                     'unassigned_at' => now(),
                 ]);
-
-            // Save new coordinator
-            $zone->update([
-                'coordinator_id' => $userId,
-            ]);
 
             // Create history record
             ZoneCoordinatorHistory::create([
