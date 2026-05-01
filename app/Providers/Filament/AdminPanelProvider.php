@@ -161,7 +161,7 @@ class AdminPanelProvider extends PanelProvider
                     )
                     // Sponsorship Module
                     ->group(
-                        NavigationGroup::make('Sponsorship')
+                        NavigationGroup::make('Sponsorship & Projects')
                             ->items([
                                 // Sponsor
                                 NavigationItem::make('Sponsors')
@@ -174,6 +174,12 @@ class AdminPanelProvider extends PanelProvider
                                     ->icon('heroicon-o-receipt-percent')
                                     ->url('/admin/sponsorships')
                                     ->isActiveWhen(fn() => request()->is('admin/sponsorships*')),
+
+                                // Projects
+                                NavigationItem::make('Projects')
+                                    ->icon('heroicon-o-wrench-screwdriver')
+                                    ->url('/admin/projects')
+                                    ->isActiveWhen(fn() => request()->is('admin/projects*')),
                             ])
                     )
                     // Revolving Loan

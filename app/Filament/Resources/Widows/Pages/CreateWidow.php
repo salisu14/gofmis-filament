@@ -19,6 +19,12 @@ class CreateWidow extends CreateRecord
      */
     protected function handleRecordCreation(array $data): Model
     {
+        // FIX: Normalize skills to ensure it is always an array
+        $skills = $data['skills'] ?? [];
+        if (is_string($skills)) {
+            $skills = explode(',', $skills);
+        }
+
         // 1. Map Filament form data to the WidowData DTO.
         $widowData = new WidowData(
             deceasedId: $data['deceased_id'],
@@ -27,7 +33,8 @@ class CreateWidow extends CreateRecord
             middleName: $data['middle_name'] ?? null,
             nin: $data['nin'] ?? null,
             address: $data['address'] ?? null,
-            skills: $data['skills'] ?? [],
+            skills: $skills, // Pass the normalized array
+            isEligible: $data['is_eligible'] ?? true,
             isMarried: $data['is_married'] ?? false,
         );
 

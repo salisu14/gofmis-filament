@@ -11,17 +11,27 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('approval_flows', function (Blueprint $table) {
-            $table->uuid('id')->primary()->first();
-            $table->string('model_type')->after('id');
-            $table->uuid('model_id')->after('model_type');
-            $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending')->after('model_id');
-            $table->integer('current_step')->default(1)->after('status');
-            $table->integer('total_steps')->default(1)->after('current_step');
-            $table->uuid('approver_id')->nullable()->after('total_steps');
-            $table->text('rejection_reason')->nullable()->after('approver_id');
-            $table->timestamp('approved_at')->nullable()->after('rejection_reason');
-            $table->timestamp('rejected_at')->nullable()->after('approved_at');
+        Schema::create('approval_flows', function (Blueprint $table) {
+            $table->uuid('id')->primary();
+
+            // Polymorphic columns for the entity being approved (e.g., WidowLoan)
+            $table->string('model_type');
+            $table->uuid('model_id');
+
+            $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending');
+            $table->integer('current_step')->default(1);
+            $table->integer('total_steps')->default(1);
+
+            // Finalization details
+            $table->uuid('approver_id')->nullable();
+            $table->text('rejection_reason')->nullable();
+            $table->timestamp('approved_at')->nullable();
+            $table->timestamp('rejected_at')->nullable();
+
+            $table->timestamps();
+
+            // Indexes for polymorphic lookups
+            $table->index(['model_type', 'model_id']);
         });
     }
 

@@ -11,17 +11,30 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('approval_steps', function (Blueprint $table) {
-            $table->uuid('id')->primary()->first();
-            $table->uuid('approval_flow_id')->after('id');
-            $table->integer('step_number')->after('approval_flow_id');
-            $table->string('role_required')->nullable()->after('step_number');
-            $table->enum('status', ['pending', 'approved', 'rejected', 'waiting'])->default('waiting')->after('role_required');
-            $table->uuid('approver_id')->nullable()->after('status');
-            $table->timestamp('approved_at')->nullable()->after('approver_id');
-            $table->timestamp('rejected_at')->nullable()->after('approved_at');
-            $table->text('rejection_reason')->nullable()->after('rejected_at');
-            $table->text('comments')->nullable()->after('rejection_reason');
+        Schema::create('approval_steps', function (Blueprint $table) {
+            $table->uuid('id')->primary();
+
+            $table->foreignUuid('approval_flow_id')
+                ->constrained('approval_flows')
+                ->cascadeOnDelete();
+
+            $table->integer('step_number');
+            $table->string('role_required')->nullable();
+
+            $table->enum('status', ['pending', 'approved', 'rejected', 'waiting'])
+                ->default('waiting');
+
+            $table->uuid('approver_id')->nullable();
+            $table->timestamp('approved_at')->nullable();
+            $table->timestamp('rejected_at')->nullable();
+
+            $table->text('rejection_reason')->nullable();
+            $table->text('comments')->nullable();
+
+            $table->timestamps();
+
+            // Index for faster lookups when processing flows
+            $table->index(['approval_flow_id', 'status']);
         });
     }
 
