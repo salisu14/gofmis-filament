@@ -35,6 +35,28 @@ class OrphanForm
                         ]),
 
                         Grid::make(3)->schema([
+                            // ADDED: Gender Field
+                            Select::make('gender')
+                                ->label('Gender')
+                                ->options(\App\Enums\Gender::class)
+                                ->required()
+                                ->native(false),
+
+                            TextInput::make('nin')
+                                ->label('NIN')
+                                ->unique(ignoreRecord: true)
+                                ->placeholder('11-digit NIN')
+                                ->maxLength(11)
+                                ->required(),
+
+                            TextInput::make('reg_no')
+                                ->label('Registration Number')
+                                ->placeholder('Auto-generated on creation')
+                                ->disabled()
+                                ->dehydrated(false),
+                        ]),
+
+                        Grid::make(2)->schema([
                             DatePicker::make('birth_date')
                                 ->label('Date of Birth')
                                 ->required()
@@ -51,31 +73,16 @@ class OrphanForm
                                 ->label('Calculated Age')
                                 ->numeric()
                                 ->readOnly()
-                                ->dehydrated(false) // 👈 important (don’t save manually)
+                                ->dehydrated(false) // Don't save manually
                                 ->helperText('Auto-calculated from birth date.'),
-
-                            TextInput::make('nin')
-                                ->label('NIN')
-                                ->unique(ignoreRecord: true)
-                                ->placeholder('11-digit NIN')
-                                ->maxLength(11)
-                                ->required(),
                         ]),
 
-                        Grid::make(2)->schema([
-                            TextInput::make('reg_no')
-                                ->label('Registration Number')
-                                ->placeholder('Auto-generated on creation')
-                                ->disabled()
-                                ->dehydrated(false),
-
-                            Select::make('deceased_id')
-                                ->label('Deceased')
-                                ->relationship('deceased', 'full_name')
-                                ->searchable()
-                                ->preload()
-                                ->required(),
-                        ]),
+                        Select::make('deceased_id')
+                            ->label('Deceased')
+                            ->relationship('deceased', 'full_name')
+                            ->searchable()
+                            ->preload()
+                            ->required(),
                     ]),
 
                 Section::make('Status & Skills')

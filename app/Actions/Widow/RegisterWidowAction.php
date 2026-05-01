@@ -36,7 +36,13 @@ class RegisterWidowAction
                 'child_sequence' => $registrationData['child_sequence'],
 
                 'address'     => $data->address,
-                'skills'      => $data->skills ?? [],
+                'skills' => is_array($data->skills)
+                    ? $data->skills
+                    : (is_string($data->skills) ? explode(',', $data->skills) : []),
+
+                // FIX: Pass is_eligible during creation to satisfy NOT NULL constraint
+                'is_eligible' => $data->isEligible,
+
                 'is_married'  => $data->isMarried,
                 'deceased_id' => $deceased->id,
             ]);

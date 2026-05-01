@@ -17,6 +17,8 @@ class WidowData extends Data
         // FIX: must be array to match model cast
         public ?array $skills = [],
 
+        public ?bool $isEligible = true,
+
         // Optional (future-proof)
         public bool $isMarried = false,
     ) {}
