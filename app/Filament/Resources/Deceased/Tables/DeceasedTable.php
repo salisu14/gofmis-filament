@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Deceased\Tables;
 
 use App\Enums\VulnerabilityStatus;
+use App\Filament\Exports\DeceasedExporter;
 use App\Models\Deceased;
 use App\Models\Zone;
 use App\Services\Deceased\ZoneTransferService;
@@ -10,6 +11,7 @@ use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\ExportAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -132,6 +134,11 @@ class DeceasedTable
                 TernaryFilter::make('has_death_cert')
                     ->label('Death Certificate'),
             ])->deferFilters(false)
+            ->headerActions([
+                ExportAction::make()
+                    ->exporter(DeceasedExporter::class)
+                    ->enableVisibleTableColumnsByDefault(),
+            ])
             ->recordActions([
                 ViewAction::make(),
                 EditAction::make(),

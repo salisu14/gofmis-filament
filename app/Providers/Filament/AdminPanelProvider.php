@@ -34,6 +34,7 @@ class AdminPanelProvider extends PanelProvider
             ->colors([
                 'primary' => Color::Amber,
             ])
+            ->databaseNotifications()
             ->globalSearch()
             ->spa(hasPrefetching: true)
             ->sidebarCollapsibleOnDesktop()
@@ -301,10 +302,9 @@ class AdminPanelProvider extends PanelProvider
                 \App\Filament\Widgets\HealthcareInterventionWidget::class,
                 \App\Filament\Widgets\WelfareInterventionWidget::class,
                 \App\Filament\Widgets\SpecialInterventionWidget::class,
-//                \App\Filament\Widgets\PendingApprovalsWidget::class,
+                \App\Filament\Widgets\PendingApprovalsWidget::class,
                 \App\Filament\Widgets\OverAgedOrphansWidget::class,
             ])
-            // ✅ FIXED: Removed RoleMiddleware from global middleware
             ->middleware([
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
@@ -315,7 +315,6 @@ class AdminPanelProvider extends PanelProvider
                 DisableBladeIconComponents::class,
                 DispatchServingFilamentEvent::class,
                 VerifyCsrfToken::class,
-                // RoleMiddleware::class,  ← REMOVED — was blocking all users globally
             ])
             ->navigationGroups([
                 'Beneficiary Management',

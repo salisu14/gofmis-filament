@@ -2,8 +2,10 @@
 
 namespace App\Filament\Resources\Zones\Pages;
 
+use App\Filament\Exports\ZoneExporter;
 use App\Filament\Resources\Zones\ZoneResource;
 use Filament\Actions\CreateAction;
+use Filament\Actions\ExportAction;
 use Filament\Resources\Pages\ListRecords;
 
 class ListZones extends ListRecords
@@ -14,6 +16,10 @@ class ListZones extends ListRecords
     {
         return [
             CreateAction::make(),
+
+            ExportAction::make()
+                ->exporter(ZoneExporter::class)
+                ->enableVisibleTableColumnsByDefault(),
         ];
     }
 }

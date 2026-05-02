@@ -60,13 +60,6 @@ class User extends Authenticatable
         ];
     }
 
-
-//    // Zone assignment for coordinators
-//    public function zone(): BelongsTo
-//    {
-//        return $this->belongsTo(Zone::class);
-//    }
-
     public function hasZone(): bool
     {
         return $this->coordinatedZone()->exists();

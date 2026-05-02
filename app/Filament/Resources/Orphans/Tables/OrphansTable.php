@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Orphans\Tables;
 
 use App\Enums\Gender;
 use App\Enums\VulnerabilityStatus;
+use App\Filament\Exports\OrphanExporter;
 use App\Filament\Resources\IdCards\IdCardResource;
 use App\Filament\Resources\Orphans\Actions\GenerateIdCardAction;
 use App\Models\Institution;
@@ -18,6 +19,7 @@ use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\ExportAction;
 use Filament\Actions\ForceDeleteBulkAction;
 use Filament\Actions\RestoreBulkAction;
 use Filament\Actions\ViewAction;
@@ -93,6 +95,11 @@ class OrphansTable
                     ->searchable(),
             ])
             ->defaultSort('created_at', 'desc')
+            ->headerActions([
+                ExportAction::make()
+                    ->exporter(OrphanExporter::class)
+                    ->enableVisibleTableColumnsByDefault(),
+            ])
             ->filters([
                 TrashedFilter::make(),
 

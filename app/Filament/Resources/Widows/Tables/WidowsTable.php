@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Widows\Tables;
 
+use App\Filament\Exports\WidowExporter;
 use App\Filament\Resources\IdCards\IdCardResource;
 use App\Filament\Resources\Widows\Actions\GenerateIdCardAction;
 use App\Models\Widow;
@@ -12,6 +13,7 @@ use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\ExportAction;
 use Filament\Actions\ForceDeleteBulkAction;
 use Filament\Actions\RestoreBulkAction;
 use Filament\Actions\ViewAction;
@@ -87,6 +89,11 @@ class WidowsTable
             ->defaultSort('created_at', 'desc')
             ->filters([
                 TrashedFilter::make(),
+            ])
+            ->headerActions([
+                ExportAction::make()
+                    ->exporter(WidowExporter::class)
+                    ->enableVisibleTableColumnsByDefault(),
             ])
             ->recordActions([
                 ActionGroup::make([
