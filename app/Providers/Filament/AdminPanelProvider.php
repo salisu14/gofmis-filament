@@ -162,15 +162,16 @@ class AdminPanelProvider extends PanelProvider
                     $builder = $builder->group(
                         NavigationGroup::make('ID Cards')
                             ->items([
-                                NavigationItem::make('ID Card Templates')
-                                    ->icon('heroicon-o-credit-card')
-                                    ->url('/admin/id-card-templates')
-                                    ->isActiveWhen(fn() => request()->is('admin/id-card-templates*')),
 
                                 NavigationItem::make('ID Cards')
                                     ->icon('heroicon-o-credit-card')
                                     ->url('/admin/id-cards')
                                     ->isActiveWhen(fn() => request()->is('admin/id-cards*')),
+
+                                NavigationItem::make('ID Card Templates')
+                                    ->icon('heroicon-o-circle-stack')
+                                    ->url('/admin/id-card-templates')
+                                    ->isActiveWhen(fn() => request()->is('admin/id-card-templates*')),
 
                                 NavigationItem::make('ID Card Print Batches')
                                     ->icon('heroicon-o-printer')
