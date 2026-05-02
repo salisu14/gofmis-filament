@@ -26,8 +26,9 @@ class DatabaseSeeder extends Seeder
             BankAccountsTableSeeder::class,
             ImprestPermissionSeeder::class,
             MedicationsTableSeeder::class,
-            WelfarePackageSeeder::class,
+            EducationVerifierRoleSeeder::class,
             IdCardTemplateSeeder::class,
+            WelfarePackageSeeder::class,
         ]);
     }
 }

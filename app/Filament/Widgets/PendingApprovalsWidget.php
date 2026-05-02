@@ -7,7 +7,9 @@ use App\Filament\Resources\ApprovalFlows\ApprovalFlowResource;
 use App\Models\ApprovalFlow;
 use Filament\Actions\Action;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Table;
 use Filament\Widgets\TableWidget as BaseWidget;
+use Illuminate\Database\Eloquent\Builder;
 
 class PendingApprovalsWidget extends BaseWidget
 {
@@ -20,9 +22,19 @@ class PendingApprovalsWidget extends BaseWidget
         return auth()->user()?->can('view_approval_flows') ?? false;
     }
 
-    public function getTableRecordKey($record): string
+    public function table(Table $table): Table
     {
-        return $record->id;
+        return $table
+            ->query($this->getTableQuery())
+            ->columns($this->getTableColumns())
+            ->recordActions($this->getTableActions());
+    }
+
+    protected function getTableQuery(): Builder
+    {
+        return ApprovalFlow::query()
+            ->where('status', 'pending')
+            ->latest();
     }
 
     protected function getTableColumns(): array
@@ -60,8 +72,7 @@ class PendingApprovalsWidget extends BaseWidget
                 ->url(fn(ApprovalFlow $record) => ApprovalFlowResource::getUrl('index', [
                     'activeTab' => 'details',
                     'record' => $record->id,
-                ])
-                ),
+                ])),
         ];
     }
 }

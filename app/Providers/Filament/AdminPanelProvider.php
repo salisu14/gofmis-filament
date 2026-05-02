@@ -1,8 +1,9 @@
 <?php
+// app/Providers/Filament/AdminPanelProvider.php
 
 namespace App\Providers\Filament;
 
-use App\Filament\Widgets\IdCardPrintQueueWidget;
+use App\Filament\Resources\Verifications\EducationVerificationResource;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -14,8 +15,6 @@ use Filament\Pages\Dashboard;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
-use Filament\Widgets\AccountWidget;
-use Filament\Widgets\FilamentInfoWidget;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
@@ -44,19 +43,28 @@ class AdminPanelProvider extends PanelProvider
             ->pages([
                 Dashboard::class,
             ])
+            ->authGuard('web')
+            ->resources([
+                EducationVerificationResource::class,
+            ])
             ->authMiddleware([
                 Authenticate::class,
-            ])->navigation(function (NavigationBuilder $builder): NavigationBuilder {
-                return $builder
-                    // Dashboard
+            ])
+            ->navigation(function (NavigationBuilder $builder): NavigationBuilder {
+                $user = auth()->user();
+
+                // Dashboard (all authenticated users)
+                $builder = $builder
                     ->items([
                         NavigationItem::make('Dashboard')
                             ->icon('heroicon-o-home')
                             ->url('/admin')
                             ->isActiveWhen(fn() => request()->is('admin')),
-                    ])
-                    // Deceased Module
-                    ->group(
+                    ]);
+
+                // Deceased Module (admin + super-admin)
+                if ($user?->can('view_deceased')) {
+                    $builder = $builder->group(
                         NavigationGroup::make('Deceased')
                             ->items([
                                 NavigationItem::make('Deceased')
@@ -79,9 +87,12 @@ class AdminPanelProvider extends PanelProvider
                                     ->url('/admin/zone-transfers')
                                     ->isActiveWhen(fn() => request()->is('admin/zone-transfers*')),
                             ])
-                    )
-                    // Education Module
-                    ->group(
+                    );
+                }
+
+                // Education Module (admin + super-admin + verifier)
+                if ($user?->can('view_education_interventions')) {
+                    $builder = $builder->group(
                         NavigationGroup::make('Education')
                             ->items([
                                 NavigationItem::make('Institution')
@@ -109,30 +120,29 @@ class AdminPanelProvider extends PanelProvider
                                     ->url('/admin/education-fee-invoices')
                                     ->isActiveWhen(fn() => request()->is('admin/education-fee-invoices*')),
                             ])
-                    )
-                    // Interventions
-                    ->group(
+                    );
+                }
+
+                // Interventions (admin + super-admin)
+                if ($user?->can('view_interventions')) {
+                    $builder = $builder->group(
                         NavigationGroup::make('Interventions')
                             ->items([
-                                // Categories
                                 NavigationItem::make('Categories')
                                     ->icon('heroicon-o-document-currency-dollar')
                                     ->url('/admin/categories')
                                     ->isActiveWhen(fn() => request()->is('admin/categories*')),
 
-                                // Intervention Type
                                 NavigationItem::make('Intervention Types')
                                     ->icon('heroicon-o-presentation-chart-line')
                                     ->url('/admin/intervention-types')
                                     ->isActiveWhen(fn() => request()->is('admin/intervention-types*')),
 
-                                // Intervention Request
                                 NavigationItem::make('Intervention Requests')
                                     ->icon('heroicon-o-squares-2x2')
                                     ->url('/admin/intervention-requests')
                                     ->isActiveWhen(fn() => request()->is('admin/intervention-requests*')),
 
-                                // Welfare Package
                                 NavigationItem::make('Welfare Packages')
                                     ->icon('heroicon-o-building-storefront')
                                     ->url('/admin/welfare-packages')
@@ -143,11 +153,19 @@ class AdminPanelProvider extends PanelProvider
                                     ->url('/admin/bank-accounts')
                                     ->isActiveWhen(fn() => request()->is('admin/bank-accounts*')),
                             ])
-                    )
-                    // ID Card
-                    ->group(
+                    );
+                }
+
+                // ID Cards (admin + super-admin)
+                if ($user?->can('view_id_cards')) {
+                    $builder = $builder->group(
                         NavigationGroup::make('ID Cards')
                             ->items([
+                                NavigationItem::make('ID Card Templates')
+                                    ->icon('heroicon-o-credit-card')
+                                    ->url('/admin/id-card-templates')
+                                    ->isActiveWhen(fn() => request()->is('admin/id-card-templates*')),
+
                                 NavigationItem::make('ID Cards')
                                     ->icon('heroicon-o-credit-card')
                                     ->url('/admin/id-cards')
@@ -158,65 +176,66 @@ class AdminPanelProvider extends PanelProvider
                                     ->url('/admin/id-card-print-batches')
                                     ->isActiveWhen(fn() => request()->is('admin/id-card-print-batches*')),
                             ])
-                    )
-                    // Sponsorship Module
-                    ->group(
+                    );
+                }
+
+                // Sponsorship & Projects (admin + super-admin)
+                if ($user?->can('view_sponsorships')) {
+                    $builder = $builder->group(
                         NavigationGroup::make('Sponsorship & Projects')
                             ->items([
-                                // Sponsor
                                 NavigationItem::make('Sponsors')
                                     ->icon('heroicon-o-trophy')
                                     ->url('/admin/donors')
                                     ->isActiveWhen(fn() => request()->is('admin/donors*')),
 
-                                // Sponsorships
                                 NavigationItem::make('Sponsorships')
                                     ->icon('heroicon-o-receipt-percent')
                                     ->url('/admin/sponsorships')
                                     ->isActiveWhen(fn() => request()->is('admin/sponsorships*')),
 
-                                // Projects
                                 NavigationItem::make('Projects')
                                     ->icon('heroicon-o-wrench-screwdriver')
                                     ->url('/admin/projects')
                                     ->isActiveWhen(fn() => request()->is('admin/projects*')),
                             ])
-                    )
-                    // Revolving Loan
-                    ->group(
+                    );
+                }
+
+                // Revolving Loan (admin + super-admin)
+                if ($user?->can('view_loans')) {
+                    $builder = $builder->group(
                         NavigationGroup::make('Revolving Loan')
                             ->items([
                                 NavigationItem::make('Widow Loan')
                                     ->icon('heroicon-o-square-2-stack')
                                     ->url('/admin/widow-loans')
                                     ->isActiveWhen(fn() => request()->is('admin/widow-loans*')),
-
-//                                NavigationItem::make('Approval Flows')
-//                                    ->icon('heroicon-o-book-open')
-//                                    ->url('/admin/approval-flows')
-//                                    ->isActiveWhen(fn() => request()->is('admin/approval-flows*')),
                             ])
-                    )
-                    // Medicals
-                    ->group(
+                    );
+                }
+
+                // Medicals (admin + super-admin)
+                if ($user?->can('view_medicals')) {
+                    $builder = $builder->group(
                         NavigationGroup::make('Medicals')
                             ->items([
-                                // Allocation
                                 NavigationItem::make('Medications')
                                     ->icon('heroicon-o-viewfinder-circle')
                                     ->url('/admin/medications')
                                     ->isActiveWhen(fn() => request()->is('admin/medications*')),
 
-                                // Prescriptions
                                 NavigationItem::make('Prescriptions')
                                     ->icon('heroicon-o-paper-clip')
                                     ->url('/admin/prescriptions')
                                     ->isActiveWhen(fn() => request()->is('admin/prescriptions*')),
-
                             ])
-                    )
-                    // Address Module
-                    ->group(
+                    );
+                }
+
+                // Address (admin + super-admin)
+                if ($user?->can('view_addresses')) {
+                    $builder = $builder->group(
                         NavigationGroup::make('Address')
                             ->items([
                                 NavigationItem::make('States')
@@ -224,24 +243,37 @@ class AdminPanelProvider extends PanelProvider
                                     ->url('/admin/states')
                                     ->isActiveWhen(fn() => request()->is('admin/states*')),
 
-                                // Account Schedules
                                 NavigationItem::make('Zones')
                                     ->icon('heroicon-o-calendar-date-range')
                                     ->url('/admin/zones')
                                     ->isActiveWhen(fn() => request()->is('admin/zones*')),
                             ])
-                    )
-                    // Setup & Administration
-                    ->group(
+                    );
+                }
+
+                // Education Verification (admin + super-admin + verifier)
+                if ($user?->can('verify_education')) {
+                    $builder = $builder->group(
+                        NavigationGroup::make('Education Verification')
+                            ->items([
+                                NavigationItem::make('Verify Requests')
+                                    ->icon('heroicon-o-academic-cap')
+                                    ->url('/admin/education-verification')
+                                    ->isActiveWhen(fn() => request()->is('admin/education-verification*')),
+                            ])
+                    );
+                }
+
+                // Auth/Settings (super-admin ONLY)
+                if ($user?->can('view_users')) {
+                    $builder = $builder->group(
                         NavigationGroup::make('Auth')
                             ->collapsible()
                             ->items([
-                                // Company Information
                                 NavigationItem::make('Company Information')
                                     ->icon('heroicon-o-building-office-2')
                                     ->url('/admin/company-information'),
 
-                                // Users & Permissions
                                 NavigationItem::make('Users')
                                     ->icon('heroicon-o-users')
                                     ->url('/admin/users'),
@@ -251,35 +283,28 @@ class AdminPanelProvider extends PanelProvider
                                     ->url('/admin/roles'),
                             ])
                     );
+                }
+
+                return $builder;
             })
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')
             ->widgets([
-                // ============================================
-                // SECTION 1: KEY METRICS & CHARTS (Compact/Grid Layout)
-                // ============================================
                 \App\Filament\Widgets\StatsOverviewWidget::class,
                 \App\Filament\Widgets\LoanRepaymentStatsWidget::class,
                 \App\Filament\Widgets\FinancialOverviewWidget::class,
                 \App\Filament\Widgets\GenderDistributionWidget::class,
                 \App\Filament\Widgets\AgeDistributionChartWidget::class,
-
-                // ============================================
-                // SECTION 2: ACTIONABLE QUEUES (Full Width)
-                // ============================================
                 \App\Filament\Widgets\IdCardPrintQueueWidget::class,
-                \App\Filament\Widgets\PendingApprovalsWidget::class,
-
-                // ============================================
-                // SECTION 3: DETAILED DATA TABLES (Full Width)
-                // ============================================
                 \App\Filament\Widgets\LoanRepaymentWidget::class,
                 \App\Filament\Widgets\LoanBeneficiariesWidget::class,
                 \App\Filament\Widgets\EducationInterventionWidget::class,
                 \App\Filament\Widgets\HealthcareInterventionWidget::class,
                 \App\Filament\Widgets\WelfareInterventionWidget::class,
                 \App\Filament\Widgets\SpecialInterventionWidget::class,
+//                \App\Filament\Widgets\PendingApprovalsWidget::class,
                 \App\Filament\Widgets\OverAgedOrphansWidget::class,
             ])
+            // ✅ FIXED: Removed RoleMiddleware from global middleware
             ->middleware([
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
@@ -290,10 +315,9 @@ class AdminPanelProvider extends PanelProvider
                 DisableBladeIconComponents::class,
                 DispatchServingFilamentEvent::class,
                 VerifyCsrfToken::class,
+                // RoleMiddleware::class,  ← REMOVED — was blocking all users globally
             ])
-            ->authMiddleware([
-                Authenticate::class,
-            ])->navigationGroups([
+            ->navigationGroups([
                 'Beneficiary Management',
                 'ID Card Management',
                 'Finance',

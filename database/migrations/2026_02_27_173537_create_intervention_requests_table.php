@@ -41,6 +41,16 @@ return new class extends Migration
             $table->foreignUuid('verified_by')->nullable()->constrained('users');
             $table->timestampTz('verified_at')->nullable();
 
+            // Detailed notes from verifier
+            $table->text('verification_notes')
+                ->nullable()
+                ->after('verified_by');
+
+            // Documents uploaded during verification (school reports, home visit photos, etc.)
+            $table->json('verification_documents')
+                ->nullable()
+                ->after('verification_notes');
+
             $table->timestampsTz();
 
             $table->index('status');

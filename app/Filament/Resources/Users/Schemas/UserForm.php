@@ -37,7 +37,20 @@ class UserForm
                             ->relationship('roles', 'name')
                             ->multiple()
                             ->preload()
-                            ->searchable(),
+                            ->searchable()->options(function () {
+                                $user = auth()->user();
+
+                                // Super-admin can assign any role
+                                if ($user?->hasRole('super_admin')) {
+                                    return \App\Models\Role::pluck('name', 'uuid');
+                                }
+
+                                // Admin cannot assign super-admin or manage roles
+                                return \App\Models\Role::where('name', '!=', 'super_admin')
+                                    ->pluck('name', 'uuid');
+                            })
+                            ->disabled(fn() => !auth()->user()?->can('assign roles')),
+
                     ])->columns(2),
             ]);
     }

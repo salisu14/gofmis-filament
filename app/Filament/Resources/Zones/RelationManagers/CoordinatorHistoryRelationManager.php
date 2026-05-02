@@ -25,6 +25,8 @@ class CoordinatorHistoryRelationManager extends RelationManager
 
     protected static ?string $title = 'Coordinator Assignment History';
 
+    protected $listeners = ['refreshRelation' => '$refresh'];
+
     /**
      * View-only form for inspecting historical assignment details.
      */

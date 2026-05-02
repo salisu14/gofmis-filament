@@ -52,4 +52,24 @@ class InterventionRequest extends Model
     {
         return $this->belongsTo(User::class, 'verified_by');
     }
+
+    protected static function booted(): void
+    {
+        static::updating(function ($request) {
+            // Log who approved/rejected
+            if ($request->isDirty('status') && in_array($request->status, ['approved', 'rejected'])) {
+                \App\Models\Activity::create([
+                    'user_id' => auth()->id(),
+                    'action' => "education_request_{$request->status}",
+                    'model_type' => self::class,
+                    'model_id' => $request->id,
+                    'details' => [
+                        'old_status' => $request->getOriginal('status'),
+                        'new_status' => $request->status,
+                        'verification_notes' => $request->verification_notes,
+                    ],
+                ]);
+            }
+        });
+    }
 }

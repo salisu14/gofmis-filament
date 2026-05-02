@@ -27,6 +27,8 @@ class DeceasedRelationManager extends RelationManager
 
     protected static ?string $title = 'Registered Households (Deceased)';
 
+    protected $listeners = ['refreshRelation' => '$refresh'];
+
     /**
      * Disable creation from this relation manager to keep it read-only.
      */

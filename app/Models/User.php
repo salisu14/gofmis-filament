@@ -61,11 +61,11 @@ class User extends Authenticatable
     }
 
 
-    // Zone assignment for coordinators
-    public function zone(): BelongsTo
-    {
-        return $this->belongsTo(Zone::class);
-    }
+//    // Zone assignment for coordinators
+//    public function zone(): BelongsTo
+//    {
+//        return $this->belongsTo(Zone::class);
+//    }
 
     public function hasZone(): bool
     {
@@ -98,7 +98,7 @@ class User extends Authenticatable
 
     public function isAdmin(): bool
     {
-        return $this->hasRole('admin') || $this->hasRole('super-admin');
+        return $this->hasRole('admin') || $this->hasRole('super_admin');
     }
 
     public function isStaff(): bool

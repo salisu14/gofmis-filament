@@ -2,11 +2,16 @@
 
 namespace App\Filament\Resources\Users\Tables;
 
+use App\Models\User;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
+use Filament\Support\Enums\Size;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 
 class UsersTable
@@ -18,33 +23,59 @@ class UsersTable
                 TextColumn::make('name')
                     ->searchable()
                     ->sortable(),
+
                 TextColumn::make('email')
                     ->searchable()
                     ->sortable(),
-                TextColumn::make('zone.name')
+
+                TextColumn::make('coordinatedZone.name')
+                    ->label('Coordinated Zone')
+                    ->placeholder('No zone assigned')
                     ->searchable()
                     ->sortable()
-                    ->placeholder('No zone assigned')
-                    ->toggleable(),
-                TextColumn::make('roles.name')
                     ->badge()
-                    ->color('primary')
+                    ->color('info')
+                    ->description(fn (User $record) => $record->hasRole('coordinator') ? 'Official Coordinator' : null)
                     ->toggleable(),
+
+                TextColumn::make('roles.name')
+                    ->label('Roles / Access')
+                    ->badge()
+                    ->color(fn (string $state): string => match ($state) {
+                        'super_admin' => 'danger',
+                        'admin' => 'warning',
+                        'coordinator' => 'success',
+                        default => 'gray',
+                    })
+                    ->toggleable(),
+
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                //
+                SelectFilter::make('coordinatedZone')
+                    ->label('Filter by Zone')
+                    ->relationship('coordinatedZone', 'name')
+                    ->searchable()
+                    ->preload(),
+
+                SelectFilter::make('roles')
+                    ->relationship('roles', 'name')
+                    ->preload(),
             ])
             ->recordActions([
-                ViewAction::make(),
-                EditAction::make(),
+                ActionGroup::make([
+                    ViewAction::make(),
+                    EditAction::make(),
+                ])->tooltip('Actions')
+
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make(),
+                    DeleteBulkAction::make()
+                        ->visible(fn () => auth()->user()?->can('delete_user')),
                 ]),
             ]);
     }
