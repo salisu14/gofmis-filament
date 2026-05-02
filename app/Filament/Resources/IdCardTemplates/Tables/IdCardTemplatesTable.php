@@ -34,9 +34,13 @@ class IdCardTemplatesTable
                     ->boolean()
                     ->label('Active'),
 
-                TextColumn::make('idCards_count')
+                TextColumn::make('id_cards_count')
                     ->counts('idCards')
-                    ->label('Cards Generated'),
+                    ->label('Cards Generated')
+                    ->badge()
+                    ->color('info')
+                    ->alignCenter()
+                    ->sortable(),
 
                 TextColumn::make('created_at')
                     ->dateTime()
