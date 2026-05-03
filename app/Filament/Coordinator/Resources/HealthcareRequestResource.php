@@ -3,10 +3,12 @@
 
 namespace App\Filament\Coordinator\Resources;
 
+use App\Enums\IllnessCategory;
 use App\Filament\Coordinator\Resources\HealthcareRequestResource\Pages\CreateHealthcareRequest;
 use App\Filament\Coordinator\Resources\HealthcareRequestResource\Pages\EditHealthcareRequest;
 use App\Filament\Coordinator\Resources\HealthcareRequestResource\Pages\ListHealthcareRequests;
 use App\Filament\Coordinator\Resources\HealthcareRequestResource\Pages\ViewHealthcareRequest;
+use App\Models\Illness;
 use App\Models\Orphan;
 use App\Models\Prescription;
 use App\Models\Widow;
@@ -39,9 +41,8 @@ class HealthcareRequestResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        // ✅ FIXED: Use coordinatedZone instead of zone_id
         $zoneId = auth()->user()?->coordinatedZone?->id;
-        $isAdmin = auth()->user()?->hasRole(['admin', 'super-admin']);
+        $isAdmin = auth()->user()?->hasRole(['admin', 'super_admin']);
 
         $query = parent::getEloquentQuery();
 
@@ -49,15 +50,12 @@ class HealthcareRequestResource extends Resource
             return $query;
         }
 
-        // Filter prescriptions for orphans/widows in coordinator's zone
         return $query->where(function (Builder $q) use ($zoneId) {
             $q->whereHas('prescribable', function (Builder $q2) use ($zoneId) {
-                // Check if prescribable is Orphan
                 $q2->where(function (Builder $q3) use ($zoneId) {
                     $q3->where('prescribable_type', Orphan::class)
                         ->whereHas('deceased', fn($q4) => $q4->where('zone_id', $zoneId));
                 })->orWhere(function (Builder $q3) use ($zoneId) {
-                    // Check if prescribable is Widow
                     $q3->where('prescribable_type', Widow::class)
                         ->whereHas('deceased', fn($q4) => $q4->where('zone_id', $zoneId));
                 });
@@ -67,19 +65,17 @@ class HealthcareRequestResource extends Resource
 
     public static function canCreate(): bool
     {
-        return auth()->user()?->hasAnyRole(['coordinator', 'admin', 'super-admin']) ?? false;
+        return auth()->user()?->hasAnyRole(['coordinator', 'admin', 'super_admin']) ?? false;
     }
 
     public static function canEdit($record): bool
     {
         $user = auth()->user();
-        if ($user->hasRole(['admin', 'super-admin'])) return true;
+        if ($user->hasRole(['admin', 'super_admin'])) return true;
 
-        // ✅ FIXED: Use coordinatedZone for zone comparison
         $zoneId = $user?->coordinatedZone?->id;
-
-        // Only allow editing recent prescriptions in coordinator's zone
         $recordZoneId = null;
+
         if ($record->prescribable_type === Orphan::class) {
             $recordZoneId = $record->prescribable?->deceased?->zone_id;
         } elseif ($record->prescribable_type === Widow::class) {
@@ -97,48 +93,72 @@ class HealthcareRequestResource extends Resource
     public static function form(Schema $schema): Schema
     {
         $user = auth()->user();
-        // ✅ FIXED: Use coordinatedZone instead of zone_id
         $zoneId = $user?->coordinatedZone?->id;
 
         return $schema
             ->schema([
                 Section::make('Patient Information')
                     ->schema([
-                        Forms\Components\Select::make('patient_type')
-                            ->label('Patient Type')
+                        Select::make('prescribable_type')
+                            ->label('Patient Category')
                             ->options([
-                                'orphan' => 'Orphan',
-                                'widow' => 'Widow',
+                                Orphan::class => 'Orphan',
+                                Widow::class => 'Widow',
                             ])
                             ->required()
                             ->live()
-                            ->native(false),
+                            ->native(false)
+                            ->default(Orphan::class)
+                            ->selectablePlaceholder(false),
 
                         Select::make('prescribable_id')
                             ->label('Patient')
                             ->options(function (Get $get) use ($zoneId) {
-                                $type = $get('patient_type');
+                                $type = $get('prescribable_type'); // ← FIXED: was 'patient_type'
                                 if (!$type) return [];
 
-                                if ($type === 'orphan') {
+                                if ($type === Orphan::class) {
                                     return Orphan::whereHas('deceased', fn($q) => $q->where('zone_id', $zoneId))
                                         ->where('is_eligible', true)
-                                        ->pluck('full_name', 'id');
+                                        ->get()
+                                        ->mapWithKeys(fn($o) => [$o->id => "{$o->full_name} ({$o->reg_no})"]);
                                 }
 
                                 return Widow::whereHas('deceased', fn($q) => $q->where('zone_id', $zoneId))
                                     ->where('is_eligible', true)
-                                    ->pluck('full_name', 'id');
+                                    ->get()
+                                    ->mapWithKeys(fn($w) => [$w->id => "{$w->full_name} ({$w->reg_no})"]);
                             })
                             ->searchable()
                             ->preload()
-                            ->required(),
+                            ->required()
+                            ->native(false)
+                            ->getSearchResultsUsing(function (string $search, Get $get) use ($zoneId) {
+                                $type = $get('prescribable_type');
+                                if (!$type) return [];
 
-                        Hidden::make('prescribable_type')
-                            ->default(fn(Get $get) => $get('patient_type') === 'orphan'
-                                ? Orphan::class
-                                : Widow::class
-                            ),
+                                if ($type === Orphan::class) {
+                                    return Orphan::whereHas('deceased', fn($q) => $q->where('zone_id', $zoneId))
+                                        ->where('is_eligible', true)
+                                        ->where(function ($q) use ($search) {
+                                            $q->where('full_name', 'ilike', "%{$search}%")
+                                                ->orWhere('reg_no', 'ilike', "%{$search}%");
+                                        })
+                                        ->limit(50)
+                                        ->get()
+                                        ->mapWithKeys(fn($o) => [$o->id => "{$o->full_name} ({$o->reg_no})"]);
+                                }
+
+                                return Widow::whereHas('deceased', fn($q) => $q->where('zone_id', $zoneId))
+                                    ->where('is_eligible', true)
+                                    ->where(function ($q) use ($search) {
+                                        $q->where('full_name', 'ilike', "%{$search}%")
+                                            ->orWhere('reg_no', 'ilike', "%{$search}%");
+                                    })
+                                    ->limit(50)
+                                    ->get()
+                                    ->mapWithKeys(fn($w) => [$w->id => "{$w->full_name} ({$w->reg_no})"]);
+                            }),
                     ]),
 
                 Section::make('Prescription Details')
@@ -147,12 +167,27 @@ class HealthcareRequestResource extends Resource
                         Forms\Components\TextInput::make('doctor_name')
                             ->label('Doctor/Hospital Name')
                             ->required()
-                            ->placeholder('Dr. Name or Hospital'),
+                            ->placeholder('Dr. Name or Hospital')
+                            ->maxLength(255),
 
-                        Forms\Components\TextInput::make('illness')
-                            ->label('Illness/Diagnosis')
+                        Select::make('illness_id')
+                            ->label('Diagnosis')
+                            ->relationship('illnessModel', 'name')
+                            ->searchable()
+                            ->preload()
                             ->required()
-                            ->placeholder('e.g., Malaria, Typhoid'),
+                            ->native(false)
+                            ->getOptionLabelFromRecordUsing(fn(Illness $record) => "{$record->name} (" . ($record->category?->label() ?? 'Other') . ")")
+                            ->createOptionForm([
+                                TextInput::make('name')
+                                    ->required()
+                                    ->unique(Illness::class, 'name'),
+                                Select::make('category')
+                                    ->options(IllnessCategory::class)
+                                    ->required()
+                                    ->native(false),
+                                Textarea::make('description')->rows(2),
+                            ]),
 
                         Forms\Components\TextInput::make('lab_test_cost')
                             ->label('Lab Test Cost (₦)')
@@ -174,26 +209,35 @@ class HealthcareRequestResource extends Resource
                             $set('total_cost', (float) ($get('lab_test_cost') ?? 0) + (float) ($get('drug_cost') ?? 0))
                             ),
 
-                        Forms\Components\TextInput::make('total_cost')
-                            ->label('Total Cost (₦)')
-                            ->numeric()
+                        TextInput::make('total_cost')
+                            ->label('Total Cost')
                             ->prefix('₦')
                             ->disabled()
                             ->dehydrated(false)
-                            ->default(0),
+                            ->placeholder('Auto-calculated')
+                            ->live()
+                            ->default(fn(Get $get) =>
+                            number_format(
+                                (float) ($get('lab_test_cost') ?? 0) + (float) ($get('drug_cost') ?? 0),
+                                2
+                            )
+                            ),
 
                         DatePicker::make('prescription_date')
                             ->label('Prescription Date')
                             ->required()
-                            ->default(now()),
+                            ->default(now())
+                            ->native(false)
+                            ->closeOnDateSelection(),
                     ]),
 
                 Section::make('Additional Information')
                     ->schema([
                         Textarea::make('note')
-                            ->label('Notes')
-                            ->rows(3)
-                            ->placeholder('Additional notes about the prescription...'),
+                            ->label('Clinical Notes & Dosage Instructions')
+                            ->rows(4)
+                            ->placeholder('Enter dosage instructions, frequency, duration, or additional observations...')
+                            ->columnSpanFull(),
                     ]),
 
                 Hidden::make('user_id')
@@ -215,11 +259,12 @@ class HealthcareRequestResource extends Resource
                     ->badge()
                     ->formatStateUsing(fn($state) => class_basename($state))
                     ->colors([
-                        'info' => 'Orphan',
-                        'warning' => 'Widow',
+                        'info' => Orphan::class,
+                        'warning' => Widow::class,
                     ]),
 
-                Tables\Columns\TextColumn::make('illness')
+                Tables\Columns\TextColumn::make('illnessModel.name')
+                    ->label('Illness')
                     ->searchable()
                     ->limit(30),
 
@@ -230,11 +275,16 @@ class HealthcareRequestResource extends Resource
 
                 Tables\Columns\TextColumn::make('total_cost')
                     ->money('NGN')
+                    ->state(fn(Prescription $record) => $record->total_cost)
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('prescription_date')
                     ->date('M d, Y')
                     ->sortable(),
+
+                Tables\Columns\TextColumn::make('user.name')
+                    ->label('Prescribed By')
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime('M d, Y')
@@ -249,7 +299,6 @@ class HealthcareRequestResource extends Resource
                         Widow::class => 'Widow',
                     ]),
 
-                // ✅ FIXED: Use coordinatedZone instead of zone_id
                 Tables\Filters\Filter::make('my_zone')
                     ->label('My Zone Only')
                     ->query(function (Builder $query) {

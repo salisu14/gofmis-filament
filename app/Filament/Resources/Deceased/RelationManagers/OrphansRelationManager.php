@@ -2,7 +2,9 @@
 
 namespace App\Filament\Resources\Deceased\RelationManagers;
 
+use App\Enums\IllnessCategory;
 use App\Filament\Resources\Deceased\DeceasedResource;
+use App\Models\Illness;
 use App\Models\Orphan;
 use App\Services\RegistrationNumberService;
 use Filament\Actions\Action;
@@ -265,10 +267,26 @@ class OrphansRelationManager extends RelationManager
                                     TextInput::make('doctor_name')
                                         ->required()
                                         ->placeholder('Attending Doctor'),
-                                    TextInput::make('illness')
+
+                                    // FIXED: Changed from TextInput to Select for Illness integration
+                                    Select::make('illness_id')
                                         ->label('Diagnosis')
+                                        ->relationship('illnessModel', 'name')
+                                        ->searchable()
+                                        ->preload()
                                         ->required()
-                                        ->placeholder('Illness or reason for visit'),
+                                        ->getOptionLabelFromRecordUsing(fn(Illness $record) => "{$record->name} (" . ($record->category?->label() ?? 'Other') . ")")
+                                        ->createOptionForm([
+                                            TextInput::make('name')
+                                                ->required()
+                                                ->unique(Illness::class, 'name'),
+                                            Select::make('category')
+                                                ->options(IllnessCategory::class)
+                                                ->required()
+                                                ->native(false),
+                                            Textarea::make('description')->rows(2),
+                                        ]),
+
                                     DatePicker::make('prescription_date')
                                         ->default(now())
                                         ->required()
@@ -298,7 +316,17 @@ class OrphansRelationManager extends RelationManager
                                 Hidden::make('user_id')
                                     ->default(auth()->id()),
                             ])
-                            ->itemLabel(fn(array $state): ?string => ($state['illness'] ?? null) . ($state['prescription_date'] ? " (" . date('d/m/Y', strtotime($state['prescription_date'])) . ")" : ""))
+                            ->itemLabel(function (array $state): ?string {
+                                $illnessName = ($state['illness_id'] ?? null)
+                                    ? Illness::find($state['illness_id'])?->name
+                                    : 'New Diagnosis';
+
+                                $date = isset($state['prescription_date'])
+                                    ? " (" . date('d/m/Y', strtotime($state['prescription_date'])) . ")"
+                                    : "";
+
+                                return $illnessName . $date;
+                            })
                             ->collapsible()
                             ->collapsed()
                             ->cloneable()

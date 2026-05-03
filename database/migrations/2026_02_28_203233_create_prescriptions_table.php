@@ -27,6 +27,12 @@ return new class extends Migration
                 ->constrained('users')
                 ->cascadeOnDelete();
 
+            $table->foreignUuid('illness_id')
+                ->nullable()
+                ->after('illness')
+                ->constrained('illnesses')
+                ->nullOnDelete();
+
             $table->softDeletes(); // Added for audit trail
             $table->timestamps();
 

@@ -25,6 +25,7 @@ class DatabaseSeeder extends Seeder
             ImprestSeeder::class,
             BankAccountsTableSeeder::class,
             ImprestPermissionSeeder::class,
+            IllnessSeeder::class,
             MedicationsTableSeeder::class,
             EducationVerifierRoleSeeder::class,
             IdCardTemplateSeeder::class,

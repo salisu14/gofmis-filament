@@ -19,6 +19,20 @@ class RecentActivityWidget extends Widget
     protected int|string|array $columnSpan = ['lg' => 2];
     protected string $view = 'filament.coordinator.widgets.recent-activity';
 
+    // Helper method at top of class
+    private function safeUrl(string $resourceClass, string $page, $record): ?string
+    {
+        try {
+            return $resourceClass::getUrl($page, ['record' => $record]);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::warning("Failed to generate URL for {$resourceClass}::{$page}", [
+                'record' => $record->id,
+                'error' => $e->getMessage(),
+            ]);
+            return null;
+        }
+    }
+
     protected function getViewData(): array
     {
         // ✅ FIXED: Use coordinatedZone instead of zone_id
@@ -118,7 +132,11 @@ class RecentActivityWidget extends Widget
                 'icon' => 'heroicon-m-heart',
                 'color' => 'danger',
                 'time' => $item->created_at,
-                'url' => \App\Filament\Coordinator\Resources\HealthcareRequestResource::getUrl('view', ['record' => $item]),
+                'url' => rescue(
+                    fn() => \App\Filament\Coordinator\Resources\HealthcareRequestResource::getUrl('view', ['record' => $item]),
+                    fn() => \App\Filament\Coordinator\Resources\HealthcareRequestResource::getUrl('edit', ['record' => $item]), // fallback to edit
+                    false
+                ),
             ]));
 
         // Education requests

@@ -30,7 +30,7 @@ class PrescriptionsTable
                     ->weight('bold')
                     ->description(fn(Prescription $record) => str_replace('App\Models\\', '', $record->prescribable_type)),
 
-                TextColumn::make('illness')
+                TextColumn::make('illnessModel.name')
                     ->label('Diagnosis')
                     ->searchable()
                     ->wrap(),

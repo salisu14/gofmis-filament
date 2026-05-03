@@ -2,7 +2,9 @@
 
 namespace App\Filament\Resources\Orphans\RelationManagers;
 
+use App\Enums\IllnessCategory;
 use App\Filament\Resources\Orphans\OrphanResource;
+use App\Models\Illness;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
@@ -40,9 +42,61 @@ class PrescriptionsRelationManager extends RelationManager
                             TextInput::make('doctor_name')
                                 ->label('Attending Doctor')
                                 ->required(),
-                            TextInput::make('illness')
-                                ->label('Diagnosis/Illness')
+
+                            Select::make('illness_id')
+                                ->label('Illness / Diagnosis')
+                                ->relationship('illnessModel', 'name')
+                                ->searchable()
+                                ->preload()
+                                ->native(false)
+                                ->optionsLimit(50)
+                                ->getOptionLabelFromRecordUsing(fn(Illness $record): string => "{$record->name} — {$record->category?->label()}")
+                                ->createOptionForm([
+                                    Section::make('New Illness')
+                                        ->schema([
+                                            TextInput::make('name')
+                                                ->label('Illness Name')
+                                                ->required()
+                                                ->unique(Illness::class, 'name')
+                                                ->maxLength(255)
+                                                ->placeholder('e.g. Sickle Cell Anemia'),
+
+                                            Select::make('category')
+                                                ->label('Category')
+                                                ->options(IllnessCategory::class)
+                                                ->enum(IllnessCategory::class)
+                                                ->required()
+                                                ->native(false),
+
+                                            Textarea::make('description')
+                                                ->label('Description / Symptoms')
+                                                ->rows(2)
+                                                ->placeholder('Brief description or common symptoms...'),
+                                        ]),
+                                ])
+                                ->createOptionUsing(function (array $data): string {
+                                    return Illness::create($data)->getKey();
+                                })
+                                ->editOptionForm([
+                                    Section::make('Edit Illness')
+                                        ->schema([
+                                            TextInput::make('name')
+                                                ->required()
+                                                ->maxLength(255),
+
+                                            Select::make('category')
+                                                ->options(IllnessCategory::class)
+                                                ->enum(IllnessCategory::class)
+                                                ->required()
+                                                ->native(false),
+
+                                            Textarea::make('description')
+                                                ->rows(2),
+                                        ]),
+                                ])
+                                ->columnSpan(2) // Makes illness select wider (2/3 of row)
                                 ->required(),
+
                             DatePicker::make('prescription_date')
                                 ->label('Visit Date')
                                 ->default(now())
@@ -93,7 +147,7 @@ class PrescriptionsRelationManager extends RelationManager
                     ->date()
                     ->sortable(),
 
-                TextColumn::make('illness')
+                TextColumn::make('illnessModel.name')
                     ->label('Diagnosis')
                     ->searchable()
                     ->weight('bold'),

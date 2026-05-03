@@ -222,15 +222,20 @@ class AdminPanelProvider extends PanelProvider
                     $builder = $builder->group(
                         NavigationGroup::make('Medicals')
                             ->items([
+                                NavigationItem::make('Prescriptions')
+                                    ->icon('heroicon-o-paper-clip')
+                                    ->url('/admin/prescriptions')
+                                    ->isActiveWhen(fn() => request()->is('admin/prescriptions*')),
+
                                 NavigationItem::make('Medications')
                                     ->icon('heroicon-o-viewfinder-circle')
                                     ->url('/admin/medications')
                                     ->isActiveWhen(fn() => request()->is('admin/medications*')),
 
-                                NavigationItem::make('Prescriptions')
-                                    ->icon('heroicon-o-paper-clip')
-                                    ->url('/admin/prescriptions')
-                                    ->isActiveWhen(fn() => request()->is('admin/prescriptions*')),
+                                NavigationItem::make('Common Illnesses')
+                                    ->icon('heroicon-o-viewfinder-circle')
+                                    ->url('/admin/illnesses')
+                                    ->isActiveWhen(fn() => request()->is('admin/illnesses*')),
                             ])
                     );
                 }

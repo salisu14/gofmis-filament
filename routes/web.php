@@ -19,3 +19,12 @@ Route::get('/id-card-print-batches/{record}/download', \App\Http\Controllers\IdC
 Route::get('/verify-id-card/{card}', [IdCardController::class, 'verify'])
     ->name('id-cards.verify')
     ->middleware('signed');
+
+Route::get('/debug-routes', function () {
+    $routes = collect(\Illuminate\Support\Facades\Route::getRoutes())
+        ->filter(fn($r) => str_contains($r->getName() ?? '', 'healthcare'))
+        ->map(fn($r) => $r->getName())
+        ->values();
+
+    return response()->json($routes);
+});

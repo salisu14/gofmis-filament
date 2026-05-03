@@ -18,7 +18,7 @@ class Prescription extends Model
 
     protected $fillable = [
         'doctor_name',
-        'illness',
+        'illness_id',        // ← normalized reference
         'lab_test_cost',
         'drug_cost',
         'prescription_date',
@@ -51,6 +51,12 @@ class Prescription extends Model
         return $this->belongsTo(User::class);
     }
 
+    // Normalized illness reference
+    public function illnessModel(): BelongsTo
+    {
+        return $this->belongsTo(Illness::class, 'illness_id');
+    }
+
     // The drugs prescribed
     /**
      * Updated to use the custom pivot model MedicationPrescription.
@@ -65,5 +71,14 @@ class Prescription extends Model
     public function getTotalCostAttribute(): float
     {
         return (float) $this->lab_test_cost + (float) $this->drug_cost;
+    }
+
+    /**
+     * Accessor for backward compatibility.
+     * Returns the normalized illness name, falling back to the legacy text field.
+     */
+    public function getIllnessNameAttribute(): ?string
+    {
+        return $this->illnessModel?->name ?? $this->illness;
     }
 }

@@ -39,7 +39,10 @@ class CoordinatorPanelProvider extends PanelProvider
 //                'title' => 'Coordinator Portal',
 //            ]))
             ->favicon(asset('images/favicon.ico'))
-
+            ->discoverResources(
+                in: app_path('Filament/Coordinator/Resources'),
+                for: 'App\\Filament\\Coordinator\\Resources'
+            )
             // Only show coordinator-specific resources
             ->resources([
                 \App\Filament\Coordinator\Resources\DeceasedResource::class,
@@ -47,6 +50,7 @@ class CoordinatorPanelProvider extends PanelProvider
                 \App\Filament\Coordinator\Resources\WidowResource::class,
                 \App\Filament\Coordinator\Resources\LoanRequestResource::class,
                 \App\Filament\Coordinator\Resources\EducationRequestResource::class,
+                \App\Filament\Coordinator\Resources\HealthcareRequestResource::class,
                 \App\Filament\Coordinator\Resources\ProjectResource::class,
             ])
 
