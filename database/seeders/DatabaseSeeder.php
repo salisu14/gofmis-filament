@@ -28,6 +28,7 @@ class DatabaseSeeder extends Seeder
             MedicationsTableSeeder::class,
             EducationVerifierRoleSeeder::class,
             IdCardTemplateSeeder::class,
+            OrphanClassesTableSeeder::class,
             WelfarePackageSeeder::class,
         ]);
     }

@@ -13,22 +13,22 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Resources\RelationManagers\RelationManager;
-use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
-use Filament\Tables\Grouping\Group;
 use Filament\Tables\Table;
 
 class EnrollmentsRelationManager extends RelationManager
 {
     protected static string $relationship = 'enrollments';
 
-    protected static ?string $recordTitleAttribute = 'level';
+    // Fixed: Changed to 'class_level' to match the database column
+    protected static ?string $recordTitleAttribute = 'class_level';
     protected static ?string $relatedResource = InstitutionResource::class;
 
     protected static ?string $title = 'Student Roster';
@@ -38,9 +38,8 @@ class EnrollmentsRelationManager extends RelationManager
         return $schema
             ->schema([
                 Section::make('Enrollment Details')
-                    ->description('Manage academic placement and fees for this student at this institution.')
+                    ->description('Manage academic placement and fees for this student.')
                     ->schema([
-                        // Select the orphan if creating a new enrollment from the institution side
                         Select::make('orphan_id')
                             ->relationship('orphan', 'full_name')
                             ->searchable()
@@ -49,14 +48,17 @@ class EnrollmentsRelationManager extends RelationManager
                             ->disabledOn('edit'),
 
                         Grid::make(2)->schema([
-                            TextInput::make('level')
-                                ->label('Academic Level')
-                                ->placeholder('e.g. Primary 4, JSS 2')
-                                ->required(),
+                            Select::make('orphan_class_id')
+                                ->relationship('orphanClass', 'name')
+                                ->label('Academic Class Category')
+                                ->searchable()
+                                ->preload()
+                                ->nullable(),
 
                             TextInput::make('class_level')
-                                ->label('Class/Section')
-                                ->placeholder('e.g. Blue, Section A'),
+                                ->label('Class / Grade')
+                                ->placeholder('e.g. JSS 2, Primary 4, Blue Section')
+                                ->required(),
                         ]),
                     ]),
 
@@ -79,7 +81,7 @@ class EnrollmentsRelationManager extends RelationManager
                                 ->native(false),
                         ]),
 
-                        Group::make()->schema([
+                        Grid::make(2)->schema([
                             Toggle::make('is_fee_supported')
                                 ->label('Sponsorship Support Active')
                                 ->reactive()
@@ -89,8 +91,8 @@ class EnrollmentsRelationManager extends RelationManager
                                 ->label('Support/Sponsorship Amount')
                                 ->numeric()
                                 ->prefix('₦')
-                                ->visible(fn(Get $get) => $get('is_fee_supported')),
-                        ])->columns(2),
+                                ->visible(fn (Get $get) => $get('is_fee_supported')),
+                        ]),
                     ]),
 
                 Section::make('Status & Dates')
@@ -122,10 +124,11 @@ class EnrollmentsRelationManager extends RelationManager
                     ->sortable()
                     ->weight('bold'),
 
-                TextColumn::make('level')
-                    ->label('Level')
+                TextColumn::make('class_level')
+                    ->label('Class/Grade')
                     ->badge()
-                    ->color('gray'),
+                    ->color('gray')
+                    ->searchable(),
 
                 TextColumn::make('school_fee')
                     ->label('Fee Rate')
@@ -147,8 +150,8 @@ class EnrollmentsRelationManager extends RelationManager
                 TernaryFilter::make('is_current')
                     ->label('Current Students Only'),
 
-                SelectFilter::make('level')
-                    ->options(fn() => \App\Models\OrphanEducation::query()->distinct()->pluck('level', 'level')->toArray()),
+                SelectFilter::make('class_level')
+                    ->options(fn() => \App\Models\OrphanEducation::query()->distinct()->pluck('class_level', 'class_level')->toArray()),
             ])
             ->headerActions([
                 CreateAction::make()
