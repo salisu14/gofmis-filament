@@ -34,6 +34,12 @@ class WidowLoanInfolist
                                 ->label('Loan Purpose')
                                 ->placeholder('No purpose defined'),
 
+                            TextEntry::make('bankAccount.account_name')
+                                ->label('Bank Account')
+                                ->formatStateUsing(fn ($state, WidowLoan $record) => $state
+                                    ? "{$record->bankAccount->account_name} ({$record->bankAccount->account_number})"
+                                    : 'N/A'),
+
                             TextEntry::make('duration_months')
                                 ->label('Term')
                                 ->suffix(' Months')

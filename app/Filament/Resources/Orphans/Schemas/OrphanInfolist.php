@@ -37,7 +37,10 @@ class OrphanInfolist
                             ->label('Age')
                             ->getStateUsing(fn($record) => $record->birth_date ? Carbon::parse($record->birth_date)->age : null
                             )
-                            ->suffix(' Years Old')
+                            ->suffix(' Years Old'),
+                        TextEntry::make('deceased.vulnerability_status')
+                            ->label('Vulnerability Status')
+                            ->badge(),
                     ])->columns(4),
 
                 Section::make('Eligibility & Status')

@@ -3,7 +3,6 @@
 namespace App\Filament\Resources\Deceased\Tables;
 
 use App\Enums\VulnerabilityStatus;
-use App\Filament\Exports\DeceasedExporter;
 use App\Models\Deceased;
 use App\Models\Zone;
 use App\Services\Deceased\ZoneTransferService;
@@ -11,7 +10,6 @@ use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
-use Filament\Actions\ExportAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -21,6 +19,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
+use Filament\Tables\Grouping\Group;
 use Filament\Tables\Table;
 
 class DeceasedTable
@@ -28,6 +27,19 @@ class DeceasedTable
     public static function configure(Table $table): Table
     {
         return $table
+            ->persistFiltersInSession()
+            ->persistSortInSession()
+            ->deferLoading()
+            ->groups([
+                Group::make('zone.name')
+                    ->label('Zone'),
+
+                // FIX: Used getTitleFromRecordUsing instead of getTitleUsing
+                Group::make('vulnerability_status')
+                    ->label('Vulnerability Status')
+                    ->getTitleFromRecordUsing(fn (Deceased $record): string => $record->vulnerability_status->getLabel())
+                    ->collapsible(),
+            ])
             ->columns([
                 TextColumn::make('full_name')
                     ->searchable(['first_name', 'last_name', 'middle_name'])
@@ -124,21 +136,9 @@ class DeceasedTable
                             ->when($data['age_to'], fn($q) => $q->where('age', '<=', $data['age_to']));
                     }),
 
-                TernaryFilter::make('has_interventions')
-                    ->label('Intervention Received')
-                    ->queries(
-                        true: fn($query) => $query->whereHas('interventions'),
-                        false: fn($query) => $query->whereDoesntHave('interventions'),
-                    ),
-
                 TernaryFilter::make('has_death_cert')
                     ->label('Death Certificate'),
             ])->deferFilters(false)
-            ->headerActions([
-                ExportAction::make()
-                    ->exporter(DeceasedExporter::class)
-                    ->enableVisibleTableColumnsByDefault(),
-            ])
             ->recordActions([
                 ViewAction::make(),
                 EditAction::make(),

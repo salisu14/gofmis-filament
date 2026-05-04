@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Widows\Tables;
 use App\Filament\Exports\WidowExporter;
 use App\Filament\Resources\IdCards\IdCardResource;
 use App\Filament\Resources\Widows\Actions\GenerateIdCardAction;
+use App\Models\Deceased;
 use App\Models\Widow;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
@@ -24,6 +25,7 @@ use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\TrashedFilter;
+use Filament\Tables\Grouping\Group;
 use Filament\Tables\Table;
 
 class WidowsTable
@@ -31,6 +33,17 @@ class WidowsTable
     public static function configure(Table $table): Table
     {
         return $table
+            ->persistFiltersInSession()
+            ->persistSortInSession()
+            ->groups([
+                Group::make('zone.name')
+                    ->label('Zone'),
+
+                Group::make('deceased.vulnerability_status')
+                    ->label('Vulnerability')
+                    ->getTitleFromRecordUsing(fn (Widow $record): string => $record->deceased?->vulnerability_status?->getLabel() ?? 'N/A')
+                    ->collapsible(),
+            ])
             ->columns([
                 ImageColumn::make('picture_url')
                     ->label('Image')
@@ -57,6 +70,10 @@ class WidowsTable
 
                 TextColumn::make('zone.name')
                     ->label('Zone')
+                    ->searchable(),
+
+                TextColumn::make('deceased.vulnerability_status')
+                    ->label('Vulnerability Status')
                     ->searchable(),
 
                 TextColumn::make('deceased.zone.coordinator.name')

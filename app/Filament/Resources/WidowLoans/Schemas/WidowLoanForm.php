@@ -45,6 +45,14 @@ class WidowLoanForm
                                 ->placeholder('e.g., Small business expansion')
                                 ->required()
                                 ->maxLength(255),
+
+                            Select::make('bank_account_id')
+                                ->label('Disbursement Bank Account')
+                                ->relationship('bankAccount', 'account_name')
+                                ->getOptionLabelFromRecordUsing(fn ($record) => "{$record->account_name} ({$record->account_number})")
+                                ->searchable()
+                                ->preload()
+                                ->required(),
                         ]),
 
                         Grid::make(2)->schema([

@@ -7,6 +7,7 @@ use App\Enums\VulnerabilityStatus;
 use App\Filament\Exports\OrphanExporter;
 use App\Filament\Resources\IdCards\IdCardResource;
 use App\Filament\Resources\Orphans\Actions\GenerateIdCardAction;
+use App\Models\Deceased;
 use App\Models\Institution;
 use App\Models\InterventionType;
 use App\Models\Orphan;
@@ -34,6 +35,7 @@ use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TrashedFilter;
+use Filament\Tables\Grouping\Group;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -42,6 +44,24 @@ class OrphansTable
     public static function configure(Table $table): Table
     {
         return $table
+            ->persistFiltersInSession()
+            ->persistSortInSession()
+            ->deferLoading()
+            ->groups([
+                Group::make('zone.name')
+                    ->label('Zone'),
+
+                // FIX: Used getTitleFromRecordUsing instead of getTitleUsing
+                Group::make('gender')
+                    ->label('Gender')
+                    ->getTitleFromRecordUsing(fn (Orphan $record): string => $record->gender->getLabel())
+                    ->collapsible(),
+
+                Group::make('deceased.vulnerability_status')
+                    ->label('Vulnerability')
+                    ->getTitleFromRecordUsing(fn (Orphan $record): string => $record->deceased?->vulnerability_status?->getLabel() ?? 'N/A')
+                    ->collapsible(),
+            ])
             ->columns([
                 ImageColumn::make('picture_url')
                     ->label('Image')
@@ -72,6 +92,9 @@ class OrphansTable
                     ->label('Parent')
                     ->searchable()
                     ->toggleable(),
+                TextColumn::make('deceased.vulnerability_status')
+                    ->label('Vulnerability Status')
+                    ->searchable(),
                 TextColumn::make('status')
                     ->badge()
                     ->color(fn(string $state): string => match ($state) {
