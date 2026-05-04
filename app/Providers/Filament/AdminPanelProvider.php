@@ -233,7 +233,7 @@ class AdminPanelProvider extends PanelProvider
                                     ->isActiveWhen(fn() => request()->is('admin/medications*')),
 
                                 NavigationItem::make('Common Illnesses')
-                                    ->icon('heroicon-o-viewfinder-circle')
+                                    ->icon('heroicon-o-beaker')
                                     ->url('/admin/illnesses')
                                     ->isActiveWhen(fn() => request()->is('admin/illnesses*')),
                             ])
