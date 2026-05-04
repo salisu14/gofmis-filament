@@ -14,16 +14,16 @@ class Transaction extends Model
     use HasUuids;
 
     protected $fillable = [
+        'bank_account_id',
         'reference',
-        'transaction_date',
-        'type',
         'description',
-        'transactionable_type',
-        'transactionable_id',
+        'amount',
+        'type',
+        'date',
     ];
 
     protected $casts = [
-        'transaction_date' => 'date',
+        'date' => 'datetime',
     ];
 
     public function transactionable(): MorphTo

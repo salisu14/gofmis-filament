@@ -14,6 +14,7 @@ class WidowLoanRepayment extends Model
 
     protected $fillable = [
         'widow_loan_id',
+        'bank_account_id',
         'amount',
         'paid_at',
         'payment_method',
@@ -42,6 +43,11 @@ class WidowLoanRepayment extends Model
     public function widowLoan(): BelongsTo
     {
         return $this->belongsTo(WidowLoan::class, 'widow_loan_id');
+    }
+
+    public function bankAccount(): BelongsTo
+    {
+        return $this->belongsTo(BankAccount::class);
     }
 
     public function transaction(): BelongsTo

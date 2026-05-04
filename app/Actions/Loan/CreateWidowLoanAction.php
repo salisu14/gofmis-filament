@@ -39,6 +39,7 @@ class CreateWidowLoanAction
         // 2. Create the Loan
         return WidowLoan::create([
             'widow_id'        => $data->widowId,
+            'bank_account_id' => $data->bankAccountId,
             'principal_amount' => $data->principalAmount,
             'duration_months' => $data->durationMonths,
             'purpose'         => $data->purpose,

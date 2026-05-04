@@ -36,6 +36,7 @@ class WidowLoan extends Model
 
     protected $fillable = [
         'widow_id',
+        'bank_account_id',
         'principal_amount',
         'duration_months',
         'repayment_frequency',
@@ -68,6 +69,11 @@ class WidowLoan extends Model
     public function widow(): BelongsTo
     {
         return $this->belongsTo(Widow::class);
+    }
+
+    public function bankAccount(): BelongsTo
+    {
+        return $this->belongsTo(BankAccount::class);
     }
 
     public function repayments(): HasMany

@@ -34,6 +34,7 @@ class WidowLoanService
         return DB::transaction(function () use ($data) {
             $loan = WidowLoan::create([
                 'widow_id' => $data->widowId,
+                'bank_account_id' => $data->bankAccountId,
                 'principal_amount' => $data->principalAmount,
                 'duration_months' => $data->durationMonths,
                 'purpose' => $data->purpose,
@@ -56,6 +57,13 @@ class WidowLoanService
     public function disburseLoan(WidowLoan $loan): void
     {
         DB::transaction(function () use ($loan) {
+            $bankAccount = $loan->bankAccount;
+            if (!$bankAccount) {
+                throw new \RuntimeException('Bank account is required before disbursement.');
+            }
+
+            $bankAccount->debit((float) $loan->principal_amount);
+
             $loan->update([
                 'status' => WidowLoanStatus::DISBURSED,
                 'disbursed_at' => now(),
@@ -63,12 +71,12 @@ class WidowLoanService
 
             // Create transaction for disbursement
             $transaction = Transaction::create([
+                'bank_account_id' => $bankAccount->id,
                 'reference' => 'DISB-' . $loan->id,
-                'transaction_date' => now()->toDateString(),
+                'date' => now(),
                 'type' => 'loan_disbursement',
+                'amount' => $loan->principal_amount,
                 'description' => 'Loan disbursement for widow loan ' . $loan->id,
-                'transactionable_type' => WidowLoan::class,
-                'transactionable_id' => $loan->id,
             ]);
 
             // Add transaction lines (debit loan receivable, credit cash/bank)
@@ -95,16 +103,27 @@ class WidowLoanService
     public function recordRepayment(RecordWidowLoanRepaymentData $data): WidowLoanRepayment
     {
         return DB::transaction(function () use ($data) {
+            $loan = WidowLoan::with('bankAccount')->findOrFail($data->widowLoanId);
+            $bankAccountId = $data->bankAccountId ?: $loan->bank_account_id;
+
+            if (!$bankAccountId) {
+                throw new \RuntimeException('Bank account is required to record repayment.');
+            }
+
+            $bankAccount = BankAccount::findOrFail($bankAccountId);
+
             $repayment = WidowLoanRepayment::create([
                 'widow_loan_id' => $data->widowLoanId,
+                'bank_account_id' => $bankAccount->id,
                 'amount' => $data->amount,
                 'paid_at' => $data->paidAt,
                 'payment_method' => $data->paymentMethod,
                 'notes' => $data->notes,
             ]);
 
+            $bankAccount->credit((float) $data->amount);
+
             // Update loan totals
-            $loan = $repayment->widowLoan;
             $loan->increment('total_paid', $data->amount);
             $loan->decrement('outstanding_balance', $data->amount);
 
@@ -118,12 +137,12 @@ class WidowLoanService
 
             // Create transaction
             $transaction = Transaction::create([
+                'bank_account_id' => $bankAccount->id,
                 'reference' => 'REP-' . $repayment->id,
-                'transaction_date' => $data->paidAt,
+                'date' => $data->paidAt,
                 'type' => 'loan_repayment',
+                'amount' => $data->amount,
                 'description' => 'Repayment for widow loan ' . $loan->id,
-                'transactionable_type' => WidowLoanRepayment::class,
-                'transactionable_id' => $repayment->id,
             ]);
 
             $repayment->update(['transaction_id' => $transaction->id]);

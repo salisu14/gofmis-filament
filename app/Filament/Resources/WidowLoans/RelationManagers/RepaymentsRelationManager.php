@@ -6,12 +6,13 @@ namespace App\Filament\Resources\WidowLoans\RelationManagers;
  | 2. LOAN REPAYMENTS MANAGER
  ------------------------------*/
 
+use App\Data\Loan\RecordWidowLoanRepaymentData;
+use App\Services\WidowLoanService;
 use App\Models\WidowLoan;
 use App\Models\WidowLoanRepayment;
+use App\Models\BankAccount;
 use Filament\Actions\Action;
 use Filament\Actions\CreateAction;
-use Filament\Actions\DeleteAction;
-use Filament\Actions\EditAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -40,6 +41,20 @@ class RepaymentsRelationManager extends RelationManager
                     ->default(now())
                     ->required()
                     ->native(false),
+                Select::make('bank_account_id')
+                    ->label('Receiving Bank Account')
+                    ->options(
+                        BankAccount::query()
+                            ->orderBy('account_name')
+                            ->get()
+                            ->mapWithKeys(fn (BankAccount $bank) => [
+                                $bank->id => "{$bank->account_name} ({$bank->account_number})",
+                            ])
+                            ->toArray()
+                    )
+                    ->default(fn () => $this->ownerRecord?->bank_account_id)
+                    ->searchable()
+                    ->required(),
                 Select::make('payment_method')
                     ->options([
                         'cash' => 'Cash',
@@ -57,6 +72,7 @@ class RepaymentsRelationManager extends RelationManager
             ->columns([
                 TextColumn::make('paid_at')->date()->sortable(),
                 TextColumn::make('amount')->money('NGN')->summarize(Sum::make()->money('NGN')),
+                TextColumn::make('bankAccount.account_name')->label('Bank'),
                 TextColumn::make('payment_method')->badge()->color('gray'),
                 TextColumn::make('transaction.reference')->label('Ref')->placeholder('No Transaction'),
             ])
@@ -64,7 +80,19 @@ class RepaymentsRelationManager extends RelationManager
                 CreateAction::make()
                     ->label('Record Repayment')
                     ->icon('heroicon-m-banknotes')
-                    ->modalWidth('xl'),
+                    ->modalWidth('xl')
+                    ->using(function (array $data): WidowLoanRepayment {
+                        return app(WidowLoanService::class)->recordRepayment(
+                            new RecordWidowLoanRepaymentData(
+                                widowLoanId: $this->ownerRecord->id,
+                                amount: (float) $data['amount'],
+                                paidAt: $data['paid_at'],
+                                bankAccountId: $data['bank_account_id'] ?? null,
+                                paymentMethod: $data['payment_method'] ?? null,
+                                notes: $data['notes'] ?? null,
+                            )
+                        );
+                    }),
             ])
             ->recordActions([
                 Action::make('printReceipt')
@@ -80,8 +108,6 @@ class RepaymentsRelationManager extends RelationManager
                     ->modalSubmitAction(false)
                     ->modalCancelActionLabel('Close'),
 
-                EditAction::make(),
-                DeleteAction::make(),
             ]);
     }
 }

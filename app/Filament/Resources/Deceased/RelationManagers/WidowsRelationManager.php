@@ -132,6 +132,7 @@ class WidowsRelationManager extends RelationManager
     public function table(Table $table): Table
     {
         return $table
+            ->groups([]) // This explicitly removes any inherited or persisted groups
             ->columns([
                 Tables\Columns\ImageColumn::make('picture_url')
                     ->disk('public')

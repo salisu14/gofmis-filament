@@ -52,6 +52,10 @@ class WidowInfolist
                                 IconEntry::make('is_married')
                                     ->boolean(),
 
+                                TextEntry::make('deceased.vulnerability_status')
+                                    ->label('Vulnerability Status')
+                                    ->badge(),
+
                                 TextEntry::make('zone.name')
                                     ->label('Zone')
                                     ->badge('success'),
@@ -70,7 +74,7 @@ class WidowInfolist
                             ->separator(','),
 
                         TextEntry::make('deceased.full_name')
-                            ->label('Deceased'),
+                            ->label('Spouse'),
 
                     ]),
             ]);

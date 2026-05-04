@@ -29,6 +29,12 @@ class WidowLoansTable
                     ->money('NGN')
                     ->sortable(),
 
+                TextColumn::make('bankAccount.account_name')
+                    ->label('Bank Account')
+                    ->formatStateUsing(fn ($state, WidowLoan $record) => $state
+                        ? "{$record->bankAccount->account_name} ({$record->bankAccount->account_number})"
+                        : 'N/A'),
+
                 TextColumn::make('outstanding_balance')
                     ->label('Remaining Balance')
                     ->money('NGN')

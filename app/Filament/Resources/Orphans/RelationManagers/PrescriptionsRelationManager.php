@@ -141,6 +141,7 @@ class PrescriptionsRelationManager extends RelationManager
     public function table(Table $table): Table
     {
         return $table
+            ->groups([]) // This explicitly removes any inherited or persisted groups
             ->columns([
                 TextColumn::make('prescription_date')
                     ->label('Date')
