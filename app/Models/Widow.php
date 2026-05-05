@@ -110,20 +110,17 @@ class Widow extends Model
 
     public function canApplyForLoan(): bool
     {
-        $activeLoan = $this->widowLoans()->whereNotIn('status', [
-            \App\Enums\WidowLoanStatus::COMPLETED->value,
-            \App\Enums\WidowLoanStatus::REJECTED->value,
-        ])->exists();
-
-        if ($activeLoan) {
-            return false;
-        }
-
         if ($this->is_married) {
             return false;
         }
 
-        return true;
+        // Block if there is any loan that is not COMPLETED or REJECTED.
+        // This covers DRAFT, PENDING, APPROVED, DISBURSED, COLLECTED and DEFAULTED.
+        $hasActiveLoan = $this->widowLoans()
+            ->whereIn('status', array_column(\App\Enums\WidowLoanStatus::activeStatuses(), 'value'))
+            ->exists();
+
+        return !$hasActiveLoan;
     }
 
     protected static function booted(): void

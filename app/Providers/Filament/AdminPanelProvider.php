@@ -38,7 +38,7 @@ class AdminPanelProvider extends PanelProvider
             ->globalSearch()
             ->spa(hasPrefetching: true)
             ->sidebarCollapsibleOnDesktop()
-            ->brandName('Garko Orphans Foundation MIS')
+            ->brandName('Garko Orphans Foundation (MIS)')
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
             ->pages([

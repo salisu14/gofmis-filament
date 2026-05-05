@@ -2,8 +2,11 @@
 
 namespace App\Filament\Resources\WidowLoans\RelationManagers;
 
+/* -----------------------------
+ | 1. LOAN SCHEDULES MANAGER
+ ------------------------------*/
+
 use App\Models\WidowLoan;
-use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\DatePicker;
@@ -14,10 +17,6 @@ use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
-
-/* -----------------------------
- | 1. LOAN SCHEDULES MANAGER
- ------------------------------*/
 
 class SchedulesRelationManager extends RelationManager
 {
@@ -46,11 +45,15 @@ class SchedulesRelationManager extends RelationManager
             ])
             ->defaultSort('due_date', 'asc')
             ->headerActions([
-                CreateAction::make()->label('Add Installment'),
+                // Schedule creation is handled automatically by WidowLoanService::disburseLoan().
+                // Manual creation is intentionally removed to keep the schedule authoritative.
             ])
             ->recordActions([
-                EditAction::make(),
-                DeleteAction::make(),
+                // Only super admins can manually correct schedule entries.
+                EditAction::make()
+                    ->visible(fn () => auth()->user()->hasRole('super_admin')),
+                DeleteAction::make()
+                    ->visible(fn () => auth()->user()->hasRole('super_admin')),
             ]);
     }
 }

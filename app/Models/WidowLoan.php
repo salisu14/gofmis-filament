@@ -32,6 +32,28 @@ class WidowLoan extends Model
                 $loan->refreshBalance();
             }
         });
+
+        // -------------------------------------------------------
+        // Zone-based global scope — coordinators only see loans
+        // for widows that belong to their own zone.
+        // -------------------------------------------------------
+        static::addGlobalScope('zone', function ($query) {
+            $user = auth()->user();
+
+            if (!$user || $user->hasAnyRole(['admin', 'super_admin'])) {
+                return;
+            }
+
+            $zoneId = $user->coordinatedZone?->id;
+
+            if (!$zoneId) {
+                return $query->whereRaw('1 = 0');
+            }
+
+            $query->whereHas('widow.deceased', function ($q) use ($zoneId) {
+                $q->where('zone_id', $zoneId);
+            });
+        });
     }
 
     protected $fillable = [
@@ -45,26 +67,29 @@ class WidowLoan extends Model
         'outstanding_balance',
         'status',
         'disbursed_at',
+        'collected_at',
         'approval_flow_id',
         'purpose',
         'fully_repaid',
         'loan_agreement_url',
         'reject_reason',
-        'installment_number',
-        'amount_due',
-        'due_date',
     ];
 
     protected $casts = [
-        'principal_amount' => 'decimal:2',
-        'total_payable' => 'decimal:2',
-        'total_paid' => 'decimal:2',
+        'principal_amount'    => 'decimal:2',
+        'total_payable'       => 'decimal:2',
+        'total_paid'          => 'decimal:2',
         'outstanding_balance' => 'decimal:2',
-        'disbursed_at' => 'datetime',
-        'fully_repaid' => 'boolean',
-        'status' => WidowLoanStatus::class,
+        'disbursed_at'        => 'datetime',
+        'collected_at'        => 'datetime',
+        'fully_repaid'        => 'boolean',
+        'status'              => WidowLoanStatus::class,
         'repayment_frequency' => LoanRepaymentFrequency::class,
     ];
+
+    // ==================================================
+    // Relationships
+    // ==================================================
 
     public function widow(): BelongsTo
     {
@@ -91,46 +116,90 @@ class WidowLoan extends Model
         return $this->morphMany(Transaction::class, 'transactionable', 'transactionable_type', 'transactionable_id');
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Approval Workflow Integration
-    |--------------------------------------------------------------------------
-    | These methods are called by the ApprovalService when the workflow status changes.
-    */
+    // ==================================================
+    // Approval Workflow Hooks
+    // ==================================================
 
+    /**
+     * Called by ApprovalService when the final approval step is completed.
+     * Status transitions: PENDING → APPROVED
+     */
     public function onApproved(ApprovalFlow $flow): void
     {
-        // When the final approval is given, set the status to APPROVED
         $this->update(['status' => WidowLoanStatus::APPROVED]);
     }
 
+    /**
+     * Called by ApprovalService when the flow is rejected at any step.
+     * Status transitions: PENDING → REJECTED
+     */
     public function onRejected(ApprovalFlow $flow): void
     {
-        // When rejected, update status and store the reason
         $this->update([
-            'status' => WidowLoanStatus::REJECTED,
+            'status'        => WidowLoanStatus::REJECTED,
             'reject_reason' => $flow->rejection_reason,
         ]);
     }
 
+    // ==================================================
+    // Guard Helpers — State Machine Checks
+    // ==================================================
+
     /**
-     * Determine if the loan can be submitted for approval.
+     * The loan can be submitted for approval only when it is a fresh draft.
      */
     public function canSubmitForApproval(): bool
     {
         return $this->status === WidowLoanStatus::DRAFT && !$this->isAwaitingApproval();
     }
 
-    // Helper methods
+    /**
+     * The loan can be disbursed only after final approval.
+     */
+    public function canDisburse(): bool
+    {
+        return $this->status === WidowLoanStatus::APPROVED;
+    }
+
+    /**
+     * The loan can be marked as collected only after disbursement and before
+     * being marked collected already.
+     */
+    public function canCollect(): bool
+    {
+        return $this->status === WidowLoanStatus::DISBURSED
+            && is_null($this->collected_at);
+    }
+
+    /**
+     * Repayments can only be recorded after the loan has been disbursed.
+     * Collection confirmation (collected_at) is encouraged but not mandatory
+     * to block repayments — the status signal is DISBURSED.
+     */
+    public function canRecordRepayment(): bool
+    {
+        return $this->status === WidowLoanStatus::DISBURSED;
+    }
+
+    /**
+     * The loan is fully settled.
+     */
     public function isCompleted(): bool
     {
         return $this->status === WidowLoanStatus::COMPLETED;
     }
 
+    /**
+     * The loan balance has been fully paid off.
+     */
     public function isFullyRepaid(): bool
     {
         return $this->fully_repaid;
     }
+
+    // ==================================================
+    // Approval Proxy Methods
+    // ==================================================
 
     public function approve(?string $comments = null): void
     {
@@ -152,19 +221,24 @@ class WidowLoan extends Model
         app(\App\Services\ApprovalService::class)->reject($flow, auth()->user(), $reason, $comments);
     }
 
+    // ==================================================
+    // Financial Ledger
+    // ==================================================
+
     /**
-     * Recalculate total paid and outstanding balance.
+     * Recalculate total_paid and outstanding_balance from actual repayment records.
+     * This is the single authoritative recalculation — do not manually increment/decrement.
      */
     public function refreshBalance(): void
     {
-        $totalPaid = $this->repayments()->sum('amount');
+        $totalPaid   = $this->repayments()->sum('amount');
         $outstanding = max(0, $this->total_payable - $totalPaid);
         $fullyRepaid = $outstanding <= 0;
 
         $updateData = [
-            'total_paid' => $totalPaid,
+            'total_paid'          => $totalPaid,
             'outstanding_balance' => $outstanding,
-            'fully_repaid' => $fullyRepaid,
+            'fully_repaid'        => $fullyRepaid,
         ];
 
         if ($fullyRepaid && $this->status === WidowLoanStatus::DISBURSED) {
@@ -173,27 +247,28 @@ class WidowLoan extends Model
 
         $this->update($updateData);
 
-        // Sync the schedule marks (is_paid) based on the new total_paid
+        // Sync schedule installment paid flags based on the new total_paid
         $this->syncScheduleStatus();
     }
 
     /**
-     * Generate the repayment ledger (weekly frequency).
+     * Generate the repayment installment schedule.
+     * MUST only be called after disbursed_at is set.
      */
     public function generateLedger(): void
     {
         DB::transaction(function () {
-            // Clear existing schedule if any
+            // Clear any stale schedule entries
             $this->schedules()->delete();
 
-            // Logic: Total Payable / Total Intervals = Installment
-            $isWeekly = $this->repayment_frequency === LoanRepaymentFrequency::WEEKLY;
+            $isWeekly       = $this->repayment_frequency === LoanRepaymentFrequency::WEEKLY;
             $intervalsPerMonth = $isWeekly ? 4 : 1;
             $totalIntervals = $this->duration_months * $intervalsPerMonth;
 
-            $installmentAmount = $this->total_payable / $totalIntervals;
+            // Anchor due dates to the actual disbursement date
+            $startDate = $this->disbursed_at ?? now();
 
-            $startDate = $this->disbursed_at ?: now();
+            $installmentAmount = round($this->total_payable / $totalIntervals, 2);
 
             for ($i = 1; $i <= $totalIntervals; $i++) {
                 $dueDate = $isWeekly
@@ -202,23 +277,24 @@ class WidowLoan extends Model
 
                 $this->schedules()->create([
                     'installment_number' => $i,
-                    'amount_due' => $installmentAmount,
-                    'due_date' => $dueDate,
-                    'is_paid' => false,
+                    'amount_due'         => $installmentAmount,
+                    'due_date'           => $dueDate,
+                    'is_paid'            => false,
                 ]);
             }
         });
     }
 
     /**
-     * Synchronize is_paid status in schedules based on total_paid.
+     * Synchronize the is_paid flag on schedule installments
+     * based on the running cumulative total_paid.
      */
     public function syncScheduleStatus(): void
     {
-        $totalPaid = (float) $this->total_paid;
+        $totalPaid  = (float) $this->total_paid;
         $runningSum = 0;
 
-        // Reset all to unpaid first (or we can do it in the loop)
+        // Reset all to unpaid
         $this->schedules()->update(['is_paid' => false]);
 
         $schedules = $this->schedules()->orderBy('installment_number')->get();
@@ -226,11 +302,10 @@ class WidowLoan extends Model
         foreach ($schedules as $schedule) {
             $runningSum += (float) $schedule->amount_due;
 
-            // Allow a small margin for float precision if needed, but here simple <= should work
             if ($runningSum <= $totalPaid + 0.01) {
                 $schedule->update(['is_paid' => true]);
             } else {
-                break; // Stop once we exceed total paid
+                break;
             }
         }
     }

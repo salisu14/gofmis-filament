@@ -24,6 +24,13 @@ class WidowLoansTable
                     ->sortable()
                     ->weight('bold'),
 
+                TextColumn::make('widow.deceased.zone.name')
+                    ->label('Zone')
+                    ->searchable()
+                    ->sortable()
+                    ->badge()
+                    ->color('gray'),
+
                 TextColumn::make('principal_amount')
                     ->label('Principal')
                     ->money('NGN')
@@ -38,8 +45,8 @@ class WidowLoansTable
                 TextColumn::make('outstanding_balance')
                     ->label('Remaining Balance')
                     ->money('NGN')
-                    ->state(fn(WidowLoan $record) => (float)$record->total_payable - (float)$record->total_paid)
-                    ->color(fn($state) => $state > 0 ? 'danger' : 'success')
+                    ->state(fn (WidowLoan $record) => (float) $record->total_payable - (float) $record->total_paid)
+                    ->color(fn ($state) => $state > 0 ? 'danger' : 'success')
                     ->weight('bold'),
 
                 TextColumn::make('status')
@@ -48,7 +55,7 @@ class WidowLoansTable
 
                 TextColumn::make('repayment_progress')
                     ->label('Repaid')
-                    ->state(fn(WidowLoan $record) => $record->total_payable > 0
+                    ->state(fn (WidowLoan $record) => $record->total_payable > 0
                         ? round(($record->total_paid / $record->total_payable) * 100) . '%'
                         : '0%')
                     ->badge()
@@ -64,19 +71,26 @@ class WidowLoansTable
                     ->options(WidowLoanStatus::class),
             ])
             ->recordActions([
-
+                // Generate schedule manually (only if APPROVED but schedule not yet created)
                 Action::make('generateSchedule')
                     ->label('Generate Schedule')
                     ->icon('heroicon-m-calendar-days')
                     ->color('warning')
                     ->requiresConfirmation()
-                    ->visible(fn(WidowLoan $record) => $record->status === WidowLoanStatus::APPROVED && $record->schedules()->count() === 0)
-                    ->action(fn(WidowLoan $record) => $record->generateLedger()),
+                    ->visible(fn (WidowLoan $record) =>
+                        $record->status === WidowLoanStatus::DISBURSED &&
+                        $record->schedules()->count() === 0
+                    )
+                    ->action(fn (WidowLoan $record) => $record->generateLedger()),
 
                 ViewAction::make(),
                 EditAction::make(),
+
+                // Workflow actions in order
                 \App\Filament\Actions\ApproveWidowLoanAction::make(),
                 \App\Filament\Actions\RejectWidowLoanAction::make(),
+                \App\Filament\Actions\DisburseWidowLoanAction::make(),
+                \App\Filament\Actions\MarkLoanCollectedAction::make(),
             ]);
     }
 }

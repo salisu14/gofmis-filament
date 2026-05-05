@@ -10,7 +10,6 @@ use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
@@ -36,8 +35,9 @@ class WidowLoanForm
                                 ->hint(function ($state) {
                                     if (!$state) return null;
                                     $widow = Widow::find($state);
-                                    if ($widow?->is_married) return '⚠️ Remarried (Ineligible for new loans)';
-                                    return $widow?->canApplyForLoan() ? '✅ Eligible' : '❌ Active Loan Exists';
+                                    if (!$widow) return null;
+                                    if ($widow->is_married) return '⚠️ Remarried (Ineligible)';
+                                    return $widow->canApplyForLoan() ? '✅ Eligible' : '❌ Active Loan Exists';
                                 }),
 
                             TextInput::make('purpose')
@@ -61,7 +61,7 @@ class WidowLoanForm
                                 ->prefix('₦')
                                 ->required()
                                 ->live(onBlur: true)
-                                ->afterStateUpdated(fn($state, $set) => $set('total_payable', (float)$state)),
+                                ->afterStateUpdated(fn ($state, $set) => $set('total_payable', (float) $state)),
 
                             Select::make('repayment_frequency')
                                 ->label('Repayment Frequency')
@@ -81,11 +81,11 @@ class WidowLoanForm
                                 ->required()
                                 ->live(onBlur: true)
                                 ->afterStateUpdated(function ($state, $get, $set) {
-                                    $principal = (float)$get('total_payable');
-                                    $duration = (int)$state;
-                                    $freq = $get('repayment_frequency');
+                                    $principal = (float) $get('total_payable');
+                                    $duration  = (int) $state;
+                                    $freq      = $get('repayment_frequency');
                                     if ($principal > 0 && $duration > 0) {
-                                        $intervals = $freq === LoanRepaymentFrequency::WEEKLY->value || $freq === 'weekly'
+                                        $intervals = ($freq === LoanRepaymentFrequency::WEEKLY->value || $freq === 'weekly')
                                             ? $duration * 4
                                             : $duration;
                                         $set('installment_amount', round($principal / $intervals, 2));
@@ -107,10 +107,11 @@ class WidowLoanForm
                         ]),
                     ]),
 
-                Section::make('Approval & Status')
+                Section::make('Status & Documentation')
                     ->icon('heroicon-m-check-badge')
                     ->schema([
                         Grid::make(3)->schema([
+                            // Status is read-only — it is managed by the approval and service workflow.
                             Select::make('status')
                                 ->options(WidowLoanStatus::class)
                                 ->required()
@@ -119,13 +120,19 @@ class WidowLoanForm
                                 ->disabled()
                                 ->dehydrated(),
 
+                            // disbursed_at is set automatically by DisburseWidowLoanAction — not manually editable.
                             DateTimePicker::make('disbursed_at')
                                 ->label('Disbursement Date')
-                                ->native(false),
+                                ->native(false)
+                                ->readOnly()
+                                ->helperText('Set automatically when the Disburse action is triggered.'),
 
-                            Toggle::make('fully_repaid')
-                                ->label('Mark as Fully Repaid')
-                                ->disabled(),
+                            // collected_at is set automatically by MarkLoanCollectedAction.
+                            DateTimePicker::make('collected_at')
+                                ->label('Collection Confirmed At')
+                                ->native(false)
+                                ->readOnly()
+                                ->helperText('Set automatically when the widow confirms collection.'),
                         ]),
 
                         FileUpload::make('loan_agreement_url')
@@ -136,7 +143,7 @@ class WidowLoanForm
 
                         Textarea::make('reject_reason')
                             ->label('Rejection Reason')
-                            ->visible(fn($get) => $get('status') === WidowLoanStatus::REJECTED->value)
+                            ->visible(fn ($get) => $get('status') === WidowLoanStatus::REJECTED->value)
                             ->columnSpanFull(),
                     ]),
             ]);

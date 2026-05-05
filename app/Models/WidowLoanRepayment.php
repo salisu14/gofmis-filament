@@ -22,23 +22,24 @@ class WidowLoanRepayment extends Model
         'notes',
     ];
 
-    protected static function booted()
-    {
-        parent::booted();
-
-        static::saved(function ($repayment) {
-            $repayment->widowLoan?->refreshBalance();
-        });
-
-        static::deleted(function ($repayment) {
-            $repayment->widowLoan?->refreshBalance();
-        });
-    }
-
     protected $casts = [
-        'amount' => 'decimal:2',
+        'amount'  => 'decimal:2',
         'paid_at' => 'date',
     ];
+
+    /*
+    |--------------------------------------------------------------------------
+    | NOTE: We intentionally do NOT call refreshBalance() here.
+    |
+    | Balance recalculation is handled atomically inside WidowLoanService
+    | after every repayment is persisted. Calling refreshBalance() here
+    | would cause a double-update when the service already updates the totals.
+    |--------------------------------------------------------------------------
+    */
+
+    // ==================================================
+    // Relationships
+    // ==================================================
 
     public function widowLoan(): BelongsTo
     {

@@ -27,6 +27,11 @@ class WidowLoanInfolist
                                 ->size('lg')
                                 ->color('primary'),
 
+                            TextEntry::make('widow.deceased.zone.name')
+                                ->label('Zone')
+                                ->badge()
+                                ->color('gray'),
+
                             TextEntry::make('status')
                                 ->badge(),
 
@@ -44,6 +49,10 @@ class WidowLoanInfolist
                                 ->label('Term')
                                 ->suffix(' Months')
                                 ->color('gray'),
+
+                            TextEntry::make('repayment_frequency')
+                                ->label('Repayment Frequency')
+                                ->badge(),
                         ]),
                     ]),
 
@@ -65,45 +74,56 @@ class WidowLoanInfolist
                                 ->money('NGN')
                                 ->color('success')
                                 ->weight('bold')
-                                ->state(fn(WidowLoan $record) => $record->repayments()->sum('amount')),
+                                ->state(fn (WidowLoan $record) => $record->repayments()->sum('amount')),
 
                             TextEntry::make('outstanding_balance')
                                 ->label('Remaining Balance')
                                 ->money('NGN')
-                                ->state(fn(WidowLoan $record) => (float)$record->total_payable - (float)$record->repayments()->sum('amount'))
-                                ->color(fn($state) => $state > 0 ? 'danger' : 'success')
+                                ->state(fn (WidowLoan $record) =>
+                                    max(0, (float) $record->total_payable - (float) $record->repayments()->sum('amount'))
+                                )
+                                ->color(fn ($state) => $state > 0 ? 'danger' : 'success')
                                 ->weight('bold'),
                         ]),
                     ]),
 
-                Section::make('Disbursement & Documentation')
-                    ->description('Verification of fund release and legal agreements.')
+                Section::make('Disbursement & Collection')
+                    ->description('Fund release timeline and widow confirmation of receipt.')
                     ->icon('heroicon-m-scale')
                     ->schema([
                         Grid::make(3)->schema([
                             TextEntry::make('disbursed_at')
                                 ->label('Disbursed On')
                                 ->dateTime()
-                                ->placeholder('Pending Disbursement'),
+                                ->placeholder('Not Yet Disbursed'),
+
+                            TextEntry::make('collected_at')
+                                ->label('Collected By Widow On')
+                                ->dateTime()
+                                ->placeholder('Awaiting Collection Confirmation')
+                                ->color(fn ($state) => $state ? 'success' : 'warning'),
 
                             IconEntry::make('fully_repaid')
                                 ->label('Settlement Status')
                                 ->boolean(),
+                        ]),
 
+                        Grid::make(2)->schema([
                             TextEntry::make('loan_agreement_url')
                                 ->label('Agreement File')
                                 ->placeholder('No Document Attached')
-                                ->url(fn($record) => $record->loan_agreement_url ? asset('storage/' . $record->loan_agreement_url) : null)
+                                ->url(fn ($record) => $record->loan_agreement_url
+                                    ? asset('storage/' . $record->loan_agreement_url)
+                                    : null)
                                 ->openUrlInNewTab()
                                 ->color('primary')
                                 ->icon('heroicon-m-paper-clip'),
-                        ]),
 
-                        TextEntry::make('reject_reason')
-                            ->label('Rejection Narrative')
-                            ->visible(fn($record) => $record->status === WidowLoanStatus::REJECTED)
-                            ->columnSpanFull()
-                            ->placeholder('No specific reason provided'),
+                            TextEntry::make('reject_reason')
+                                ->label('Rejection Narrative')
+                                ->visible(fn ($record) => $record->status === WidowLoanStatus::REJECTED)
+                                ->placeholder('No specific reason provided'),
+                        ]),
                     ]),
 
                 Section::make('Audit Metadata')

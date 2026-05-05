@@ -34,7 +34,7 @@
     </div>
     @endif
 
-    @if($flow->approvalSteps->isNotEmpty())
+    @if($flow->approvalSteps && $flow->approvalSteps->isNotEmpty())
     <div class="border-t border-gray-200 pt-3 dark:border-gray-700">
         <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Approval History</span>
         <div class="mt-2 space-y-2">

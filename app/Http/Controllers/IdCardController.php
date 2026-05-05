@@ -63,7 +63,15 @@ class IdCardController extends Controller
     {
         $pdf = $this->pdfService->generateSingle($card);
 
-        return $pdf->stream('preview-' . $card->card_number . '.pdf');
+        $content = $pdf->output();
+
+        return response($content, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="preview-' . $card->card_number . '.pdf"',
+            'X-Frame-Options' => 'SAMEORIGIN',
+            'Content-Security-Policy' => "frame-ancestors 'self'",
+            'Cache-Control' => 'no-cache, no-store, must-revalidate',
+        ]);
     }
 
     /**

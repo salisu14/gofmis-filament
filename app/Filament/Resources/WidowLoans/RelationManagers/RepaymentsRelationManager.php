@@ -7,6 +7,7 @@ namespace App\Filament\Resources\WidowLoans\RelationManagers;
  ------------------------------*/
 
 use App\Data\Loan\RecordWidowLoanRepaymentData;
+use App\Enums\WidowLoanStatus;
 use App\Services\WidowLoanService;
 use App\Models\WidowLoan;
 use App\Models\WidowLoanRepayment;
@@ -17,6 +18,7 @@ use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Notifications\Notification;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\Summarizers\Sum;
@@ -57,8 +59,8 @@ class RepaymentsRelationManager extends RelationManager
                     ->required(),
                 Select::make('payment_method')
                     ->options([
-                        'cash' => 'Cash',
-                        'transfer' => 'Bank Transfer',
+                        'cash'      => 'Cash',
+                        'transfer'  => 'Bank Transfer',
                         'deduction' => 'Monthly Deduction',
                     ])
                     ->required(),
@@ -81,17 +83,27 @@ class RepaymentsRelationManager extends RelationManager
                     ->label('Record Repayment')
                     ->icon('heroicon-m-banknotes')
                     ->modalWidth('xl')
+                    // Guard: only allow repayments on disbursed loans
+                    ->visible(fn () => $this->ownerRecord->canRecordRepayment())
+                    ->failureNotificationTitle('Failed to record repayment')
                     ->using(function (array $data): WidowLoanRepayment {
                         return app(WidowLoanService::class)->recordRepayment(
                             new RecordWidowLoanRepaymentData(
-                                widowLoanId: $this->ownerRecord->id,
-                                amount: (float) $data['amount'],
-                                paidAt: $data['paid_at'],
+                                widowLoanId:   $this->ownerRecord->id,
+                                amount:        (float) $data['amount'],
+                                paidAt:        $data['paid_at'],
                                 bankAccountId: $data['bank_account_id'] ?? null,
                                 paymentMethod: $data['payment_method'] ?? null,
-                                notes: $data['notes'] ?? null,
+                                notes:         $data['notes'] ?? null,
                             )
                         );
+                    })
+                    ->after(function () {
+                        Notification::make()
+                            ->success()
+                            ->title('Repayment Recorded')
+                            ->body('The repayment has been recorded and the loan balance updated.')
+                            ->send();
                     }),
             ])
             ->recordActions([
@@ -100,14 +112,19 @@ class RepaymentsRelationManager extends RelationManager
                     ->icon('heroicon-m-printer')
                     ->color('info')
                     ->modalHeading('Repayment Receipt')
-                    ->modalContent(fn(WidowLoanRepayment $record) => view('components.loan-receipt', [
+                    ->modalContent(fn (WidowLoanRepayment $record) => view('components.loan-receipt', [
                         'record' => $record,
-                        'widow' => $record->widowLoan->widow,
-                        'balance' => $record->widowLoan->total_payable - $record->widowLoan->repayments()->where('paid_at', '<=', $record->paid_at)->sum('amount'),
+                        'widow'  => $record->widowLoan->widow,
+                        'balance' => max(
+                            0,
+                            (float) $record->widowLoan->total_payable
+                            - (float) $record->widowLoan->repayments()
+                                ->where('paid_at', '<=', $record->paid_at)
+                                ->sum('amount')
+                        ),
                     ]))
                     ->modalSubmitAction(false)
                     ->modalCancelActionLabel('Close'),
-
             ]);
     }
 }

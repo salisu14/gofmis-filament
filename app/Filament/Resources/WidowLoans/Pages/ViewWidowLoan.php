@@ -14,9 +14,19 @@ class ViewWidowLoan extends ViewRecord
     {
         return [
             EditAction::make(),
+
+            // 1. Coordinator submits draft loan for super-admin approval
             \App\Filament\Actions\SubmitForApprovalAction::make(),
+
+            // 2. Super admin approves or rejects the submitted loan
             \App\Filament\Actions\ApproveWidowLoanAction::make(),
             \App\Filament\Actions\RejectWidowLoanAction::make(),
+
+            // 3. After approval, finance disburses the funds from the bank
+            \App\Filament\Actions\DisburseWidowLoanAction::make(),
+
+            // 4. Confirm the widow has physically collected the funds
+            \App\Filament\Actions\MarkLoanCollectedAction::make(),
         ];
     }
 }

@@ -20,7 +20,7 @@ class SubmitForApprovalAction
             ->requiresConfirmation()
             ->schema([
                 Section::make('Submit Loan for Approval')
-                    ->description('This will initiate the approval workflow for this loan.')
+                    ->description('This will send the loan application to the super admin for review.')
                     ->schema([
                         Textarea::make('notes')
                             ->label('Submission Notes')
@@ -30,30 +30,36 @@ class SubmitForApprovalAction
                     ]),
             ])
             ->action(function (WidowLoan $record): void {
-                // Define approval steps
+                /*
+                 * Single-step approval: the super admin is the sole approver.
+                 * This matches the described workflow: coordinator applies,
+                 * super admin approves or rejects.
+                 */
                 $approvers = [
-                    ['role' => 'loan_officer'],
-                    ['role' => 'finance_manager'],
-                    ['role' => 'director'],
+                    ['role' => 'super_admin'],
                 ];
 
-                // Create approval workflow
                 $approvalService = app(ApprovalService::class);
                 $approvalService->createApprovalWorkflow($record, $approvers);
 
-                // Update loan status to pending
+                // Transition loan from DRAFT → PENDING
                 $record->update(['status' => \App\Enums\WidowLoanStatus::PENDING]);
 
                 Notification::make()
                     ->success()
                     ->title('Loan Submitted for Approval')
-                    ->body("Widow loan for {$record->widow->full_name} has been submitted for approval.")
+                    ->body("Loan for {$record->widow->full_name} has been submitted. Awaiting super admin approval.")
                     ->send();
             })
-            ->visible(fn(WidowLoan $record) => $record->status === \App\Enums\WidowLoanStatus::DRAFT &&
-                !$record->approvalFlow &&
-                auth()->user()->can('submit_widow_loans')
+            ->visible(fn (WidowLoan $record) =>
+                $record->status === \App\Enums\WidowLoanStatus::DRAFT
+                && !$record->approvalFlow
+                && (
+                    // Coordinators can submit loans they manage
+                    auth()->user()->hasAnyRole(['coordinator', 'admin', 'super_admin'])
+                    // Or any user with the explicit permission
+                    || auth()->user()->can('submit_widow_loans')
+                )
             );
     }
 }
-

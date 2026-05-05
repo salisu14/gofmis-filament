@@ -8,182 +8,179 @@ use App\Enums\WidowLoanStatus;
 use App\Exceptions\InsufficientBankBalanceException;
 use App\Models\BankAccount;
 use App\Models\Transaction;
-use App\Models\TransactionLine;
+use App\Models\Widow;
 use App\Models\WidowLoan;
 use App\Models\WidowLoanRepayment;
-use App\Models\WidowLoanSchedule;
 use Illuminate\Support\Facades\DB;
 
 class WidowLoanService
 {
     /**
-     * Create a new widow loan application.
+     * Create a new widow loan application (DRAFT status).
+     *
+     * We do NOT generate the repayment schedule here. The schedule is anchored
+     * to the actual disbursement date, so it is generated inside disburseLoan().
      */
     public function createLoan(CreateWidowLoanData $data): WidowLoan
     {
-        // Check if widow can apply
-        $widow = $data->widowId; // Assuming we get the widow model or id
-        // For now, assume widow is passed or fetched
+        $widow = Widow::findOrFail($data->widowId);
 
-        // Validate bank balance
-        $bank = BankAccount::findOrFail($data->bankAccountId);
-        if (!$bank->hasSufficientFunds($data->principalAmount)) {
-            throw new InsufficientBankBalanceException('Insufficient funds in the selected bank account.');
+        if (!$widow->canApplyForLoan()) {
+            throw new \RuntimeException('This widow is not eligible to apply for a new loan.');
         }
 
         return DB::transaction(function () use ($data) {
-            $loan = WidowLoan::create([
-                'widow_id' => $data->widowId,
-                'bank_account_id' => $data->bankAccountId,
-                'principal_amount' => $data->principalAmount,
-                'duration_months' => $data->durationMonths,
-                'purpose' => $data->purpose,
-                'status' => WidowLoanStatus::DRAFT,
+            return WidowLoan::create([
+                'widow_id'           => $data->widowId,
+                'bank_account_id'    => $data->bankAccountId,
+                'principal_amount'   => $data->principalAmount,
+                'total_payable'      => $data->principalAmount, // No interest by default
+                'duration_months'    => $data->durationMonths,
+                'repayment_frequency' => $data->repaymentFrequency ?? 'weekly',
+                'purpose'            => $data->purpose,
+                'status'             => WidowLoanStatus::DRAFT,
+                'outstanding_balance' => $data->principalAmount,
             ]);
-
-            // Generate schedule if duration is set
-            if ($data->durationMonths) {
-                $this->generateLoanSchedule($loan);
-            }
-
-            return $loan;
         });
     }
 
     /**
-     * Approve and disburse the loan.
-     * @throws \Throwable
+     * Disburse an approved loan.
+     *
+     * Steps:
+     *  1. Validate loan is in APPROVED state.
+     *  2. Validate bank has sufficient funds.
+     *  3. Debit the bank account.
+     *  4. Update loan status to DISBURSED and record disbursed_at.
+     *  5. Create a disbursement Transaction record.
+     *  6. Generate the repayment schedule (anchored to disbursed_at).
+     *
+     * @throws InsufficientBankBalanceException|\Throwable
      */
     public function disburseLoan(WidowLoan $loan): void
     {
-        DB::transaction(function () use ($loan) {
-            $bankAccount = $loan->bankAccount;
-            if (!$bankAccount) {
-                throw new \RuntimeException('Bank account is required before disbursement.');
-            }
+        if (!$loan->canDisburse()) {
+            throw new \RuntimeException(
+                "Loan cannot be disbursed. Current status: {$loan->status->getLabel()}."
+            );
+        }
 
+        $bankAccount = $loan->bankAccount;
+        if (!$bankAccount) {
+            throw new \RuntimeException('A bank account must be assigned before disbursement.');
+        }
+
+        if (!$bankAccount->hasSufficientFunds((float) $loan->principal_amount)) {
+            throw new InsufficientBankBalanceException(
+                'Insufficient funds in the selected bank account to disburse this loan.'
+            );
+        }
+
+        DB::transaction(function () use ($loan, $bankAccount) {
+            // Debit the disbursing bank account
             $bankAccount->debit((float) $loan->principal_amount);
 
+            $disbursedAt = now();
+
+            // Update loan status
             $loan->update([
-                'status' => WidowLoanStatus::DISBURSED,
-                'disbursed_at' => now(),
+                'status'       => WidowLoanStatus::DISBURSED,
+                'disbursed_at' => $disbursedAt,
             ]);
 
-            // Create transaction for disbursement
-            $transaction = Transaction::create([
+            // Create a disbursement Transaction record
+            Transaction::create([
                 'bank_account_id' => $bankAccount->id,
-                'reference' => 'DISB-' . $loan->id,
-                'date' => now(),
-                'type' => 'loan_disbursement',
-                'amount' => $loan->principal_amount,
-                'description' => 'Loan disbursement for widow loan ' . $loan->id,
+                'reference'       => 'DISB-' . strtoupper(substr($loan->id, 0, 8)),
+                'date'            => $disbursedAt,
+                'type'            => 'loan_disbursement',
+                'amount'          => $loan->principal_amount,
+                'description'     => "Loan disbursement for widow: {$loan->widow->full_name}",
             ]);
 
-            // Add transaction lines (debit loan receivable, credit cash/bank)
-            // Assuming accounts exist
-            TransactionLine::create([
-                'transaction_id' => $transaction->id,
-                'account_id' => 1, // Loan receivable account
-                'debit' => $loan->principal_amount,
-                'credit' => 0,
-            ]);
-
-            TransactionLine::create([
-                'transaction_id' => $transaction->id,
-                'account_id' => 2, // Bank account
-                'debit' => 0,
-                'credit' => $loan->principal_amount,
-            ]);
+            // Generate repayment schedule anchored to the actual disbursement date.
+            // The loan must be refreshed so disbursed_at is up-to-date before calling generateLedger.
+            $loan->refresh()->generateLedger();
         });
     }
 
     /**
-     * Record a repayment.
+     * Mark a disbursed loan as collected — i.e. the widow has physically confirmed
+     * receipt of the funds. The loan status remains DISBURSED; the collected_at
+     * timestamp is the sole confirmation signal.
+     *
+     * @throws \RuntimeException|\Throwable
+     */
+    public function collectLoan(WidowLoan $loan): void
+    {
+        if (!$loan->canCollect()) {
+            throw new \RuntimeException(
+                "Loan cannot be marked as collected. Current status: {$loan->status->getLabel()}."
+            );
+        }
+
+        // Only set the timestamp — status stays DISBURSED
+        $loan->update(['collected_at' => now()]);
+    }
+
+    /**
+     * Record a repayment instalment against a disbursed/collected loan.
+     *
+     * Steps:
+     *  1. Validate loan is in a repayable state.
+     *  2. Credit the receiving bank account.
+     *  3. Create a WidowLoanRepayment record.
+     *  4. Create a Transaction record (no hardcoded journal lines).
+     *  5. Call refreshBalance() once to recalculate totals and sync schedule flags.
      */
     public function recordRepayment(RecordWidowLoanRepaymentData $data): WidowLoanRepayment
     {
         return DB::transaction(function () use ($data) {
             $loan = WidowLoan::with('bankAccount')->findOrFail($data->widowLoanId);
-            $bankAccountId = $data->bankAccountId ?: $loan->bank_account_id;
 
+            if (!$loan->canRecordRepayment()) {
+                throw new \RuntimeException(
+                    "Repayments cannot be recorded. Loan status: {$loan->status->getLabel()}."
+                );
+            }
+
+            $bankAccountId = $data->bankAccountId ?: $loan->bank_account_id;
             if (!$bankAccountId) {
-                throw new \RuntimeException('Bank account is required to record repayment.');
+                throw new \RuntimeException('A bank account is required to record a repayment.');
             }
 
             $bankAccount = BankAccount::findOrFail($bankAccountId);
 
-            $repayment = WidowLoanRepayment::create([
-                'widow_loan_id' => $data->widowLoanId,
-                'bank_account_id' => $bankAccount->id,
-                'amount' => $data->amount,
-                'paid_at' => $data->paidAt,
-                'payment_method' => $data->paymentMethod,
-                'notes' => $data->notes,
-            ]);
-
+            // Credit the receiving bank account with the repayment
             $bankAccount->credit((float) $data->amount);
 
-            // Update loan totals
-            $loan->increment('total_paid', $data->amount);
-            $loan->decrement('outstanding_balance', $data->amount);
+            // Create the repayment record
+            $repayment = WidowLoanRepayment::create([
+                'widow_loan_id'  => $data->widowLoanId,
+                'bank_account_id' => $bankAccount->id,
+                'amount'         => $data->amount,
+                'paid_at'        => $data->paidAt,
+                'payment_method' => $data->paymentMethod,
+                'notes'          => $data->notes,
+            ]);
 
-            // Check if fully repaid
-            if ($loan->outstanding_balance <= 0) {
-                $loan->update([
-                    'status' => WidowLoanStatus::COMPLETED,
-                    'fully_repaid' => true,
-                ]);
-            }
-
-            // Create transaction
+            // Create a transaction record for audit trail
             $transaction = Transaction::create([
                 'bank_account_id' => $bankAccount->id,
-                'reference' => 'REP-' . $repayment->id,
-                'date' => $data->paidAt,
-                'type' => 'loan_repayment',
-                'amount' => $data->amount,
-                'description' => 'Repayment for widow loan ' . $loan->id,
+                'reference'       => 'REP-' . strtoupper(substr($repayment->id, 0, 8)),
+                'date'            => $data->paidAt,
+                'type'            => 'loan_repayment',
+                'amount'          => $data->amount,
+                'description'     => "Repayment for widow loan: {$loan->widow->full_name}",
             ]);
 
             $repayment->update(['transaction_id' => $transaction->id]);
 
-            // Transaction lines
-            TransactionLine::create([
-                'transaction_id' => $transaction->id,
-                'account_id' => 2, // Bank
-                'debit' => $data->amount,
-                'credit' => 0,
-            ]);
+            // Single authoritative balance recalculation.
+            // Do NOT manually increment/decrement loan totals — refreshBalance() handles it all.
+            $loan->refreshBalance();
 
-            TransactionLine::create([
-                'transaction_id' => $transaction->id,
-                'account_id' => 1, // Loan receivable
-                'debit' => 0,
-                'credit' => $data->amount,
-            ]);
-
-            return $repayment;
+            return $repayment->fresh();
         });
-    }
-
-    /**
-     * Generate loan schedule.
-     */
-    private function generateLoanSchedule(WidowLoan $loan): void
-    {
-        $principal = $loan->principal_amount;
-        $months = $loan->duration_months;
-        $monthlyPayment = $principal / $months; // Simple equal installments
-
-        for ($i = 1; $i <= $months; $i++) {
-            WidowLoanSchedule::create([
-                'widow_loan_id' => $loan->id,
-                'installment_number' => $i,
-                'amount_due' => $monthlyPayment,
-                'due_date' => now()->addMonths($i)->toDateString(),
-            ]);
-        }
-
-        $loan->update(['total_payable' => $principal]); // For now, no interest
     }
 }

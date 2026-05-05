@@ -29,7 +29,7 @@ class PermissionsTableSeeder extends Seeder
             ['category', ['create', 'edit', 'show', 'delete', 'access']],
             ['repayment', ['access', 'create', 'show', 'edit', 'delete']],
             ['message', ['access', 'create', 'show', 'edit', 'delete']],
-            ['loan', ['create', 'edit', 'show', 'delete', 'approve', 'access', 'reject', 'repayment']],
+            ['loan', ['create', 'edit', 'show', 'delete', 'approve', 'access', 'reject', 'repayment',]],
             ['bank', ['access', 'create', 'show', 'edit', 'delete']],
         ];
 
@@ -40,6 +40,8 @@ class PermissionsTableSeeder extends Seeder
             'mark_orphan_unmarried',
             'admin_dashboard_access',
             'notification_access',
+            'disburse_widow_loans',
+            'collect_widow_loans',
         ];
 
         $permissions = [];

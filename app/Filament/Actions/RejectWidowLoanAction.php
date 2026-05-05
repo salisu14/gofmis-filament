@@ -9,7 +9,6 @@ use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\View;
 
-
 class RejectWidowLoanAction
 {
     public static function make(): Action
@@ -23,8 +22,8 @@ class RejectWidowLoanAction
                 Section::make('Rejection Details')
                     ->schema([
                         View::make('filament.components.approval-flow-info')
-                            ->viewData(fn(WidowLoan $record) => [
-                                'flow' => $record->approvalFlow,
+                            ->viewData(fn (WidowLoan $record) => [
+                                'flow'        => $record->approvalFlow,
                                 'currentStep' => $record->getCurrentApprovalStep(),
                             ]),
                         Textarea::make('reason')
@@ -49,9 +48,12 @@ class RejectWidowLoanAction
                     ->body("Widow loan for {$record->widow->full_name} has been rejected.")
                     ->send();
             })
-            ->visible(fn(WidowLoan $record) => $record->isAwaitingApproval() &&
-                auth()->user()->can('reject_widow_loans')
+            ->visible(fn (WidowLoan $record) =>
+                $record->isAwaitingApproval()
+                && (
+                    auth()->user()->hasAnyRole(['super_admin', 'admin'])
+                    || auth()->user()->can('reject_widow_loans')
+                )
             );
     }
 }
-

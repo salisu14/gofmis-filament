@@ -17,7 +17,6 @@ use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\AuthenticateSession;
 use Illuminate\Session\Middleware\StartSession;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 
 class CoordinatorPanelProvider extends PanelProvider
@@ -46,8 +45,8 @@ class CoordinatorPanelProvider extends PanelProvider
             // Only show coordinator-specific resources
             ->resources([
                 \App\Filament\Coordinator\Resources\DeceasedResource::class,
-                \App\Filament\Coordinator\Resources\OrphanResource::class,
                 \App\Filament\Coordinator\Resources\WidowResource::class,
+                \App\Filament\Coordinator\Resources\OrphanResource::class,
                 \App\Filament\Coordinator\Resources\LoanRequestResource::class,
                 \App\Filament\Coordinator\Resources\EducationRequestResource::class,
                 \App\Filament\Coordinator\Resources\HealthcareRequestResource::class,

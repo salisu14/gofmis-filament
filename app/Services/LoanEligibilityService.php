@@ -2,60 +2,53 @@
 
 namespace App\Services;
 
-use App\Models\Loan;
+use App\Enums\WidowLoanStatus;
 use App\Models\Widow;
+use App\Models\WidowLoan;
 use Illuminate\Database\Eloquent\Collection;
 
 class LoanEligibilityService
 {
     /**
-     * Check if a widow has no active unpaid loans.
+     * Check if a widow is eligible to apply for a new WidowLoan.
+     *
+     * A widow is eligible when:
+     *  - She is not remarried.
+     *  - She has no active WidowLoan (draft/pending/approved/disbursed/collected/defaulted).
+     *
+     * NOTE: This uses widowLoans() — the dedicated WidowLoan model — not the
+     * generic Loan model (loans() relationship).
      */
     public function canApplyForLoan(Widow $widow): bool
     {
-        // A widow can apply if they have no active (pending or approved) unpaid loans.
-        // We check if paid_at is null AND status is not rejected.
-        $hasActiveLoan = $widow->loans()
-            ->whereNull('paid_at')
-            ->where('status', '!=', 'rejected')
-            ->exists();
-
-        return !$hasActiveLoan;
+        return $widow->canApplyForLoan();
     }
 
     /**
-     * Get approved loans for the authenticated user's widows.
+     * Get approved (APPROVED status) WidowLoans that have not yet been disbursed.
      */
-    public function getApprovedLoansForAuthUser(): Collection
+    public function getApprovedPendingDisbursement(): \Illuminate\Database\Eloquent\Builder
     {
-        // Assuming User hasMany Widows
-        return auth()->user()->widows
-            ->flatMap->loans
-            ->sortByDesc('created_at')
-            ->whereNotNull('approved_at')
-            ->whereNull('paid_at');
+        return WidowLoan::where('status', WidowLoanStatus::APPROVED);
     }
 
     /**
-     * Get rejected loans for the authenticated user's widows.
+     * Get all disbursed loans still awaiting collection confirmation.
      */
-    public function getRejectedLoansForAuthUser(): Collection
+    public function getDisbursedAwaitingCollection(): \Illuminate\Database\Eloquent\Builder
     {
-        return auth()->user()->widows
-            ->flatMap->loans
-            ->sortByDesc('created_at')
-            ->whereNotNull('reject_reason');
+        return WidowLoan::where('status', WidowLoanStatus::DISBURSED)
+            ->whereNull('collected_at');
     }
 
     /**
-     * Get pending loans.
+     * Get all active loans (disbursed/collected with outstanding balance).
      */
-    public function getPendingLoansForAuthUser(): Collection
+    public function getActiveLoans(): \Illuminate\Database\Eloquent\Builder
     {
-        return auth()->user()->widows
-            ->flatMap->loans
-            ->sortByDesc('created_at')
-            ->whereNull('approved_at')
-            ->whereNull('reject_reason');
+        return WidowLoan::whereIn('status', [
+            WidowLoanStatus::DISBURSED->value,
+            WidowLoanStatus::COLLECTED->value,
+        ])->where('fully_repaid', false);
     }
 }

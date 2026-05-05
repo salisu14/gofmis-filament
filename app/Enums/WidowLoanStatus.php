@@ -4,10 +4,10 @@ namespace App\Enums;
 
 enum WidowLoanStatus: string
 {
-    case DRAFT = 'draft';
-    case PENDING = 'pending';
-    case APPROVED = 'approved';
-    case REJECTED = 'rejected';
+    case DRAFT     = 'draft';
+    case PENDING   = 'pending';
+    case APPROVED  = 'approved';
+    case REJECTED  = 'rejected';
     case DISBURSED = 'disbursed';
     case COMPLETED = 'completed';
     case DEFAULTED = 'defaulted';
@@ -15,10 +15,10 @@ enum WidowLoanStatus: string
     public function getLabel(): string
     {
         return match ($this) {
-            self::DRAFT => 'Draft',
-            self::PENDING => 'Pending',
-            self::APPROVED => 'Approved',
-            self::REJECTED => 'Rejected',
+            self::DRAFT     => 'Draft',
+            self::PENDING   => 'Pending Approval',
+            self::APPROVED  => 'Approved',
+            self::REJECTED  => 'Rejected',
             self::DISBURSED => 'Disbursed',
             self::COMPLETED => 'Completed',
             self::DEFAULTED => 'Defaulted',
@@ -28,13 +28,28 @@ enum WidowLoanStatus: string
     public function getColor(): string
     {
         return match ($this) {
-            self::DRAFT => 'gray',
-            self::PENDING => 'warning',
-            self::APPROVED => 'info',
-            self::REJECTED => 'danger',
+            self::DRAFT     => 'gray',
+            self::PENDING   => 'warning',
+            self::APPROVED  => 'info',
+            self::REJECTED  => 'danger',
             self::DISBURSED => 'primary',
             self::COMPLETED => 'success',
             self::DEFAULTED => 'danger',
         };
+    }
+
+    /**
+     * Statuses that represent an "active" loan — blocks a widow from applying for a new one.
+     * Excludes COMPLETED and REJECTED, which represent terminal/resolved states.
+     */
+    public static function activeStatuses(): array
+    {
+        return [
+            self::DRAFT,
+            self::PENDING,
+            self::APPROVED,
+            self::DISBURSED,
+            self::DEFAULTED,
+        ];
     }
 }

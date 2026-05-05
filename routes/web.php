@@ -12,6 +12,51 @@ Route::get('/id-cards/{idCard}/download', IdCardDownloadController::class)
     ->name('id-cards.download')
     ->middleware('auth');
 
+Route::get('/id-cards/{card}/preview', [IdCardController::class, 'preview'])
+    ->name('id-cards.preview')
+    ->middleware('auth');
+
+// Local debug route: render the card HTML directly (no auth) to isolate preview issues.
+if (app()->environment('local')) {
+    Route::get('/dev/id-cards/{card}/preview-debug', function (\App\Models\IdCard $card) {
+        $beneficiary = $card->cardable;
+        $isWidow = $card->cardable_type === \App\Models\Widow::class;
+
+        $logoPath = storage_path('app/public/logos/gof_logo.jpeg');
+        if (!file_exists($logoPath)) {
+            $logoPath = public_path('images/garko-logo.png');
+        }
+
+        $photo = null;
+        if ($beneficiary) {
+            $photo = ($beneficiary->picture_url && \Illuminate\Support\Facades\Storage::disk('public')->exists($beneficiary->picture_url))
+                ? \Illuminate\Support\Facades\Storage::disk('public')->url($beneficiary->picture_url)
+                : (file_exists(public_path('images/default-avatar.png')) ? asset('images/default-avatar.png') : null);
+        }
+
+        return view('id-cards.card-content', [
+            'foundation_logo' => file_exists($logoPath) ? $logoPath : null,
+            'foundation_name' => 'Garko Orphans Foundation',
+            'card_type' => $isWidow ? 'WIDOW ID CARD' : 'ORPHAN ID CARD',
+            'card_number' => $card->card_number,
+            'photo_url' => $photo,
+            'full_name' => $beneficiary->full_name ?? 'N/A',
+            'nin' => $beneficiary->nin ?? 'N/A',
+            'reg_no' => $beneficiary->reg_no ?? 'N/A',
+            'gender' => $beneficiary->gender ?? 'N/A',
+            'zone' => $beneficiary->zone?->name ?? 'N/A',
+            'coordinator_name' => $beneficiary->zone?->coordinator_name ?? 'N/A',
+            'coordinator_phone' => $beneficiary->zone?->coordinator_phone ?? 'N/A',
+            'issue_date' => $card->issued_at?->format('M d, Y') ?? now()->format('M d, Y'),
+            'expiry_date' => $card->expires_at?->format('M d, Y') ?? null,
+            'background_color' => $isWidow ? '#FFF8F0' : '#F0F8FF',
+            'accent_color' => $isWidow ? '#8B4513' : '#1E90FF',
+            'qr_code' => ($card->qr_code_path && \Illuminate\Support\Facades\Storage::disk('public')->exists($card->qr_code_path))
+                ? \Illuminate\Support\Facades\Storage::disk('public')->url($card->qr_code_path)
+                : null,
+        ]);
+    });
+}
 Route::get('/id-card-print-batches/{record}/download', \App\Http\Controllers\IdCardPrintBatchDownloadController::class)
     ->name('id-card-print-batches.download')
     ->middleware('auth');

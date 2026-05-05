@@ -22,8 +22,8 @@ class ApproveWidowLoanAction
                 Section::make('Approval Details')
                     ->schema([
                         View::make('filament.components.approval-flow-info')
-                            ->viewData(fn(WidowLoan $record) => [
-                                'flow' => $record->approvalFlow,
+                            ->viewData(fn (WidowLoan $record) => [
+                                'flow'        => $record->approvalFlow,
                                 'currentStep' => $record->getCurrentApprovalStep(),
                             ]),
                         Textarea::make('comments')
@@ -39,12 +39,17 @@ class ApproveWidowLoanAction
                 Notification::make()
                     ->success()
                     ->title('Loan Approved')
-                    ->body("Widow loan for {$record->widow->full_name} has been approved.")
+                    ->body("Widow loan for {$record->widow->full_name} has been approved. You may now disburse the funds.")
                     ->send();
             })
-            ->visible(fn(WidowLoan $record) => $record->isAwaitingApproval() &&
-                auth()->user()->can('approve_widow_loans')
+            ->visible(fn (WidowLoan $record) =>
+                // The loan must have a pending approval flow
+                $record->isAwaitingApproval()
+                && (
+                    // Super admin always can approve (Gate::before bypass applies too)
+                    auth()->user()->hasAnyRole(['super_admin', 'admin'])
+                    || auth()->user()->can('approve_widow_loans')
+                )
             );
     }
 }
-
