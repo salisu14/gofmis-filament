@@ -94,6 +94,7 @@ class OrphansTable
                     ->toggleable(),
                 TextColumn::make('deceased.vulnerability_status')
                     ->label('Vulnerability Status')
+                    ->alignCenter()
                     ->searchable(),
                 TextColumn::make('status')
                     ->badge()

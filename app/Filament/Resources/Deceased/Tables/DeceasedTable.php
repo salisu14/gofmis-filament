@@ -53,6 +53,7 @@ class DeceasedTable
 
                 TextColumn::make('vulnerability_status')
                     ->badge()
+                    ->alignCenter()
                     ->sortable(),
 
                 TextColumn::make('zone.name')

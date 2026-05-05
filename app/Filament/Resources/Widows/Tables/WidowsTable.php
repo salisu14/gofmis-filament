@@ -74,6 +74,7 @@ class WidowsTable
 
                 TextColumn::make('deceased.vulnerability_status')
                     ->label('Vulnerability Status')
+                    ->alignCenter()
                     ->searchable(),
 
                 TextColumn::make('deceased.zone.coordinator.name')
