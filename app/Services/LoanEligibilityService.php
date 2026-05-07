@@ -42,13 +42,14 @@ class LoanEligibilityService
     }
 
     /**
-     * Get all active loans (disbursed/collected with outstanding balance).
+     * Get all active loans (disbursed with outstanding balance).
+     *
+     * NOTE: There is no COLLECTED status — the collected_at timestamp is the
+     * collection signal while status remains DISBURSED throughout repayments.
      */
     public function getActiveLoans(): \Illuminate\Database\Eloquent\Builder
     {
-        return WidowLoan::whereIn('status', [
-            WidowLoanStatus::DISBURSED->value,
-            WidowLoanStatus::COLLECTED->value,
-        ])->where('fully_repaid', false);
+        return WidowLoan::where('status', WidowLoanStatus::DISBURSED)
+            ->where('fully_repaid', false);
     }
 }

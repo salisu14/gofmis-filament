@@ -36,6 +36,16 @@ class BankAccount extends Model
         'reserved_balance' => 'decimal:2',
     ];
 
+    protected static function booted(): void
+    {
+        static::creating(function ($account) {
+            // Initialize ledger balance with opening balance if it's a new account
+            if (is_null($account->ledger_balance)) {
+                $account->ledger_balance = $account->opening_balance ?? 0;
+            }
+        });
+    }
+
     /*
     |--------------------------------------------------------------------------
     | Relationships
@@ -76,7 +86,8 @@ class BankAccount extends Model
         if (!$this->hasSufficientFunds($amount)) {
             throw new InsufficientBankBalanceException('Cannot reserve funds: Available balance is too low.');
         }
-        $this->increment('reserved_balance', $amount);
+        $this->reserved_balance = (float) $this->reserved_balance + $amount;
+        $this->save();
     }
 
     /**
@@ -84,7 +95,8 @@ class BankAccount extends Model
      */
     public function unreserve(float $amount): void
     {
-        $this->decrement('reserved_balance', min($this->reserved_balance, $amount));
+        $this->reserved_balance = max(0, (float) $this->reserved_balance - $amount);
+        $this->save();
     }
 
     /**
@@ -107,7 +119,8 @@ class BankAccount extends Model
         if (!$this->hasSufficientFunds($amount)) {
             throw new InsufficientBankBalanceException('Insufficient funds in bank account.');
         }
-        $this->decrement('ledger_balance', $amount);
+        $this->ledger_balance = (float) $this->ledger_balance - $amount;
+        $this->save();
     }
 
     /**
@@ -115,6 +128,7 @@ class BankAccount extends Model
      */
     public function credit(float $amount): void
     {
-        $this->increment('ledger_balance', $amount);
+        $this->ledger_balance = (float) $this->ledger_balance + $amount;
+        $this->save();
     }
 }

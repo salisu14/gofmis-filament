@@ -18,12 +18,14 @@ class WidowLoanSchedule extends Model
         'amount_due',
         'due_date',
         'is_paid',
+        'paid_at',
     ];
 
     protected $casts = [
         'amount_due' => 'decimal:2',
-        'due_date' => 'date',
-        'is_paid' => 'boolean',
+        'due_date'   => 'date',
+        'paid_at'    => 'date',
+        'is_paid'    => 'boolean',
     ];
 
     public function widowLoan(): BelongsTo

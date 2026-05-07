@@ -35,6 +35,11 @@ return new class extends Migration
             $table->index('due_date');
             $table->index(['widow_loan_id', 'is_paid']);
 
+            $table->date('paid_at')
+                ->nullable()
+                ->after('is_paid')
+                ->comment('The date this installment was actually paid. Null means unpaid.');
+
             // Ensure installment numbers don't duplicate for the same loan
             $table->unique(['widow_loan_id', 'installment_number']);
         });

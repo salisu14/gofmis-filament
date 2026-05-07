@@ -12,6 +12,8 @@ class CreateWidowLoanData extends Data
         public ?int $durationMonths = null,
         public ?string $purpose = null,
         public ?string $bankAccountId = null,
+        public ?string $disbursementBankId = null,
+        public ?string $repaymentBankId = null,
         public ?string $repaymentFrequency = 'weekly',
     ) {}
 
@@ -23,6 +25,8 @@ class CreateWidowLoanData extends Data
             'durationMonths'     => 'nullable|integer|min:1',
             'purpose'            => 'nullable|string|max:255',
             'bankAccountId'      => 'nullable|uuid|exists:bank_accounts,id',
+            'disbursementBankId' => 'nullable|uuid|exists:bank_accounts,id',
+            'repaymentBankId'    => 'nullable|uuid|exists:bank_accounts,id',
             'repaymentFrequency' => 'nullable|string|in:weekly,monthly',
         ];
     }

@@ -31,17 +31,63 @@ class WidowLoanService
 
         return DB::transaction(function () use ($data) {
             return WidowLoan::create([
-                'widow_id'           => $data->widowId,
-                'bank_account_id'    => $data->bankAccountId,
-                'principal_amount'   => $data->principalAmount,
-                'total_payable'      => $data->principalAmount, // No interest by default
-                'duration_months'    => $data->durationMonths,
-                'repayment_frequency' => $data->repaymentFrequency ?? 'weekly',
-                'purpose'            => $data->purpose,
-                'status'             => WidowLoanStatus::DRAFT,
-                'outstanding_balance' => $data->principalAmount,
+                'widow_id'             => $data->widowId,
+                'bank_account_id'      => $data->bankAccountId,
+                'disbursement_bank_id' => $data->disbursementBankId,
+                'repayment_bank_id'    => $data->repaymentBankId,
+                'principal_amount'     => $data->principalAmount,
+                'total_payable'        => $data->principalAmount, // No interest by default
+                'duration_months'      => $data->durationMonths,
+                'repayment_frequency'  => $data->repaymentFrequency ?? 'weekly',
+                'purpose'              => $data->purpose,
+                'status'               => WidowLoanStatus::DRAFT,
+                'outstanding_balance'  => $data->principalAmount,
             ]);
         });
+    }
+
+    /**
+     * Submit a draft loan for approval.
+     *
+     * This method:
+     *  1. Creates the approval workflow.
+     *  2. Reserves the principal amount in the foundation's bank account.
+     *  3. Transitions status from DRAFT → PENDING.
+     *
+     * @throws InsufficientBankBalanceException|\Throwable
+     */
+    public function submitForApproval(WidowLoan $loan, array $approvers): void
+    {
+        if (!$loan->canSubmitForApproval()) {
+            throw new \RuntimeException('Loan is not in a state that can be submitted for approval.');
+        }
+
+        $bankAccount = $loan->bankAccount;
+        if (!$bankAccount) {
+            throw new \RuntimeException('A bank account must be assigned before submission.');
+        }
+
+        DB::transaction(function () use ($loan, $approvers, $bankAccount) {
+            // Reserve the funds in the bank account
+            $bankAccount->reserve((float) $loan->principal_amount);
+
+            // Create the approval workflow
+            app(ApprovalService::class)->createApprovalWorkflow($loan, $approvers);
+
+            // Transition status
+            $loan->update(['status' => WidowLoanStatus::PENDING]);
+        });
+    }
+
+    /**
+     * Handle loan rejection by releasing the reserved funds back to the bank ledger.
+     */
+    public function handleRejection(WidowLoan $loan): void
+    {
+        $bankAccount = $loan->bankAccount;
+        if ($bankAccount && $loan->principal_amount > 0) {
+            $bankAccount->unreserve((float) $loan->principal_amount);
+        }
     }
 
     /**
@@ -70,15 +116,9 @@ class WidowLoanService
             throw new \RuntimeException('A bank account must be assigned before disbursement.');
         }
 
-        if (!$bankAccount->hasSufficientFunds((float) $loan->principal_amount)) {
-            throw new InsufficientBankBalanceException(
-                'Insufficient funds in the selected bank account to disburse this loan.'
-            );
-        }
-
         DB::transaction(function () use ($loan, $bankAccount) {
-            // Debit the disbursing bank account
-            $bankAccount->debit((float) $loan->principal_amount);
+            // Debit the disbursing bank account (and unreserve the funds)
+            $bankAccount->disburse((float) $loan->principal_amount);
 
             $disbursedAt = now();
 
@@ -154,14 +194,18 @@ class WidowLoanService
             // Credit the receiving bank account with the repayment
             $bankAccount->credit((float) $data->amount);
 
+            // Auto-assign the next sequential receipt number
+            $nextReceiptNumber = WidowLoanRepayment::max('receipt_number') + 1;
+
             // Create the repayment record
             $repayment = WidowLoanRepayment::create([
-                'widow_loan_id'  => $data->widowLoanId,
+                'widow_loan_id'   => $data->widowLoanId,
                 'bank_account_id' => $bankAccount->id,
-                'amount'         => $data->amount,
-                'paid_at'        => $data->paidAt,
-                'payment_method' => $data->paymentMethod,
-                'notes'          => $data->notes,
+                'receipt_number'  => $nextReceiptNumber,
+                'amount'          => $data->amount,
+                'paid_at'         => $data->paidAt,
+                'payment_method'  => $data->paymentMethod,
+                'notes'           => $data->notes,
             ]);
 
             // Create a transaction record for audit trail

@@ -39,12 +39,6 @@ class WidowLoanInfolist
                                 ->label('Loan Purpose')
                                 ->placeholder('No purpose defined'),
 
-                            TextEntry::make('bankAccount.account_name')
-                                ->label('Bank Account')
-                                ->formatStateUsing(fn ($state, WidowLoan $record) => $state
-                                    ? "{$record->bankAccount->account_name} ({$record->bankAccount->account_number})"
-                                    : 'N/A'),
-
                             TextEntry::make('duration_months')
                                 ->label('Term')
                                 ->suffix(' Months')
@@ -106,6 +100,22 @@ class WidowLoanInfolist
                             IconEntry::make('fully_repaid')
                                 ->label('Settlement Status')
                                 ->boolean(),
+                        ]),
+
+                        Grid::make(2)->schema([
+                            TextEntry::make('bankAccount.account_name')
+                                ->label('Foundation Disbursing Account')
+                                ->formatStateUsing(fn ($state, WidowLoan $record) => $state
+                                    ? "{$record->bankAccount->account_name} ({$record->bankAccount->account_number})"
+                                    : 'N/A')
+                                ->placeholder('Not Set'),
+
+                            TextEntry::make('disbursementBank.account_name')
+                                ->label("Widow's Receiving Account")
+                                ->formatStateUsing(fn ($state, WidowLoan $record) => $record->disbursementBank
+                                    ? "{$record->disbursementBank->account_name} ({$record->disbursementBank->account_number})"
+                                    : 'N/A')
+                                ->placeholder('Not Specified'),
                         ]),
 
                         Grid::make(2)->schema([

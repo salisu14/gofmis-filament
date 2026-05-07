@@ -15,6 +15,7 @@ class WidowLoanRepayment extends Model
     protected $fillable = [
         'widow_loan_id',
         'bank_account_id',
+        'receipt_number',
         'amount',
         'paid_at',
         'payment_method',

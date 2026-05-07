@@ -39,11 +39,7 @@ class SubmitForApprovalAction
                     ['role' => 'super_admin'],
                 ];
 
-                $approvalService = app(ApprovalService::class);
-                $approvalService->createApprovalWorkflow($record, $approvers);
-
-                // Transition loan from DRAFT → PENDING
-                $record->update(['status' => \App\Enums\WidowLoanStatus::PENDING]);
+                app(\App\Services\WidowLoanService::class)->submitForApproval($record, $approvers);
 
                 Notification::make()
                     ->success()

@@ -3,10 +3,16 @@
     <div class="flex justify-between items-start border-b border-gray-300 pb-4 mb-6">
         <div>
             <h1 class="text-2xl font-bold uppercase tracking-tight text-primary-600">Loan Repayment Receipt</h1>
-            <p class="text-sm text-gray-500 italic">Grace Orphans Foundation — Widow Support Program</p>
+            <p class="text-sm text-gray-500 italic">Garko Orphans Foundation — Widow Support Program</p>
         </div>
         <div class="text-right">
-            <p class="text-sm font-semibold">Ref: {{ $record->transaction?->reference ?? 'N/A' }}</p>
+            <p class="text-sm font-semibold">
+                @if($record->receipt_number)
+                    Receipt No: <span class="font-mono">RCP-{{ str_pad($record->receipt_number, 5, '0', STR_PAD_LEFT) }}</span>
+                @else
+                    Ref: {{ $record->transaction?->reference ?? 'N/A' }}
+                @endif
+            </p>
             <p class="text-xs text-gray-400 uppercase tracking-widest">Date: {{ $record->paid_at->format('d M, Y') }}</p>
         </div>
     </div>

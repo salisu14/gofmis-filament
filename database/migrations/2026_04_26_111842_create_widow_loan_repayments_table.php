@@ -30,6 +30,11 @@ return new class extends Migration
             $table->date('paid_at');
             $table->string('payment_method'); // cash, transfer, deduction
 
+            $table->unsignedBigInteger('receipt_number')
+                ->nullable()
+                ->after('id')
+                ->comment('Sequential receipt reference number, auto-assigned on creation.');
+
             // Narrative
             $table->text('notes')->nullable();
 

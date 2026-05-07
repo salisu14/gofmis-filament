@@ -54,7 +54,7 @@ class RepaymentsRelationManager extends RelationManager
                             ])
                             ->toArray()
                     )
-                    ->default(fn () => $this->ownerRecord?->bank_account_id)
+                    ->default(fn () => $this->ownerRecord?->repayment_bank_id ?? $this->ownerRecord?->bank_account_id)
                     ->searchable()
                     ->required(),
                 Select::make('payment_method')

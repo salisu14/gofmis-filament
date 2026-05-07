@@ -130,7 +130,7 @@ class AdminPanelProvider extends PanelProvider
                         NavigationGroup::make('Interventions')
                             ->items([
                                 NavigationItem::make('Categories')
-                                    ->icon('heroicon-o-document-currency-dollar')
+                                    ->icon('heroicon-o-tag')
                                     ->url('/admin/categories')
                                     ->isActiveWhen(fn() => request()->is('admin/categories*')),
 

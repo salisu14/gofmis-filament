@@ -59,6 +59,8 @@ class WidowLoan extends Model
     protected $fillable = [
         'widow_id',
         'bank_account_id',
+        'disbursement_bank_id',
+        'repayment_bank_id',
         'principal_amount',
         'duration_months',
         'repayment_frequency',
@@ -101,6 +103,23 @@ class WidowLoan extends Model
         return $this->belongsTo(BankAccount::class);
     }
 
+    /**
+     * The widow's own bank account that receives the disbursed funds.
+     * Distinct from bankAccount() which is the foundation's internal disbursing account.
+     */
+    public function disbursementBank(): BelongsTo
+    {
+        return $this->belongsTo(BankAccount::class, 'disbursement_bank_id');
+    }
+
+    /**
+     * The foundation's bank account where repayments for this loan should be credited.
+     */
+    public function repaymentBank(): BelongsTo
+    {
+        return $this->belongsTo(BankAccount::class, 'repayment_bank_id');
+    }
+
     public function repayments(): HasMany
     {
         return $this->hasMany(WidowLoanRepayment::class, 'widow_loan_id');
@@ -139,6 +158,9 @@ class WidowLoan extends Model
             'status'        => WidowLoanStatus::REJECTED,
             'reject_reason' => $flow->rejection_reason,
         ]);
+
+        // Release the reserved funds
+        app(\App\Services\WidowLoanService::class)->handleRejection($this);
     }
 
     // ==================================================

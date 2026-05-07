@@ -47,12 +47,31 @@ class WidowLoanForm
                                 ->maxLength(255),
 
                             Select::make('bank_account_id')
-                                ->label('Disbursement Bank Account')
+                                ->label('Foundation Disbursing Account')
+                                ->helperText('The foundation\'s internal bank account to be debited.')
                                 ->relationship('bankAccount', 'account_name')
                                 ->getOptionLabelFromRecordUsing(fn ($record) => "{$record->account_name} ({$record->account_number})")
                                 ->searchable()
                                 ->preload()
                                 ->required(),
+
+                            Select::make('disbursement_bank_id')
+                                ->label('Widow\'s Receiving Account')
+                                ->helperText('The bank account the widow receives funds into.')
+                                ->relationship('disbursementBank', 'account_name')
+                                ->getOptionLabelFromRecordUsing(fn ($record) => "{$record->account_name} ({$record->account_number})")
+                                ->searchable()
+                                ->preload()
+                                ->nullable(),
+
+                            Select::make('repayment_bank_id')
+                                ->label('Foundation Repayment Account')
+                                ->helperText('The foundation account where repayments will be credited.')
+                                ->relationship('repaymentBank', 'account_name')
+                                ->getOptionLabelFromRecordUsing(fn ($record) => "{$record->account_name} ({$record->account_number})")
+                                ->searchable()
+                                ->preload()
+                                ->nullable(),
                         ]),
 
                         Grid::make(2)->schema([
