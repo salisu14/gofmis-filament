@@ -19,7 +19,7 @@ class RegisterOrphanAction
 
     public function __construct(
         private readonly RegistrationNumberService $regNoService,
-        private readonly OrphanEligibilityService  $eligibilityService,
+        private readonly OrphanEligibilityService $eligibilityService,
     ) {}
 
     /**
@@ -70,17 +70,17 @@ class RegisterOrphanAction
             foreach ($data->educations ?? [] as $education) {
                 $orphan->educations()->create([
                     'institution_id' => $education['institution_id'],
-                    'level'          => $education['level'] ?? null,
-                    'class_level'    => $education['class_level'] ?? null,
-                    'school_fee'     => $education['school_fee'] ?? 0,
-                    'fee_frequency'  => $education['fee_frequency'] ?? 'termly',
-                    'is_current'     => $education['is_current'] ?? true,
-                    'started_at'     => $education['started_at'] ?? now(),
+                    'level' => $education['level'] ?? null,
+                    'class_level' => $education['class_level'] ?? null,
+                    'school_fee' => $education['school_fee'] ?? 0,
+                    'fee_frequency' => $education['fee_frequency'] ?? 'termly',
+                    'is_current' => $education['is_current'] ?? true,
+                    'started_at' => $education['started_at'] ?? now(),
                 ]);
             }
 
             // VOCATIONAL SKILLS
-            if (!empty($data->vocationalSkills)) {
+            if (! empty($data->vocationalSkills)) {
                 $orphan->vocationalSkills()->detach();
 
                 $skillRows = collect($data->vocationalSkills)
@@ -93,7 +93,7 @@ class RegisterOrphanAction
                             $specify = null;
                         }
 
-                        if (!$skillId) {
+                        if (! $skillId) {
                             return null;
                         }
 
@@ -110,15 +110,10 @@ class RegisterOrphanAction
                     ->values()
                     ->all();
 
-                if (!empty($skillRows)) {
+                if (! empty($skillRows)) {
                     OrphanVocationalSkill::query()->insert($skillRows);
                 }
             }
-
-            // UPDATE COUNT (SAFE)
-            $deceased->update([
-                'number_of_orphans_left' => $deceased->orphans()->count()
-            ]);
 
             // ELIGIBILITY
             $isEligible = $this->eligibilityService->isEligible($orphan);

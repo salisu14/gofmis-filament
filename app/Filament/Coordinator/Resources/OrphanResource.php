@@ -2,8 +2,8 @@
 
 namespace App\Filament\Coordinator\Resources;
 
-use App\Filament\Coordinator\Concerns\ZoneScoped;
 use App\Enums\Gender;
+use App\Filament\Coordinator\Concerns\ZoneScoped;
 use App\Models\Orphan;
 use App\Models\VocationalSkill;
 use Carbon\Carbon;
@@ -39,8 +39,11 @@ class OrphanResource extends Resource
     use ZoneScoped;
 
     protected static ?string $model = Orphan::class;
+
     protected static string|null|\BackedEnum $navigationIcon = 'heroicon-o-user-group';
+
     protected static string|null|\UnitEnum $navigationGroup = 'Beneficiary Registration';
+
     protected static ?int $navigationSort = 2;
 
     /**
@@ -70,10 +73,14 @@ class OrphanResource extends Resource
     public static function canEdit($record): bool
     {
         $user = auth()->user();
-        if (!$user) return false;
-        if ($user->hasAnyRole(['admin', 'super_admin'])) return true;
+        if (! $user) {
+            return false;
+        }
+        if ($user->hasAnyRole(['admin', 'super_admin'])) {
+            return true;
+        }
 
-        return $record->deceased?->zone_id === $user->zone_id;
+        return $record->deceased?->zone_id === $user->coordinatedZone?->id;
     }
 
     public static function canDelete($record): bool
@@ -87,7 +94,7 @@ class OrphanResource extends Resource
 
     public static function form(Schema $schema): Schema
     {
-        $coordinatorZoneId = auth()->user()?->zone_id;
+        $coordinatorZoneId = auth()->user()?->coordinatedZone?->id;
 
         return $schema
             ->schema([
@@ -274,7 +281,7 @@ class OrphanResource extends Resource
 
                 Tables\Columns\TextColumn::make('age')
                     ->label('Age')
-                    ->state(fn($record) => $record->birth_date?->age)
+                    ->state(fn ($record) => $record->birth_date?->age)
                     ->sortable('birth_date')
                     ->alignCenter(),
 
@@ -316,7 +323,7 @@ class OrphanResource extends Resource
                     ->modalHeading('Mark as Married')
                     ->modalDescription('This will revoke all benefits and eligibility. This action cannot be undone.')
                     ->modalSubmitActionLabel('Yes, Mark as Married')
-                    ->visible(fn($record) => !$record->is_married && (($record->gender->value ?? $record->gender) === Gender::FEMALE->value))
+                    ->visible(fn ($record) => ! $record->is_married && (($record->gender->value ?? $record->gender) === Gender::FEMALE->value))
                     ->schema([
                         DatePicker::make('married_at')
                             ->label('Marriage Date')
@@ -357,7 +364,7 @@ class OrphanResource extends Resource
                         ->action(function ($records) {
                             foreach ($records as $record) {
                                 if (
-                                    !$record->is_married
+                                    ! $record->is_married
                                     && (($record->gender->value ?? $record->gender) === Gender::FEMALE->value)
                                 ) {
                                     $record->markAsMarried();

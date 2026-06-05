@@ -3,11 +3,13 @@
 namespace App\Models;
 
 use App\Enums\VulnerabilityStatus;
+use App\Models\Scopes\EligibleOrphanScope;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOneThrough;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Deceased extends Model
@@ -53,7 +55,7 @@ class Deceased extends Model
         return $this->belongsTo(Zone::class);
     }
 
-    public function coordinator(): \Illuminate\Database\Eloquent\Relations\HasOneThrough|Deceased
+    public function coordinator(): HasOneThrough
     {
         return $this->hasOneThrough(
             User::class,
@@ -71,6 +73,12 @@ class Deceased extends Model
     }
 
     public function orphans(): HasMany
+    {
+        return $this->hasMany(Orphan::class)
+            ->withoutGlobalScope(EligibleOrphanScope::class);
+    }
+
+    public function eligibleOrphans(): HasMany
     {
         return $this->hasMany(Orphan::class);
     }
@@ -102,14 +110,14 @@ class Deceased extends Model
         static::addGlobalScope('zone', function ($query) {
             $user = auth()->user();
 
-            if (!$user || $user->hasAnyRole(['admin', 'super_admin'])) {
+            if (! $user || $user->hasAnyRole(['admin', 'super_admin'])) {
                 return;
             }
 
             // ✅ FIXED: Get zone_id from coordinatedZone relationship
             $zoneId = $user->coordinatedZone?->id;
 
-            if (!$zoneId) {
+            if (! $zoneId) {
                 return $query->whereRaw('1 = 0');
             }
 
@@ -120,7 +128,7 @@ class Deceased extends Model
             $model->full_name = trim(implode(' ', array_filter([
                 $model->first_name,
                 $model->middle_name,
-                $model->last_name
+                $model->last_name,
             ])));
         });
 
@@ -129,7 +137,7 @@ class Deceased extends Model
                 $model->full_name = trim(implode(' ', array_filter([
                     $model->first_name,
                     $model->middle_name,
-                    $model->last_name
+                    $model->last_name,
                 ])));
             }
         });

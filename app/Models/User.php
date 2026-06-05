@@ -3,16 +3,13 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
-use Filament\Notifications\Notification;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Validation\ValidationException;
 use Spatie\Permission\Traits\HasRoles;
-
 
 class User extends Authenticatable
 {
@@ -20,6 +17,7 @@ class User extends Authenticatable
     use HasFactory, HasRoles, HasUuids, Notifiable;
 
     protected $keyType = 'string';
+
     public $incrementing = false;
 
     protected string $guard_name = 'web';
@@ -101,26 +99,29 @@ class User extends Authenticatable
 
     public function managesZone(?string $zoneId = null): bool
     {
-        if (!$this->isCoordinator()) {
+        if (! $this->isCoordinator()) {
             return false;
         }
 
+        $coordinatedZoneId = $this->coordinatedZone?->id;
+
         if ($zoneId === null) {
-            return $this->zone_id !== null;
+            return $coordinatedZoneId !== null;
         }
 
-        return $this->zone_id === $zoneId;
+        return $coordinatedZoneId === $zoneId;
     }
 
     // Get zone ID for filtering (works for both coordinators and admins)
     public function effectiveZoneId(): ?string
     {
         if ($this->isCoordinator()) {
-            return $this->zone_id;
+            return $this->coordinatedZone?->id;
         }
 
         return null; // Admins see all zones
     }
+
     protected static function booted(): void
     {
         static::saving(function ($user) {

@@ -29,31 +29,21 @@ class RegisterWidowAction
 
             $widow = Widow::create([
                 'first_name' => $data->firstName,
-                'last_name'  => $data->lastName,
-                'middle_name'=> $data->middleName,
-                'nin'        => $data->nin,
+                'last_name' => $data->lastName,
+                'middle_name' => $data->middleName,
+                'nin' => $data->nin,
                 'reg_no' => $registrationData['reg_no'],
                 'child_sequence' => $registrationData['child_sequence'],
 
-                'address'     => $data->address,
+                'address' => $data->address,
                 'skills' => is_array($data->skills)
                     ? $data->skills
                     : (is_string($data->skills) ? explode(',', $data->skills) : []),
 
-                // FIX: Pass is_eligible during creation to satisfy NOT NULL constraint
-                'is_eligible' => $data->isEligible,
+                'is_eligible' => $data->isEligible && ! $data->isMarried,
 
-                'is_married'  => $data->isMarried,
+                'is_married' => $data->isMarried,
                 'deceased_id' => $deceased->id,
-            ]);
-
-            // ✅ FIXED FIELD NAME
-            $deceased->increment('number_of_widows_left');
-
-            // (Optional but recommended)
-            // You can later introduce WidowEligibilityService
-            $widow->update([
-                'is_eligible' => true, // or computed later
             ]);
 
             return $widow;

@@ -3,9 +3,9 @@
 namespace App\Services;
 
 use App\Enums\Gender;
-use App\Models\Orphan;
 use App\Events\OrphanBecameIneligible;
-use Carbon\Carbon;
+use App\Models\Orphan;
+use App\Models\Scopes\EligibleOrphanScope;
 use Illuminate\Database\Eloquent\Builder;
 
 class OrphanEligibilityService
@@ -58,7 +58,9 @@ class OrphanEligibilityService
      */
     public function checkAndFlagIneligibleOrphans(): void
     {
-        Orphan::where('gender', 'MALE')->where('age', '>', 17)
+        Orphan::withoutGlobalScope(EligibleOrphanScope::class)
+            ->where('gender', 'MALE')
+            ->where('age', '>', 17)
             ->get()
             ->each(function ($orphan) {
                 // Logic to ensure we don't fire the event every day for the same orphan
@@ -66,7 +68,9 @@ class OrphanEligibilityService
                 event(new OrphanBecameIneligible($orphan, 'AGE_LIMIT'));
             });
 
-        Orphan::where('gender', 'FEMALE')->where('is_married', true)
+        Orphan::withoutGlobalScope(EligibleOrphanScope::class)
+            ->where('gender', 'FEMALE')
+            ->where('is_married', true)
             ->where('status', 'active') // Assuming a status column
             ->get()
             ->each(function ($orphan) {

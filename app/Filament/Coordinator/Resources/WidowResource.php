@@ -23,14 +23,16 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 
-
 class WidowResource extends Resource
 {
     use ZoneScoped;
 
     protected static ?string $model = Widow::class;
+
     protected static string|null|\BackedEnum $navigationIcon = 'heroicon-o-heart';
+
     protected static string|null|\UnitEnum $navigationGroup = 'Beneficiary Registration';
+
     protected static ?int $navigationSort = 3;
 
     /**
@@ -58,10 +60,14 @@ class WidowResource extends Resource
     public static function canEdit($record): bool
     {
         $user = auth()->user();
-        if (!$user) return false;
-        if ($user->hasAnyRole(['admin', 'super_admin'])) return true;
+        if (! $user) {
+            return false;
+        }
+        if ($user->hasAnyRole(['admin', 'super_admin'])) {
+            return true;
+        }
 
-        return $record->deceased?->zone_id === $user->zone_id;
+        return $record->deceased?->zone_id === $user->coordinatedZone?->id;
     }
 
     public static function canDelete($record): bool
@@ -75,7 +81,7 @@ class WidowResource extends Resource
 
     public static function form(Schema $schema): Schema
     {
-        $coordinatorZoneId = auth()->user()?->zone_id;
+        $coordinatorZoneId = auth()->user()?->coordinatedZone?->id;
 
         return $schema
             ->schema([
@@ -249,7 +255,7 @@ class WidowResource extends Resource
                     ->modalHeading('Mark as Married')
                     ->modalDescription('This will revoke all benefits and eligibility. This action cannot be undone.')
                     ->modalSubmitActionLabel('Yes, Mark as Married')
-                    ->visible(fn($record) => !$record->is_married)
+                    ->visible(fn ($record) => ! $record->is_married)
                     ->schema([
                         DatePicker::make('married_at')
                             ->label('Marriage Date')
@@ -289,7 +295,7 @@ class WidowResource extends Resource
                         ->modalDescription('This will revoke benefits for all selected beneficiaries.')
                         ->action(function ($records) {
                             foreach ($records as $record) {
-                                if (!$record->is_married) {
+                                if (! $record->is_married) {
                                     $record->markAsMarried();
                                 }
                             }

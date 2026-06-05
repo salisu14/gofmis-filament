@@ -136,12 +136,16 @@ class Orphan extends Model
 
     public function getPaidAmountAttribute(): float
     {
-        return $this->payments()->sum('amount');
+        return (float) $this->educations()
+            ->get()
+            ->sum(fn (OrphanEducation $education): float => $education->total_paid);
     }
 
     public function getBalanceAttribute(): float
     {
-        return $this->amount - $this->paid_amount;
+        return (float) $this->educations()
+            ->get()
+            ->sum(fn (OrphanEducation $education): float => $education->balance);
     }
 
     public function scopeEligible($query)
@@ -175,14 +179,14 @@ class Orphan extends Model
         static::addGlobalScope('zone', function ($query) {
             $user = auth()->user();
 
-            if (!$user || $user->hasAnyRole(['admin', 'super_admin'])) {
+            if (! $user || $user->hasAnyRole(['admin', 'super_admin'])) {
                 return;
             }
 
             // ✅ FIXED: Use coordinatedZone instead of zone_id
             $zoneId = $user->coordinatedZone?->id;
 
-            if (!$zoneId) {
+            if (! $zoneId) {
                 return $query->whereRaw('1 = 0');
             }
 
@@ -191,11 +195,26 @@ class Orphan extends Model
             });
         });
 
+        static::saving(function ($model) {
+            if ($model->birth_date) {
+                $model->age = \Carbon\Carbon::parse($model->birth_date)->age;
+            }
+
+            $gender = $model->gender instanceof Gender ? $model->gender : Gender::tryFrom((string) $model->gender);
+
+            if (
+                ($gender === Gender::MALE && $model->age >= 18) ||
+                ($gender === Gender::FEMALE && $model->is_married)
+            ) {
+                $model->is_eligible = false;
+            }
+        });
+
         static::creating(function ($model) {
             $model->full_name = trim(implode(' ', array_filter([
                 $model->first_name,
                 $model->middle_name,
-                $model->last_name
+                $model->last_name,
             ])));
         });
 
@@ -204,7 +223,7 @@ class Orphan extends Model
                 $model->full_name = trim(implode(' ', array_filter([
                     $model->first_name,
                     $model->middle_name,
-                    $model->last_name
+                    $model->last_name,
                 ])));
             }
         });

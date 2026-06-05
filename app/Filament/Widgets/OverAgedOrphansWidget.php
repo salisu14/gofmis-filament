@@ -1,10 +1,12 @@
 <?php
+
 // app/Filament/Widgets/OverAgedOrphansWidget.php
 
 namespace App\Filament\Widgets;
 
 use App\Enums\Gender;
 use App\Models\Orphan;
+use App\Models\Scopes\EligibleOrphanScope;
 use Filament\Tables;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
@@ -14,7 +16,9 @@ use Filament\Widgets\TableWidget as BaseWidget;
 class OverAgedOrphansWidget extends BaseWidget
 {
     protected static ?string $heading = 'Over-Aged & Married Orphans';
+
     protected static ?int $sort = 9;
+
     protected int|string|array $columnSpan = 'full';
 
     public function table(Table $table): Table
@@ -22,6 +26,7 @@ class OverAgedOrphansWidget extends BaseWidget
         return $table
             ->query(
                 Orphan::query()
+                    ->withoutGlobalScope(EligibleOrphanScope::class)
                     ->where(function ($query) {
                         $query->where(function ($q) {
                             // Over-aged males (>= 18)
@@ -34,13 +39,20 @@ class OverAgedOrphansWidget extends BaseWidget
                                 ->where('is_married', true);
                         });
                     })
-                    ->with(['deceased.zone', 'educations' => fn($q) => $q->where('is_current', true)])
+                    ->with(['deceased.zone', 'educations' => fn ($q) => $q->where('is_current', true)])
             )
             ->heading('Over-Aged Male Orphans & Married Girls')
-            ->description(fn() => 'Over-aged males (≥18): ' .
-                Orphan::where('gender', Gender::MALE)->where('age', '>=', 18)->where('is_eligible', true)->count() .
-                ' | Married girls: ' .
-                Orphan::where('gender', Gender::FEMALE)->where('is_married', true)->count())
+            ->description(fn () => 'Over-aged males (≥18): '.
+                Orphan::withoutGlobalScope(EligibleOrphanScope::class)
+                    ->where('gender', Gender::MALE)
+                    ->where('age', '>=', 18)
+                    ->where('is_eligible', true)
+                    ->count().
+                ' | Married girls: '.
+                Orphan::withoutGlobalScope(EligibleOrphanScope::class)
+                    ->where('gender', Gender::FEMALE)
+                    ->where('is_married', true)
+                    ->count())
             ->columns([
                 TextColumn::make('full_name')
                     ->searchable()
@@ -59,7 +71,7 @@ class OverAgedOrphansWidget extends BaseWidget
                 TextColumn::make('age')
                     ->numeric()
                     ->sortable()
-                    ->color(fn($record) => $record->age >= 18 ? 'danger' : 'success'),
+                    ->color(fn ($record) => $record->age >= 18 ? 'danger' : 'success'),
 
                 IconColumn::make('is_married')
                     ->label('Married')
@@ -80,6 +92,7 @@ class OverAgedOrphansWidget extends BaseWidget
                         if ($record->gender === Gender::FEMALE && $record->is_married) {
                             return 'Married Girl';
                         }
+
                         return 'Other';
                     })
                     ->colors([
@@ -89,7 +102,7 @@ class OverAgedOrphansWidget extends BaseWidget
 
                 TextColumn::make('educations.level')
                     ->label('Education')
-                    ->formatStateUsing(fn($record) => $record->educations->first()?->level ?? 'N/A'),
+                    ->formatStateUsing(fn ($record) => $record->educations->first()?->level ?? 'N/A'),
 
                 TextColumn::make('zone.name')
                     ->label('Zone')

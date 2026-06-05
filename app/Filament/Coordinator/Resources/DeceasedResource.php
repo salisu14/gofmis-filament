@@ -2,8 +2,8 @@
 
 namespace App\Filament\Coordinator\Resources;
 
-use App\Filament\Coordinator\Concerns\ZoneScoped;
 use App\Enums\VulnerabilityStatus;
+use App\Filament\Coordinator\Concerns\ZoneScoped;
 use App\Models\Deceased;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
@@ -26,8 +26,11 @@ class DeceasedResource extends Resource
     use ZoneScoped;
 
     protected static ?string $model = Deceased::class;
+
     protected static string|null|\BackedEnum $navigationIcon = 'heroicon-o-user-minus';
+
     protected static string|null|\UnitEnum $navigationGroup = 'Beneficiary Registration';
+
     protected static ?int $navigationSort = 1;
 
     /**
@@ -55,10 +58,14 @@ class DeceasedResource extends Resource
     public static function canEdit($record): bool
     {
         $user = auth()->user();
-        if (!$user) return false;
-        if ($user->hasAnyRole(['admin', 'super_admin'])) return true;
+        if (! $user) {
+            return false;
+        }
+        if ($user->hasAnyRole(['admin', 'super_admin'])) {
+            return true;
+        }
 
-        return $record->zone_id === $user->zone_id;
+        return $record->zone_id === $user->coordinatedZone?->id;
     }
 
     public static function canDelete($record): bool
@@ -72,7 +79,7 @@ class DeceasedResource extends Resource
 
     public static function form(Schema $schema): Schema
     {
-        $coordinatorZoneId = auth()->user()?->zone_id;
+        $coordinatorZoneId = auth()->user()?->coordinatedZone?->id;
 
         return $schema
             ->schema([
