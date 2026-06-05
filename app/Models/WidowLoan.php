@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
-use App\Enums\WidowLoanStatus;
 use App\Enums\LoanRepaymentFrequency;
+use App\Enums\WidowLoanStatus;
 use App\Traits\Approvable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
@@ -11,14 +11,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use App\Models\ApprovalFlow;
 use Illuminate\Support\Facades\DB;
 
 class WidowLoan extends Model
 {
-    use HasUuids, SoftDeletes, Approvable;
+    use Approvable, HasUuids, SoftDeletes;
 
     public $incrementing = false;
+
     protected $keyType = 'string';
 
     protected $table = 'widow_loans';
@@ -40,13 +40,13 @@ class WidowLoan extends Model
         static::addGlobalScope('zone', function ($query) {
             $user = auth()->user();
 
-            if (!$user || $user->hasAnyRole(['admin', 'super_admin'])) {
+            if (! $user || $user->hasAnyRole(['admin', 'super_admin'])) {
                 return;
             }
 
             $zoneId = $user->coordinatedZone?->id;
 
-            if (!$zoneId) {
+            if (! $zoneId) {
                 return $query->whereRaw('1 = 0');
             }
 
@@ -78,14 +78,14 @@ class WidowLoan extends Model
     ];
 
     protected $casts = [
-        'principal_amount'    => 'decimal:2',
-        'total_payable'       => 'decimal:2',
-        'total_paid'          => 'decimal:2',
+        'principal_amount' => 'decimal:2',
+        'total_payable' => 'decimal:2',
+        'total_paid' => 'decimal:2',
         'outstanding_balance' => 'decimal:2',
-        'disbursed_at'        => 'datetime',
-        'collected_at'        => 'datetime',
-        'fully_repaid'        => 'boolean',
-        'status'              => WidowLoanStatus::class,
+        'disbursed_at' => 'datetime',
+        'collected_at' => 'datetime',
+        'fully_repaid' => 'boolean',
+        'status' => WidowLoanStatus::class,
         'repayment_frequency' => LoanRepaymentFrequency::class,
     ];
 
@@ -155,7 +155,7 @@ class WidowLoan extends Model
     public function onRejected(ApprovalFlow $flow): void
     {
         $this->update([
-            'status'        => WidowLoanStatus::REJECTED,
+            'status' => WidowLoanStatus::REJECTED,
             'reject_reason' => $flow->rejection_reason,
         ]);
 
@@ -172,7 +172,7 @@ class WidowLoan extends Model
      */
     public function canSubmitForApproval(): bool
     {
-        return $this->status === WidowLoanStatus::DRAFT && !$this->isAwaitingApproval();
+        return $this->status === WidowLoanStatus::DRAFT && ! $this->isAwaitingApproval();
     }
 
     /**
@@ -194,13 +194,13 @@ class WidowLoan extends Model
     }
 
     /**
-     * Repayments can only be recorded after the loan has been disbursed.
-     * Collection confirmation (collected_at) is encouraged but not mandatory
-     * to block repayments — the status signal is DISBURSED.
+     * Repayments can only be recorded after the widow has confirmed collection.
      */
     public function canRecordRepayment(): bool
     {
-        return $this->status === WidowLoanStatus::DISBURSED;
+        return $this->status === WidowLoanStatus::DISBURSED
+            && ! is_null($this->collected_at)
+            && ! $this->fully_repaid;
     }
 
     /**
@@ -226,7 +226,7 @@ class WidowLoan extends Model
     public function approve(?string $comments = null): void
     {
         $flow = $this->approvalFlow;
-        if (!$flow) {
+        if (! $flow) {
             throw new \Exception('No approval workflow found for this loan.');
         }
 
@@ -236,7 +236,7 @@ class WidowLoan extends Model
     public function reject(string $reason, ?string $comments = null): void
     {
         $flow = $this->approvalFlow;
-        if (!$flow) {
+        if (! $flow) {
             throw new \Exception('No approval workflow found for this loan.');
         }
 
@@ -253,14 +253,14 @@ class WidowLoan extends Model
      */
     public function refreshBalance(): void
     {
-        $totalPaid   = $this->repayments()->sum('amount');
+        $totalPaid = $this->repayments()->sum('amount');
         $outstanding = max(0, $this->total_payable - $totalPaid);
         $fullyRepaid = $outstanding <= 0;
 
         $updateData = [
-            'total_paid'          => $totalPaid,
+            'total_paid' => $totalPaid,
             'outstanding_balance' => $outstanding,
-            'fully_repaid'        => $fullyRepaid,
+            'fully_repaid' => $fullyRepaid,
         ];
 
         if ($fullyRepaid && $this->status === WidowLoanStatus::DISBURSED) {
@@ -283,26 +283,37 @@ class WidowLoan extends Model
             // Clear any stale schedule entries
             $this->schedules()->delete();
 
-            $isWeekly       = $this->repayment_frequency === LoanRepaymentFrequency::WEEKLY;
+            $isWeekly = $this->repayment_frequency === LoanRepaymentFrequency::WEEKLY;
             $intervalsPerMonth = $isWeekly ? 4 : 1;
             $totalIntervals = $this->duration_months * $intervalsPerMonth;
 
             // Anchor due dates to the actual disbursement date
             $startDate = $this->disbursed_at ?? now();
 
+            if ($totalIntervals <= 0) {
+                throw new \RuntimeException('Loan duration must generate at least one repayment installment.');
+            }
+
             $installmentAmount = round($this->total_payable / $totalIntervals, 2);
+            $scheduledTotal = 0;
 
             for ($i = 1; $i <= $totalIntervals; $i++) {
                 $dueDate = $isWeekly
                     ? $startDate->copy()->addWeeks($i)
                     : $startDate->copy()->addMonths($i);
 
+                $amountDue = $i === $totalIntervals
+                    ? round($this->total_payable - $scheduledTotal, 2)
+                    : $installmentAmount;
+
                 $this->schedules()->create([
                     'installment_number' => $i,
-                    'amount_due'         => $installmentAmount,
-                    'due_date'           => $dueDate,
-                    'is_paid'            => false,
+                    'amount_due' => $amountDue,
+                    'due_date' => $dueDate,
+                    'is_paid' => false,
                 ]);
+
+                $scheduledTotal += $amountDue;
             }
         });
     }
@@ -313,19 +324,39 @@ class WidowLoan extends Model
      */
     public function syncScheduleStatus(): void
     {
-        $totalPaid  = (float) $this->total_paid;
-        $runningSum = 0;
-
         // Reset all to unpaid
-        $this->schedules()->update(['is_paid' => false]);
+        $this->schedules()->update([
+            'is_paid' => false,
+            'paid_at' => null,
+        ]);
 
         $schedules = $this->schedules()->orderBy('installment_number')->get();
+        $repayments = $this->repayments()
+            ->orderBy('paid_at')
+            ->orderBy('created_at')
+            ->get(['amount', 'paid_at']);
 
+        $requiredTotal = 0;
+        $paidTotal = 0;
+        $repaymentIndex = 0;
+        $paidAt = null;
+
+        // Walk both ledgers so each installment gets the date it became covered.
         foreach ($schedules as $schedule) {
-            $runningSum += (float) $schedule->amount_due;
+            $requiredTotal += (float) $schedule->amount_due;
 
-            if ($runningSum <= $totalPaid + 0.01) {
-                $schedule->update(['is_paid' => true]);
+            while ($paidTotal + 0.01 < $requiredTotal && $repaymentIndex < $repayments->count()) {
+                $repayment = $repayments[$repaymentIndex];
+                $paidTotal += (float) $repayment->amount;
+                $paidAt = $repayment->paid_at;
+                $repaymentIndex++;
+            }
+
+            if ($paidTotal + 0.01 >= $requiredTotal) {
+                $schedule->update([
+                    'is_paid' => true,
+                    'paid_at' => $paidAt,
+                ]);
             } else {
                 break;
             }

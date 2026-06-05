@@ -25,23 +25,23 @@ class WidowLoanService
     {
         $widow = Widow::findOrFail($data->widowId);
 
-        if (!$widow->canApplyForLoan()) {
+        if (! $widow->canApplyForLoan()) {
             throw new \RuntimeException('This widow is not eligible to apply for a new loan.');
         }
 
         return DB::transaction(function () use ($data) {
             return WidowLoan::create([
-                'widow_id'             => $data->widowId,
-                'bank_account_id'      => $data->bankAccountId,
+                'widow_id' => $data->widowId,
+                'bank_account_id' => $data->bankAccountId,
                 'disbursement_bank_id' => $data->disbursementBankId,
-                'repayment_bank_id'    => $data->repaymentBankId,
-                'principal_amount'     => $data->principalAmount,
-                'total_payable'        => $data->principalAmount, // No interest by default
-                'duration_months'      => $data->durationMonths,
-                'repayment_frequency'  => $data->repaymentFrequency ?? 'weekly',
-                'purpose'              => $data->purpose,
-                'status'               => WidowLoanStatus::DRAFT,
-                'outstanding_balance'  => $data->principalAmount,
+                'repayment_bank_id' => $data->repaymentBankId,
+                'principal_amount' => $data->principalAmount,
+                'total_payable' => $data->principalAmount, // No interest by default
+                'duration_months' => $data->durationMonths,
+                'repayment_frequency' => $data->repaymentFrequency ?? 'weekly',
+                'purpose' => $data->purpose,
+                'status' => WidowLoanStatus::DRAFT,
+                'outstanding_balance' => $data->principalAmount,
             ]);
         });
     }
@@ -58,12 +58,12 @@ class WidowLoanService
      */
     public function submitForApproval(WidowLoan $loan, array $approvers): void
     {
-        if (!$loan->canSubmitForApproval()) {
+        if (! $loan->canSubmitForApproval()) {
             throw new \RuntimeException('Loan is not in a state that can be submitted for approval.');
         }
 
         $bankAccount = $loan->bankAccount;
-        if (!$bankAccount) {
+        if (! $bankAccount) {
             throw new \RuntimeException('A bank account must be assigned before submission.');
         }
 
@@ -105,14 +105,14 @@ class WidowLoanService
      */
     public function disburseLoan(WidowLoan $loan): void
     {
-        if (!$loan->canDisburse()) {
+        if (! $loan->canDisburse()) {
             throw new \RuntimeException(
                 "Loan cannot be disbursed. Current status: {$loan->status->getLabel()}."
             );
         }
 
         $bankAccount = $loan->bankAccount;
-        if (!$bankAccount) {
+        if (! $bankAccount) {
             throw new \RuntimeException('A bank account must be assigned before disbursement.');
         }
 
@@ -124,18 +124,18 @@ class WidowLoanService
 
             // Update loan status
             $loan->update([
-                'status'       => WidowLoanStatus::DISBURSED,
+                'status' => WidowLoanStatus::DISBURSED,
                 'disbursed_at' => $disbursedAt,
             ]);
 
             // Create a disbursement Transaction record
             Transaction::create([
                 'bank_account_id' => $bankAccount->id,
-                'reference'       => 'DISB-' . strtoupper(substr($loan->id, 0, 8)),
-                'date'            => $disbursedAt,
-                'type'            => 'loan_disbursement',
-                'amount'          => $loan->principal_amount,
-                'description'     => "Loan disbursement for widow: {$loan->widow->full_name}",
+                'reference' => 'DISB-'.strtoupper(substr($loan->id, 0, 8)),
+                'date' => $disbursedAt,
+                'type' => 'loan_disbursement',
+                'amount' => $loan->principal_amount,
+                'description' => "Loan disbursement for widow: {$loan->widow->full_name}",
             ]);
 
             // Generate repayment schedule anchored to the actual disbursement date.
@@ -153,7 +153,7 @@ class WidowLoanService
      */
     public function collectLoan(WidowLoan $loan): void
     {
-        if (!$loan->canCollect()) {
+        if (! $loan->canCollect()) {
             throw new \RuntimeException(
                 "Loan cannot be marked as collected. Current status: {$loan->status->getLabel()}."
             );
@@ -176,16 +176,24 @@ class WidowLoanService
     public function recordRepayment(RecordWidowLoanRepaymentData $data): WidowLoanRepayment
     {
         return DB::transaction(function () use ($data) {
-            $loan = WidowLoan::with('bankAccount')->findOrFail($data->widowLoanId);
+            $loan = WidowLoan::with(['bankAccount', 'repaymentBank'])->findOrFail($data->widowLoanId);
 
-            if (!$loan->canRecordRepayment()) {
+            if (! $loan->canRecordRepayment()) {
                 throw new \RuntimeException(
-                    "Repayments cannot be recorded. Loan status: {$loan->status->getLabel()}."
+                    'Repayments can only be recorded after the widow has collected the loan and before it is fully repaid.'
                 );
             }
 
-            $bankAccountId = $data->bankAccountId ?: $loan->bank_account_id;
-            if (!$bankAccountId) {
+            $remainingBalance = (float) $loan->outstanding_balance;
+
+            if ((float) $data->amount > $remainingBalance) {
+                throw new \RuntimeException(
+                    'Repayment amount exceeds the outstanding balance of ₦'.number_format($remainingBalance, 2).'.'
+                );
+            }
+
+            $bankAccountId = $data->bankAccountId ?: ($loan->repayment_bank_id ?: $loan->bank_account_id);
+            if (! $bankAccountId) {
                 throw new \RuntimeException('A bank account is required to record a repayment.');
             }
 
@@ -199,23 +207,23 @@ class WidowLoanService
 
             // Create the repayment record
             $repayment = WidowLoanRepayment::create([
-                'widow_loan_id'   => $data->widowLoanId,
+                'widow_loan_id' => $data->widowLoanId,
                 'bank_account_id' => $bankAccount->id,
-                'receipt_number'  => $nextReceiptNumber,
-                'amount'          => $data->amount,
-                'paid_at'         => $data->paidAt,
-                'payment_method'  => $data->paymentMethod,
-                'notes'           => $data->notes,
+                'receipt_number' => $nextReceiptNumber,
+                'amount' => $data->amount,
+                'paid_at' => $data->paidAt,
+                'payment_method' => $data->paymentMethod,
+                'notes' => $data->notes,
             ]);
 
             // Create a transaction record for audit trail
             $transaction = Transaction::create([
                 'bank_account_id' => $bankAccount->id,
-                'reference'       => 'REP-' . strtoupper(substr($repayment->id, 0, 8)),
-                'date'            => $data->paidAt,
-                'type'            => 'loan_repayment',
-                'amount'          => $data->amount,
-                'description'     => "Repayment for widow loan: {$loan->widow->full_name}",
+                'reference' => 'REP-'.strtoupper(substr($repayment->id, 0, 8)),
+                'date' => $data->paidAt,
+                'type' => 'loan_repayment',
+                'amount' => $data->amount,
+                'description' => "Repayment for widow loan: {$loan->widow->full_name}",
             ]);
 
             $repayment->update(['transaction_id' => $transaction->id]);
