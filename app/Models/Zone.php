@@ -69,11 +69,6 @@ class Zone extends Model
         return $this->hasMany(ZoneCoordinatorHistory::class);
     }
 
-    public function users(): HasMany
-    {
-        return $this->hasMany(User::class, 'zone_id');
-    }
-
     protected static function booted(): void
     {
         static::saving(function ($zone) {

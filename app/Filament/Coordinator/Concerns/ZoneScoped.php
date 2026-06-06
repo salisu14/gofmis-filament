@@ -16,7 +16,7 @@ trait ZoneScoped
             return $query;
         }
 
-        $isAdmin = $user->hasAnyRole(['admin', 'super-admin']);
+        $isAdmin = $user->hasAnyRole(['admin', 'super_admin']);
 
         // Admin sees everything
         if ($isAdmin) {
@@ -38,7 +38,7 @@ trait ZoneScoped
 
     public static function canViewAny(): bool
     {
-        return auth()->user()?->hasAnyRole(['coordinator', 'admin', 'super-admin']) ?? false;
+        return auth()->user()?->hasAnyRole(['coordinator', 'admin', 'super_admin']) ?? false;
     }
 
     public static function canCreate(): bool

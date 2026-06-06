@@ -110,8 +110,8 @@ class OrphanForm
 
                         DatePicker::make('married_at')
                             ->label('Date of New Marriage')
-                            ->visible(fn($get) => $get('is_married'))
-                            ->required(fn($get) => $get('is_married'))
+                            ->visible(fn ($get) => $get('is_married'))
+                            ->required(fn ($get) => $get('is_married'))
                             ->native(false),
 
                         TagsInput::make('skills')
@@ -133,11 +133,14 @@ class OrphanForm
 
                         FileUpload::make('picture_url')
                             ->label('Profile Picture')
+                            ->image()
                             ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
                             ->avatar()
                             ->directory('orphans')
                             ->disk('public')
                             ->visibility('public')
+                            ->imageEditor()
+                            ->circleCropper()
                             ->maxSize(5120)
                             ->columnSpanFull(),
 
@@ -149,7 +152,7 @@ class OrphanForm
                                     ->live(),
                                 FileUpload::make('birth_certificate_path')
                                     ->label('Certificate Scan')
-                                    ->visible(fn($get) => $get('has_birth_cert'))
+                                    ->visible(fn ($get) => $get('has_birth_cert'))
                                     ->directory('birth-certificates')
                                     ->disk('public')
                                     ->visibility('public')

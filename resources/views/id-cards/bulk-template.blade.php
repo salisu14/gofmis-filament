@@ -2,7 +2,8 @@
         @page { size: A4; margin: 10mm; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Helvetica', Arial, sans-serif; background: #fff; }
-        .page { width: 190mm; height: 277mm; position: relative; page-break-after: always; }
+        .page { width: 190mm; min-height: 267mm; position: relative; page-break-after: always; }
+        .page:last-child { page-break-after: auto; }
         .page-header { text-align: center; margin-bottom: 5mm; padding-bottom: 3mm; border-bottom: 0.1mm solid #ccc; }
         .page-header h2 { font-size: 12pt; color: #333; margin-bottom: 1mm; }
         .page-header p { font-size: 8pt; color: #666; }
@@ -12,11 +13,11 @@
         
         /* Partial Styles */
         .card-container { width: 85.60mm; height: 53.7mm; position: relative; padding: 3mm; border: none; overflow: hidden; }
-        .header { border-bottom: 0.2mm solid {{ $accent_color }}; padding-bottom: 1mm; margin-bottom: 1.5mm; height: 13.5mm; }
+        .header { border-bottom: 0.2mm solid {{ $accentColor ?? '#1E90FF' }}; padding-bottom: 1mm; margin-bottom: 1.5mm; height: 13.5mm; }
         .logo-container { float: left; width: 12mm; height: 10mm; margin-right: 2mm; }
         .logo { width: 12mm; height: 10mm; object-fit: contain; }
         .foundation-info { float: left; width: 65mm; }
-        .foundation-name { font-size: 7.5pt; font-weight: bold; color: {{ $accent_color }}; text-transform: uppercase; margin-bottom: 0.2mm; }
+        .foundation-name { font-size: 7.5pt; font-weight: bold; color: {{ $accentColor ?? '#1E90FF' }}; text-transform: uppercase; margin-bottom: 0.2mm; }
         .card-type { font-size: 5pt; color: #666; letter-spacing: 0.5px; margin-top: 0.5mm; }
         .clear { clear: both; }
         .content { margin-top: 0.5mm; height: 26mm; }

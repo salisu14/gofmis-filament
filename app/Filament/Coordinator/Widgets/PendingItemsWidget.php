@@ -12,15 +12,17 @@ use Filament\Widgets\Widget;
 class PendingItemsWidget extends Widget
 {
     protected static ?int $sort = 4;
+
     protected int|string|array $columnSpan = ['lg' => 2];
+
     protected string $view = 'filament.coordinator.widgets.pending-items';
 
     protected function getViewData(): array
     {
-        $zoneId = auth()->user()?->zone_id;
+        $zoneId = auth()->user()?->coordinatedZone?->id;
 
         // ✅ Always return all keys with default values
-        if (!$zoneId) {
+        if (! $zoneId) {
             return [
                 'counts' => [
                     'loans' => 0,
@@ -36,7 +38,7 @@ class PendingItemsWidget extends Widget
         $counts = [
             'loans' => WidowLoan::where('status', WidowLoanStatus::PENDING)->count(),
             'education' => InterventionRequest::where('status', 'pending')
-                ->whereHas('type', fn($q) => $q->where('name', 'like', '%education%'))
+                ->whereHas('type', fn ($q) => $q->where('name', 'like', '%education%'))
                 ->count(),
             'healthcare' => \App\Models\Prescription::whereMonth('created_at', now()->month)->count(),
             'welfare' => WelfareBeneficiary::where('status', BeneficiaryStatus::PENDING)->count(),
@@ -50,11 +52,11 @@ class PendingItemsWidget extends Widget
             ->latest()
             ->limit(3)
             ->get()
-            ->each(fn($item) => $items->push([
+            ->each(fn ($item) => $items->push([
                 'type' => 'loan',
                 'label' => 'Loan Request',
                 'name' => $item->widow?->full_name ?? 'Unknown',
-                'detail' => '₦' . number_format($item->principal_amount, 2),
+                'detail' => '₦'.number_format($item->principal_amount, 2),
                 'status' => 'Pending Approval',
                 'color' => 'warning',
                 'icon' => 'heroicon-m-banknotes',
@@ -63,12 +65,12 @@ class PendingItemsWidget extends Widget
             ]));
 
         InterventionRequest::where('status', 'pending')
-            ->whereHas('type', fn($q) => $q->where('name', 'like', '%education%'))
+            ->whereHas('type', fn ($q) => $q->where('name', 'like', '%education%'))
             ->with('orphan')
             ->latest()
             ->limit(3)
             ->get()
-            ->each(fn($item) => $items->push([
+            ->each(fn ($item) => $items->push([
                 'type' => 'education',
                 'label' => 'Education Request',
                 'name' => $item->orphan?->full_name ?? 'Unknown',
@@ -85,7 +87,7 @@ class PendingItemsWidget extends Widget
             ->latest()
             ->limit(3)
             ->get()
-            ->each(fn($item) => $items->push([
+            ->each(fn ($item) => $items->push([
                 'type' => 'welfare',
                 'label' => 'Welfare Request',
                 'name' => $item->deceased?->full_name ?? 'Unknown',

@@ -11,10 +11,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Storage;
 
 class Orphan extends Model
 {
     use HasUuids, SoftDeletes;
+
+    public const STATUS_ARCHIVED = 'archived';
 
     protected $table = 'orphans';
 
@@ -50,24 +53,29 @@ class Orphan extends Model
         'married_at' => 'datetime',
     ];
 
+    public function setPictureUrlAttribute($value): void
+    {
+        if (is_array($value)) {
+            $value = reset($value) ?: null;
+        }
+
+        $this->attributes['picture_url'] = $value;
+    }
+
     /**
      * Mark orphan (girl) as married and revoke eligibility.
      */
-    public function markAsMarried(?string $notes = null): void
+    public function markAsMarried(?string $notes = null, mixed $marriedAt = null): void
     {
         $this->update([
             'is_married' => true,
-            'married_at' => now(),
+            'married_at' => $marriedAt ?? now(),
             'is_eligible' => false,
+            'status' => self::STATUS_ARCHIVED,
+            'rejection_reason' => $notes ?? 'Archived: female orphan is married.',
         ]);
 
-        // Deactivate ID cards
-        $this->idCards()->where('status', 'active')->update(['status' => 'inactive']);
-
-        // Cancel pending intervention requests
-        $this->interventionRequests()
-            ->whereIn('status', ['pending', 'draft'])
-            ->update(['status' => 'cancelled', 'notes' => 'Beneficiary got married']);
+        $this->revokeActiveBenefits('Beneficiary got married.');
 
         // Log the event
         activity()
@@ -75,6 +83,17 @@ class Orphan extends Model
             ->causedBy(auth()->user())
             ->withProperties(['notes' => $notes])
             ->log('orphan_marked_married');
+    }
+
+    public function archiveForIneligibility(string $reason): void
+    {
+        $this->update([
+            'is_eligible' => false,
+            'status' => self::STATUS_ARCHIVED,
+            'rejection_reason' => $this->archiveReasonText($reason),
+        ]);
+
+        $this->revokeActiveBenefits($this->archiveReasonText($reason));
     }
 
     public function idCards(): MorphMany
@@ -150,7 +169,9 @@ class Orphan extends Model
 
     public function scopeEligible($query)
     {
-        return $query->where('is_eligible', true);
+        return $query
+            ->where('is_eligible', true)
+            ->where('status', '!=', self::STATUS_ARCHIVED);
     }
 
     public function isEligibleForIntervention(): bool
@@ -207,6 +228,13 @@ class Orphan extends Model
                 ($gender === Gender::FEMALE && $model->is_married)
             ) {
                 $model->is_eligible = false;
+                $model->status = self::STATUS_ARCHIVED;
+
+                if (! $model->rejection_reason) {
+                    $model->rejection_reason = $gender === Gender::MALE
+                        ? 'Archived: male orphan is 18 years or older.'
+                        : 'Archived: female orphan is married.';
+                }
             }
         });
 
@@ -227,5 +255,54 @@ class Orphan extends Model
                 ])));
             }
         });
+
+        static::updated(function (Orphan $orphan) {
+            if ($orphan->wasChanged('picture_url')) {
+                static::deleteStoredImage($orphan->getOriginal('picture_url'));
+            }
+
+            if (
+                $orphan->status === self::STATUS_ARCHIVED &&
+                $orphan->wasChanged(['status', 'is_eligible', 'is_married'])
+            ) {
+                $orphan->revokeActiveBenefits($orphan->rejection_reason ?? 'Orphan is no longer eligible for benefits.');
+            }
+        });
+
+        static::deleted(function (Orphan $orphan) {
+            static::deleteStoredImage($orphan->picture_url);
+        });
+    }
+
+    protected static function deleteStoredImage(?string $path): void
+    {
+        if (! $path || str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            return;
+        }
+
+        Storage::disk('public')->delete($path);
+    }
+
+    protected function revokeActiveBenefits(string $reason): void
+    {
+        $this->idCards()
+            ->where('status', 'active')
+            ->update(['status' => 'inactive']);
+
+        $this->interventionRequests()
+            ->whereIn('status', ['pending', 'draft'])
+            ->update([
+                'status' => 'cancelled',
+                'rejection_reason' => $reason,
+            ]);
+    }
+
+    protected function archiveReasonText(string $reason): string
+    {
+        return match ($reason) {
+            'AGE_LIMIT' => 'Archived: male orphan is 18 years or older.',
+            'MARRIAGE' => 'Archived: female orphan is married.',
+            default => $reason,
+        };
     }
 }

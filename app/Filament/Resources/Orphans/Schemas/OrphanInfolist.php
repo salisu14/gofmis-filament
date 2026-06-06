@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Orphans\Schemas;
 
+use App\Models\Orphan;
 use Carbon\Carbon;
 use Filament\Infolists\Components\IconEntry;
 use Filament\Infolists\Components\ImageEntry;
@@ -35,7 +36,7 @@ class OrphanInfolist
                             ->badge(),
                         TextEntry::make('age')
                             ->label('Age')
-                            ->getStateUsing(fn($record) => $record->birth_date ? Carbon::parse($record->birth_date)->age : null
+                            ->getStateUsing(fn ($record) => $record->birth_date ? Carbon::parse($record->birth_date)->age : null
                             )
                             ->suffix(' Years Old'),
                         TextEntry::make('deceased.vulnerability_status')
@@ -50,10 +51,11 @@ class OrphanInfolist
                             ->boolean(),
                         TextEntry::make('status')
                             ->badge()
-                            ->color(fn(string $state): string => match ($state) {
+                            ->color(fn (string $state): string => match ($state) {
                                 'active' => 'success',
                                 'pending' => 'warning',
                                 'inactive' => 'danger',
+                                Orphan::STATUS_ARCHIVED => 'gray',
                                 default => 'gray',
                             }),
                         TextEntry::make('nin')
@@ -68,9 +70,9 @@ class OrphanInfolist
                             ->boolean(),
                         TextEntry::make('birth_certificate_path')
                             ->label('Certificate Link')
-                            ->url(fn($record) => $record->birth_certificate_path ? asset('storage/' . $record->birth_certificate_path) : null)
+                            ->url(fn ($record) => $record->birth_certificate_path ? asset('storage/'.$record->birth_certificate_path) : null)
                             ->openUrlInNewTab()
-                            ->visible(fn($record) => $record->has_birth_cert && $record->birth_certificate_path)
+                            ->visible(fn ($record) => $record->has_birth_cert && $record->birth_certificate_path)
                             ->placeholder('No file uploaded')
                             ->icon('heroicon-m-link'),
                     ])->columns(3),
@@ -81,7 +83,7 @@ class OrphanInfolist
                             ->date('d M, Y'),
                         TextEntry::make('child_sequence')
                             ->label('Position in Siblings')
-                            ->suffix(fn($state) => match ($state) {
+                            ->suffix(fn ($state) => match ($state) {
                                 1 => 'st Child',
                                 2 => 'nd Child',
                                 3 => 'rd Child',
@@ -92,7 +94,7 @@ class OrphanInfolist
                             ->boolean(),
                         TextEntry::make('married_at')
                             ->dateTime()
-                            ->visible(fn($record) => $record->is_married),
+                            ->visible(fn ($record) => $record->is_married),
 
                         TextEntry::make('zone.name')
                             ->label('Zone')

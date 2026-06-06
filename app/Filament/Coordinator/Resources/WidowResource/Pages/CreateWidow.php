@@ -27,7 +27,9 @@ class CreateWidow extends CreateRecord
             middleName: $data['middle_name'] ?: null,
             nin: $data['nin'] ?? null,
             address: $data['address'] ?? null,
+            picture: $data['picture_url'] ?? null,
             skills: $data['skills'] ?? [],
+            isEligible: $data['is_eligible'] ?? true,
             isMarried: $data['is_married'] ?? false,
         );
 

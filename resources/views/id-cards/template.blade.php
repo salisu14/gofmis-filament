@@ -1,8 +1,9 @@
 {{-- resources/views/id-cards/template.blade.php --}}<!DOCTYPE html><html><head><meta charset="utf-8"><style>
-        @page { size: 85.60mm 53.98mm; margin: 0; }
+        @page { margin: 0; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        html, body { width: 85.60mm; height: 53.98mm; font-family: 'Helvetica', Arial, sans-serif; overflow: hidden; background: #fff; }
-        .card-container { width: 85.60mm; height: 53.7mm; border: 0.1mm solid #ddd; position: relative; padding: 3mm; overflow: hidden; }
+        html, body { margin: 0; padding: 0; width: 85.60mm; line-height: 1; font-family: 'Helvetica', Arial, sans-serif; overflow: hidden; background: #fff; }
+        .print-page { width: 85.60mm; height: 53.98mm; overflow: hidden; position: relative; }
+        .card-container { width: 85.60mm; height: 53.7mm; border: none; position: relative; padding: 3mm; overflow: hidden; }
         .header { border-bottom: 0.2mm solid {{ $accent_color }}; padding-bottom: 1mm; margin-bottom: 1.5mm; height: 13.5mm; }
         .logo-container { float: left; width: 12mm; height: 10mm; margin-right: 2mm; }
         .logo { width: 12mm; height: 10mm; object-fit: contain; }
@@ -23,4 +24,4 @@
         .footer { position: absolute; bottom: 1.5mm; left: 3mm; width: 75mm; font-size: 4pt; color: #777; }
         .valid-row { margin-bottom: 0mm; }
         .security-hologram { position: absolute; top: 3mm; right: 3mm; width: 8mm; height: 8mm; background: linear-gradient(45deg, rgba(255,255,255,0.1) 0%, rgba(255,215,0,0.2) 50%, rgba(255,255,255,0.1) 100%); border-radius: 50%; border: 0.1mm solid rgba(0,0,0,0.05); }
-    </style></head><body>@include('id-cards.card-content')</body></html>
+    </style></head><body><div class="print-page">@include('id-cards.card-content')</div></body></html>

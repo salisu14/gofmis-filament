@@ -7,6 +7,7 @@ use App\Models\Deceased;
 use App\Models\Widow;
 use App\Services\RegistrationNumberService;
 use App\Traits\HasImageUpload;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 
 class RegisterWidowAction
@@ -27,6 +28,14 @@ class RegisterWidowAction
         return DB::transaction(function () use ($data, $deceased) {
             $registrationData = $this->regNoService->generateWidowData($deceased);
 
+            $picturePath = $data->picture instanceof UploadedFile
+                ? $this->uploadImage($data->picture, 'widow-photos')
+                : $data->picture;
+
+            if (is_array($picturePath)) {
+                $picturePath = reset($picturePath) ?: null;
+            }
+
             $widow = Widow::create([
                 'first_name' => $data->firstName,
                 'last_name' => $data->lastName,
@@ -36,6 +45,7 @@ class RegisterWidowAction
                 'child_sequence' => $registrationData['child_sequence'],
 
                 'address' => $data->address,
+                'picture_url' => $picturePath,
                 'skills' => is_array($data->skills)
                     ? $data->skills
                     : (is_string($data->skills) ? explode(',', $data->skills) : []),

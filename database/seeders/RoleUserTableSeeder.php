@@ -5,11 +5,10 @@ namespace Database\Seeders;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 
-
 class RoleUserTableSeeder extends Seeder
 {
     public function run()
     {
-        User::findOrFail(1)->roles()->syncRoles(1);
+        User::where('email', 'sadmin@admin.com')->first()?->syncRoles('super_admin');
     }
 }

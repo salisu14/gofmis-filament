@@ -13,6 +13,7 @@ class WidowData extends Data
         public ?string $middleName = null,
         public ?string $nin = null,
         public ?string $address = null,
+        public mixed $picture = null,
 
         // FIX: must be array to match model cast
         public ?array $skills = [],

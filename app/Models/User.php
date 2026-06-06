@@ -8,7 +8,6 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Illuminate\Validation\ValidationException;
 use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
@@ -31,7 +30,6 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
-        'zone_id',
     ];
 
     /**
@@ -120,29 +118,5 @@ class User extends Authenticatable
         }
 
         return null; // Admins see all zones
-    }
-
-    protected static function booted(): void
-    {
-        static::saving(function ($user) {
-
-            if ($user->zone_id && ! $user->hasRole('coordinator')) {
-                throw ValidationException::withMessages([
-                    'zone_id' => 'Only coordinators can be assigned to zones.',
-                ]);
-            }
-
-            if ($user->zone_id) {
-                $exists = User::where('zone_id', $user->zone_id)
-                    ->where('id', '!=', $user->id)
-                    ->exists();
-
-                if ($exists) {
-                    throw ValidationException::withMessages([
-                        'zone_id' => 'This zone is already assigned to another coordinator.',
-                    ]);
-                }
-            }
-        });
     }
 }

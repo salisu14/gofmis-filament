@@ -1,17 +1,19 @@
 <?php
+
 // app/Services/QRCodeService.php
 
 namespace App\Services;
 
 use App\Models\IdCard;
 use App\Models\Widow;
-use Endroid\QrCode\ErrorCorrectionLevel;
 use Endroid\QrCode\Color\Color;
+use Endroid\QrCode\ErrorCorrectionLevel;
 use Endroid\QrCode\Logo\Logo;
 use Endroid\QrCode\QrCode;
 use Endroid\QrCode\Writer\PngWriter;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Str;
 
 class QRCodeService
 {
@@ -19,7 +21,7 @@ class QRCodeService
 
     public function __construct()
     {
-        $this->writer = new PngWriter();
+        $this->writer = new PngWriter;
     }
 
     /**
@@ -62,7 +64,7 @@ class QRCodeService
             $result = $this->writer->write($qrCode, $logo);
         }
 
-        $filename = 'qr-codes/' . $idCard->card_number . '.png';
+        $filename = 'qr-codes/'.$idCard->card_number.'.png';
         Storage::disk('public')->put($filename, $result->getString());
 
         return $filename;
@@ -75,14 +77,14 @@ class QRCodeService
     {
         $idCard = IdCard::with(['cardable', 'template'])->find($cardId);
 
-        if (!$idCard) {
+        if (! $idCard) {
             return ['valid' => false, 'message' => 'Card not found'];
         }
 
         if ($idCard->status === 'revoked') {
             return [
                 'valid' => false,
-                'message' => 'This card has been revoked: ' . $idCard->revocation_reason
+                'message' => 'This card has been revoked: '.$idCard->revocation_reason,
             ];
         }
 
@@ -100,7 +102,32 @@ class QRCodeService
             'status' => $idCard->status,
             'issued_at' => $idCard->issued_at->format('F j, Y'),
             'expires_at' => $idCard->expires_at?->format('F j, Y'),
-            'photo_url' => $cardable->picture_url ? Storage::url($cardable->picture_url) : null,
+            'photo_url' => $this->publicPhotoUrl($cardable->picture_url),
         ];
+    }
+
+    private function publicPhotoUrl(mixed $value): ?string
+    {
+        if (is_array($value)) {
+            $value = reset($value) ?: null;
+        }
+
+        if (! is_string($value) || trim($value) === '') {
+            return null;
+        }
+
+        $value = trim($value);
+
+        if (Str::startsWith($value, ['http://', 'https://'])) {
+            return $value;
+        }
+
+        if (Str::startsWith($value, ['/storage/', 'storage/'])) {
+            $value = ltrim(Str::after($value, 'storage/'), '/');
+        }
+
+        return Storage::disk('public')->exists($value)
+            ? Storage::disk('public')->url($value)
+            : null;
     }
 }

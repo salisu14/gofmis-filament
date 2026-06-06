@@ -1,4 +1,5 @@
 <?php
+
 // app/Http/Middleware/RoleMiddleware.php
 // FIXED: Only applies role checks to specific resources, not globally blocking all users
 
@@ -24,8 +25,6 @@ class RoleMiddleware
     protected array $allowedRoles = [
         'admin',
         'super_admin',
-        'super-admin',
-        'super admin',
         'education-verifier',
     ];
 
@@ -36,7 +35,7 @@ class RoleMiddleware
     {
         $user = $request->user();
 
-        if (!$user) {
+        if (! $user) {
             return $next($request); // Let auth middleware handle unauthenticated
         }
 
@@ -52,13 +51,13 @@ class RoleMiddleware
         }
 
         // If not a restricted resource, allow access (respect existing auth)
-        if (!$isRestricted) {
+        if (! $isRestricted) {
             return $next($request);
         }
 
         // For restricted resources, check role
         if (method_exists($user, 'hasAnyRole')) {
-            if (!$user->hasAnyRole($this->allowedRoles)) {
+            if (! $user->hasAnyRole($this->allowedRoles)) {
                 abort(403, 'You do not have permission to access the education verification area.');
             }
         }

@@ -171,11 +171,14 @@ class WidowResource extends Resource
 
                             Forms\Components\FileUpload::make('picture_url')
                                 ->label('Profile Photo')
+                                ->image()
                                 ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
                                 ->avatar()
                                 ->directory('widow-photos')
                                 ->disk('public')
                                 ->visibility('public')
+                                ->imageEditor()
+                                ->circleCropper()
                                 ->maxSize(5120),
                         ]),
                     ]),

@@ -5,11 +5,9 @@ namespace App\Filament\Resources\Users\Tables;
 use App\Models\User;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
-use Filament\Support\Enums\Size;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
@@ -69,13 +67,17 @@ class UsersTable
                 ActionGroup::make([
                     ViewAction::make(),
                     EditAction::make(),
-                ])->tooltip('Actions')
+                ])->tooltip('Actions'),
 
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make()
-                        ->visible(fn () => auth()->user()?->can('delete_user')),
+                        ->visible(function (): bool {
+                            $user = auth()->user();
+
+                            return $user?->can('delete_users') || $user?->can('user_delete');
+                        }),
                 ]),
             ]);
     }

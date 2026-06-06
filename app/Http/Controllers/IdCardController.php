@@ -1,4 +1,5 @@
 <?php
+
 // app/Http/Controllers/IdCardController.php
 
 namespace App\Http\Controllers;
@@ -13,7 +14,6 @@ use App\Services\IdCardGenerationService;
 use App\Services\IdCardPDFService;
 use App\Services\QRCodeService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
@@ -38,9 +38,9 @@ class IdCardController extends Controller
         $beneficiary = $model::findOrFail($id);
 
         // Check eligibility
-        if (!$beneficiary->is_eligible) {
+        if (! $beneficiary->is_eligible) {
             return response()->json([
-                'message' => 'Beneficiary is not eligible for ID card generation'
+                'message' => 'Beneficiary is not eligible for ID card generation',
             ], 422);
         }
 
@@ -67,7 +67,7 @@ class IdCardController extends Controller
 
         return response($content, 200, [
             'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'inline; filename="preview-' . $card->card_number . '.pdf"',
+            'Content-Disposition' => 'inline; filename="preview-'.$card->card_number.'.pdf"',
             'X-Frame-Options' => 'SAMEORIGIN',
             'Content-Security-Policy' => "frame-ancestors 'self'",
             'Cache-Control' => 'no-cache, no-store, must-revalidate',
@@ -83,7 +83,7 @@ class IdCardController extends Controller
 
         $pdf = $this->pdfService->generateSingle($card);
 
-        return $pdf->download('id-card-' . $card->card_number . '.pdf');
+        return $pdf->download('id-card-'.$card->card_number.'.pdf');
     }
 
     /**
@@ -97,7 +97,7 @@ class IdCardController extends Controller
             'filters' => 'nullable|array',
             'filters.zone_id' => 'nullable|exists:zones,id',
             'filters.is_eligible' => 'nullable|boolean',
-            'filters.gender' => 'nullable|in:male,female',
+            'filters.gender' => 'nullable|in:MALE,FEMALE,male,female',
             'range' => 'nullable|array',
             'range.start_reg_no' => 'nullable|string',
             'range.end_reg_no' => 'nullable|string',
@@ -125,7 +125,7 @@ class IdCardController extends Controller
 
             if ($cards->isEmpty()) {
                 return response()->json([
-                    'message' => 'No eligible beneficiaries found for the selected criteria'
+                    'message' => 'No eligible beneficiaries found for the selected criteria',
                 ], 422);
             }
 
@@ -169,13 +169,13 @@ class IdCardController extends Controller
     {
         if ($batch->status !== 'completed') {
             return response()->json([
-                'message' => 'Batch is still processing'
+                'message' => 'Batch is still processing',
             ], 422);
         }
 
         return response()->download(
             Storage::disk('public')->path($batch->pdf_path),
-            $batch->batch_name . '.pdf'
+            $batch->batch_name.'.pdf'
         );
     }
 
@@ -185,10 +185,10 @@ class IdCardController extends Controller
     public function verify(Request $request, IdCard $card)
     {
         // Validate signed URL
-        if (!$request->hasValidSignature()) {
+        if (! $request->hasValidSignature()) {
             return response()->json([
                 'valid' => false,
-                'message' => 'Invalid or expired QR code'
+                'message' => 'Invalid or expired QR code',
             ], 403);
         }
 
@@ -220,34 +220,34 @@ class IdCardController extends Controller
     private function getCardsByFilters($query, array $filters, array $range)
     {
         // Apply filters
-        if (!empty($filters['zone_id'])) {
-            $query->whereHas('deceased.zone', fn($q) => $q->where('id', $filters['zone_id']));
+        if (! empty($filters['zone_id'])) {
+            $query->whereHas('deceased.zone', fn ($q) => $q->where('id', $filters['zone_id']));
         }
 
         if (isset($filters['is_eligible'])) {
             $query->where('is_eligible', $filters['is_eligible']);
         }
 
-        if (!empty($filters['gender'])) {
-            $query->where('gender', $filters['gender']);
+        if (! empty($filters['gender']) && $query->getModel() instanceof Orphan) {
+            $query->where('gender', strtoupper($filters['gender']));
         }
 
         // Apply range filters
-        if (!empty($range['start_date']) && !empty($range['end_date'])) {
+        if (! empty($range['start_date']) && ! empty($range['end_date'])) {
             $query->whereBetween('created_at', [$range['start_date'], $range['end_date']]);
         }
 
-        if (!empty($range['start_reg_no']) && !empty($range['end_reg_no'])) {
+        if (! empty($range['start_reg_no']) && ! empty($range['end_reg_no'])) {
             $query->whereBetween('reg_no', [$range['start_reg_no'], $range['end_reg_no']]);
         }
 
-        if (!empty($range['specific_ids'])) {
+        if (! empty($range['specific_ids'])) {
             $query->whereIn('id', $range['specific_ids']);
         }
 
         // Only get those without active cards
         return $query->where('is_eligible', true)
-            ->whereDoesntHave('idCards', fn($q) => $q->where('status', 'active'))
+            ->whereDoesntHave('idCards', fn ($q) => $q->where('status', 'active'))
             ->get();
     }
 }

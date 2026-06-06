@@ -68,7 +68,7 @@ class ViewEducationVerification extends ViewRecord
                 }),
 
             DeleteAction::make()
-                ->visible(fn() => auth()->user()?->hasRole(['admin', 'super-admin'])),
+                ->visible(fn() => auth()->user()?->hasRole(['admin', 'super_admin'])),
         ];
     }
 }

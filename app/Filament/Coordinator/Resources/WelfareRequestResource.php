@@ -42,7 +42,7 @@ class WelfareRequestResource extends Resource
     {
         // ✅ FIXED: Use coordinatedZone instead of zone_id
         $zoneId = auth()->user()?->coordinatedZone?->id;
-        $isAdmin = auth()->user()?->hasRole(['admin', 'super-admin']);
+        $isAdmin = auth()->user()?->hasRole(['admin', 'super_admin']);
 
         $query = parent::getEloquentQuery();
 
@@ -55,13 +55,13 @@ class WelfareRequestResource extends Resource
 
     public static function canCreate(): bool
     {
-        return auth()->user()?->hasAnyRole(['coordinator', 'admin', 'super-admin']) ?? false;
+        return auth()->user()?->hasAnyRole(['coordinator', 'admin', 'super_admin']) ?? false;
     }
 
     public static function canEdit($record): bool
     {
         $user = auth()->user();
-        if ($user->hasRole(['admin', 'super-admin'])) return true;
+        if ($user->hasRole(['admin', 'super_admin'])) return true;
 
         // ✅ FIXED: Use coordinatedZone for zone comparison
         $zoneId = $user?->coordinatedZone?->id;
@@ -72,7 +72,7 @@ class WelfareRequestResource extends Resource
 
     public static function canDelete($record): bool
     {
-        return auth()->user()?->hasRole(['admin', 'super-admin']) ?? false;
+        return auth()->user()?->hasRole(['admin', 'super_admin']) ?? false;
     }
 
     public static function form(Schema $schema): Schema

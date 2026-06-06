@@ -1,4 +1,5 @@
 <?php
+
 // app/Filament/Resources/IdCardResource/Pages/BulkPrintIdCards.php
 
 namespace App\Filament\Resources\IdCards\Pages;
@@ -33,11 +34,17 @@ class BulkPrintIdCards extends Page implements HasForms
     use InteractsWithForms;
 
     protected static string $resource = IdCardResource::class;
+
     protected static ?string $title = 'Bulk ID Card Print';
+
     public ?array $data = [];
+
     public int $estimatedCount = 0;
+
     public bool $isCalculating = false;
+
     public ?IdCardPrintBatch $currentBatch = null;
+
     protected string $view = 'filament.resources.id-cards.pages.bulk-print-id-cards';
 
     public function mount(): void
@@ -65,7 +72,7 @@ class BulkPrintIdCards extends Page implements HasForms
                             ])
                             ->required()
                             ->live()
-                            ->afterStateUpdated(fn() => $this->resetCount()),
+                            ->afterStateUpdated(fn () => $this->resetCount()),
 
                         Forms\Components\Select::make('template_id')
                             ->label('Card Template')
@@ -88,52 +95,55 @@ class BulkPrintIdCards extends Page implements HasForms
                             ->inline(),
 
                         Grid::make(2)
-                            ->visible(fn(Get $get) => $get('range_type') === 'date')
+                            ->visible(fn (Get $get) => $get('range_type') === 'date')
                             ->schema([
                                 DatePicker::make('range.start_date')
                                     ->label('From')
                                     ->required()
                                     ->live()
-                                    ->afterStateUpdated(fn() => $this->resetCount()),
+                                    ->afterStateUpdated(fn () => $this->resetCount()),
                                 DatePicker::make('range.end_date')
                                     ->label('To')
                                     ->required()
                                     ->live()
-                                    ->afterStateUpdated(fn() => $this->resetCount()),
+                                    ->afterStateUpdated(fn () => $this->resetCount()),
                             ]),
 
                         Grid::make(2)
-                            ->visible(fn(Get $get) => $get('range_type') === 'reg_no')
+                            ->visible(fn (Get $get) => $get('range_type') === 'reg_no')
                             ->schema([
                                 TextInput::make('range.start_reg_no')
                                     ->label('From Reg. No')
                                     ->required()
                                     ->live(onBlur: true)
-                                    ->afterStateUpdated(fn() => $this->resetCount()),
+                                    ->afterStateUpdated(fn () => $this->resetCount()),
                                 TextInput::make('range.end_reg_no')
                                     ->label('To Reg. No')
                                     ->required()
                                     ->live(onBlur: true)
-                                    ->afterStateUpdated(fn() => $this->resetCount()),
+                                    ->afterStateUpdated(fn () => $this->resetCount()),
                             ]),
 
                         Select::make('range.specific_ids')
                             ->label('Select Beneficiaries')
-                            ->visible(fn(Get $get) => $get('range_type') === 'specific')
+                            ->visible(fn (Get $get) => $get('range_type') === 'specific')
                             ->multiple()
                             ->searchable()
                             ->preload()
                             ->options(function (Get $get) {
                                 $type = $get('type');
-                                if ($type === 'mixed') return [];
+                                if ($type === 'mixed') {
+                                    return [];
+                                }
 
                                 $model = $type === 'widow' ? Widow::class : Orphan::class;
+
                                 return $model::where('is_eligible', true)
-                                    ->whereDoesntHave('idCards', fn($q) => $q->where('status', 'active'))
+                                    ->whereDoesntHave('idCards', fn ($q) => $q->where('status', 'active'))
                                     ->pluck('full_name', 'id');
                             })
                             ->live()
-                            ->afterStateUpdated(fn() => $this->resetCount()),
+                            ->afterStateUpdated(fn () => $this->resetCount()),
                     ]),
 
                 Section::make('Additional Filters')
@@ -144,23 +154,23 @@ class BulkPrintIdCards extends Page implements HasForms
                             ->options(Zone::pluck('name', 'id'))
                             ->placeholder('All Zones')
                             ->live()
-                            ->afterStateUpdated(fn() => $this->resetCount()),
+                            ->afterStateUpdated(fn () => $this->resetCount()),
 
                         Select::make('filters.gender')
                             ->label('Gender')
                             ->options([
-                                'male' => 'Male',
-                                'female' => 'Female',
+                                'MALE' => 'Male',
+                                'FEMALE' => 'Female',
                             ])
                             ->placeholder('All Genders')
                             ->live()
-                            ->afterStateUpdated(fn() => $this->resetCount()),
+                            ->afterStateUpdated(fn () => $this->resetCount()),
 
                         Toggle::make('filters.exclude_printed')
                             ->label('Exclude Already Printed')
                             ->default(true)
                             ->live()
-                            ->afterStateUpdated(fn() => $this->resetCount()),
+                            ->afterStateUpdated(fn () => $this->resetCount()),
                     ]),
 
                 Section::make('Batch Information')
@@ -169,14 +179,14 @@ class BulkPrintIdCards extends Page implements HasForms
                             ->label('Batch Name')
                             ->required()
                             ->placeholder('e.g., Widows Q2 2026 Batch 1')
-                            ->default('Batch ' . now()->format('Y-m-d H:i')),
+                            ->default('Batch '.now()->format('Y-m-d H:i')),
 
                         Placeholder::make('estimated_count')
                             ->label('Estimated Cards')
-                            ->content(fn(): string => $this->isCalculating
+                            ->content(fn (): string => $this->isCalculating
                                 ? 'Calculating...'
                                 : ($this->estimatedCount > 0
-                                    ? number_format($this->estimatedCount) . ' cards'
+                                    ? number_format($this->estimatedCount).' cards'
                                     : 'Click "Calculate Count" to preview')
                             ),
 
@@ -185,7 +195,7 @@ class BulkPrintIdCards extends Page implements HasForms
                                 ->label('Calculate Count')
                                 ->icon('heroicon-o-calculator')
                                 ->color('info')
-                                ->action(fn() => $this->calculateCount()),
+                                ->action(fn () => $this->calculateCount()),
                         ]),
                     ]),
             ])
@@ -202,8 +212,11 @@ class BulkPrintIdCards extends Page implements HasForms
         $this->isCalculating = true;
 
         try {
-            $query = $this->buildQuery();
-            $this->estimatedCount = $query->count();
+            $data = $this->form->getState();
+            $this->estimatedCount = $data['type'] === 'mixed'
+                ? $this->applyFilters(Widow::query(), $data)->count()
+                    + $this->applyFilters(Orphan::query(), $data)->count()
+                : $this->buildQuery()->count();
 
             Notification::make()
                 ->title('Count Calculated')
@@ -227,13 +240,11 @@ class BulkPrintIdCards extends Page implements HasForms
         $type = $data['type'];
 
         if ($type === 'mixed') {
-            // For mixed, we'll handle separately in the job
-            $widowQuery = $this->applyFilters(Widow::query(), $data);
-            $orphanQuery = $this->applyFilters(Orphan::query(), $data);
-            return $widowQuery->union($orphanQuery);
+            throw new \LogicException('Mixed batches must be loaded as separate widow and orphan collections.');
         }
 
         $model = $type === 'widow' ? Widow::class : Orphan::class;
+
         return $this->applyFilters($model::query(), $data);
     }
 
@@ -244,29 +255,29 @@ class BulkPrintIdCards extends Page implements HasForms
 
         // Exclude already printed
         if (($data['filters']['exclude_printed'] ?? true)) {
-            $query->whereDoesntHave('idCards', fn($q) => $q->where('status', 'active'));
+            $query->whereDoesntHave('idCards', fn ($q) => $q->where('status', 'active'));
         }
 
         // Zone filter
-        if (!empty($data['filters']['zone_id'])) {
-            $query->whereHas('deceased.zone', fn($q) => $q->where('id', $data['filters']['zone_id']));
+        if (! empty($data['filters']['zone_id'])) {
+            $query->whereHas('deceased.zone', fn ($q) => $q->where('id', $data['filters']['zone_id']));
         }
 
         // Gender filter
-        if (!empty($data['filters']['gender'])) {
+        if (! empty($data['filters']['gender']) && $query->getModel() instanceof Orphan) {
             $query->where('gender', $data['filters']['gender']);
         }
 
         // Range filters
-        if ($data['range_type'] === 'date' && !empty($data['range']['start_date']) && !empty($data['range']['end_date'])) {
+        if ($data['range_type'] === 'date' && ! empty($data['range']['start_date']) && ! empty($data['range']['end_date'])) {
             $query->whereBetween('created_at', [$data['range']['start_date'], $data['range']['end_date']]);
         }
 
-        if ($data['range_type'] === 'reg_no' && !empty($data['range']['start_reg_no']) && !empty($data['range']['end_reg_no'])) {
+        if ($data['range_type'] === 'reg_no' && ! empty($data['range']['start_reg_no']) && ! empty($data['range']['end_reg_no'])) {
             $query->whereBetween('reg_no', [$data['range']['start_reg_no'], $data['range']['end_reg_no']]);
         }
 
-        if ($data['range_type'] === 'specific' && !empty($data['range']['specific_ids'])) {
+        if ($data['range_type'] === 'specific' && ! empty($data['range']['specific_ids'])) {
             $query->whereIn('id', $data['range']['specific_ids']);
         }
 
@@ -275,17 +286,18 @@ class BulkPrintIdCards extends Page implements HasForms
 
     public function downloadBatch(): void
     {
-        if (!$this->currentBatch || $this->currentBatch->status !== 'completed') {
+        if (! $this->currentBatch || $this->currentBatch->status !== 'completed') {
             Notification::make()
                 ->title('Batch not ready')
                 ->body('Please wait for the batch to complete processing.')
                 ->warning()
                 ->send();
+
             return;
         }
 
         $this->redirectRoute('filament.admin.resources.id-card-print-batches.view', [
-            'record' => $this->currentBatch
+            'record' => $this->currentBatch,
         ]);
     }
 
@@ -305,10 +317,10 @@ class BulkPrintIdCards extends Page implements HasForms
                 ->color('primary')
                 ->requiresConfirmation()
                 ->modalHeading('Confirm Bulk Print')
-                ->modalDescription(fn(): string => "This will generate {$this->estimatedCount} ID cards. Continue?")
+                ->modalDescription(fn (): string => "This will generate {$this->estimatedCount} ID cards. Continue?")
                 ->modalSubmitActionLabel('Yes, Generate')
-                ->action(fn() => $this->createBatch())
-                ->disabled(fn(): bool => $this->estimatedCount === 0),
+                ->action(fn () => $this->createBatch())
+                ->disabled(fn (): bool => $this->estimatedCount === 0),
         ];
     }
 
@@ -322,6 +334,7 @@ class BulkPrintIdCards extends Page implements HasForms
                 ->body('Please adjust your filters and try again.')
                 ->warning()
                 ->send();
+
             return;
         }
 
@@ -340,7 +353,7 @@ class BulkPrintIdCards extends Page implements HasForms
                 ]);
 
                 // Get beneficiaries and dispatch job
-                $beneficiaries = $this->buildQuery()->get();
+                $beneficiaries = $this->buildBeneficiaryCollection($data);
                 GenerateIdCardsJob::dispatch($batch, $beneficiaries);
 
                 $this->currentBatch = $batch;
@@ -376,5 +389,16 @@ class BulkPrintIdCards extends Page implements HasForms
             ],
             default => null,
         };
+    }
+
+    private function buildBeneficiaryCollection(array $data): \Illuminate\Support\Collection
+    {
+        if ($data['type'] !== 'mixed') {
+            return $this->buildQuery()->get();
+        }
+
+        return $this->applyFilters(Widow::query(), $data)
+            ->get()
+            ->merge($this->applyFilters(Orphan::query(), $data)->get());
     }
 }

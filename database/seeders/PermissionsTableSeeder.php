@@ -4,13 +4,11 @@ namespace Database\Seeders;
 
 use App\Models\Permission;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Str;
 
 class PermissionsTableSeeder extends Seeder
 {
     public function run()
     {
-        $now = now();
         $guard = 'web';
 
         // Define permission patterns: [entity, [actions]]
@@ -29,13 +27,22 @@ class PermissionsTableSeeder extends Seeder
             ['category', ['create', 'edit', 'show', 'delete', 'access']],
             ['repayment', ['access', 'create', 'show', 'edit', 'delete']],
             ['message', ['access', 'create', 'show', 'edit', 'delete']],
-            ['loan', ['create', 'edit', 'show', 'delete', 'approve', 'access', 'reject', 'repayment',]],
+            ['loan', ['create', 'edit', 'show', 'delete', 'approve', 'access', 'reject', 'repayment']],
             ['bank', ['access', 'create', 'show', 'edit', 'delete']],
         ];
 
         // Special/standalone permissions
         $standalonePermissions = [
             'user_management_access',
+            'view_users',
+            'create_users',
+            'edit_users',
+            'delete_users',
+            'assign_roles',
+            'view_roles',
+            'create_roles',
+            'edit_roles',
+            'delete_roles',
             'mark_orphan_married',
             'mark_orphan_unmarried',
             'admin_dashboard_access',
@@ -49,27 +56,20 @@ class PermissionsTableSeeder extends Seeder
         // Generate CRUD permissions from patterns
         foreach ($permissionPatterns as [$entity, $actions]) {
             foreach ($actions as $action) {
-                $permissions[] = [
-                    'uuid'       => Str::uuid(),
-                    'name'       => "{$entity}_{$action}",
-                    'guard_name' => $guard,
-                    'created_at' => $now,
-                    'updated_at' => $now,
-                ];
+                $permissions[] = "{$entity}_{$action}";
             }
         }
 
         // Add standalone permissions
         foreach ($standalonePermissions as $name) {
-            $permissions[] = [
-                'uuid'       => Str::uuid(),
-                'name'       => $name,
-                'guard_name' => $guard,
-                'created_at' => $now,
-                'updated_at' => $now,
-            ];
+            $permissions[] = $name;
         }
 
-        Permission::insert($permissions);
+        foreach (array_unique($permissions) as $permission) {
+            Permission::firstOrCreate([
+                'name' => $permission,
+                'guard_name' => $guard,
+            ]);
+        }
     }
 }

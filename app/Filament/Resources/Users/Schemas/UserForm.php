@@ -26,9 +26,9 @@ class UserForm
                             ->maxLength(255),
                         TextInput::make('password')
                             ->password()
-                            ->dehydrateStateUsing(fn($state) => Hash::make($state))
-                            ->dehydrated(fn($state) => filled($state))
-                            ->required(fn(string $context): bool => $context === 'create'),
+                            ->dehydrateStateUsing(fn ($state) => Hash::make($state))
+                            ->dehydrated(fn ($state) => filled($state))
+                            ->required(fn (string $context): bool => $context === 'create'),
                     ])->columns(2),
 
                 Section::make('Identity & Roles')
@@ -37,7 +37,8 @@ class UserForm
                             ->relationship('roles', 'name')
                             ->multiple()
                             ->preload()
-                            ->searchable()->options(function () {
+                            ->searchable()
+                            ->options(function () {
                                 $user = auth()->user();
 
                                 // Super-admin can assign any role
@@ -49,7 +50,11 @@ class UserForm
                                 return \App\Models\Role::where('name', '!=', 'super_admin')
                                     ->pluck('name', 'uuid');
                             })
-                            ->disabled(fn() => !auth()->user()?->can('assign roles')),
+                            ->disabled(function (): bool {
+                                $user = auth()->user();
+
+                                return ! ($user?->can('assign_roles') || $user?->can('role_edit'));
+                            }),
 
                     ])->columns(2),
             ]);

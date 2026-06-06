@@ -68,8 +68,8 @@ class WidowForm
 
                         DatePicker::make('married_at')
                             ->label('Date of New Marriage')
-                            ->visible(fn($get) => $get('is_married'))
-                            ->required(fn($get) => $get('is_married'))
+                            ->visible(fn ($get) => $get('is_married'))
+                            ->required(fn ($get) => $get('is_married'))
                             ->native(false),
 
                         TagsInput::make('skills')
@@ -109,11 +109,14 @@ class WidowForm
                     ->schema([
                         FileUpload::make('picture_url')
                             ->label('Profile Picture')
+                            ->image()
                             ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
                             ->avatar()
                             ->directory('widow-photos')
                             ->disk('public')
                             ->visibility('public')
+                            ->imageEditor()
+                            ->circleCropper()
                             ->maxSize(5120)
                             ->columnSpanFull(),
                     ]),

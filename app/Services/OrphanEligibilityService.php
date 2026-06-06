@@ -15,10 +15,14 @@ class OrphanEligibilityService
      */
     public function isEligible(Orphan $orphan): bool
     {
-        // Rule 1: Boys > 17 are not eligible
+        if (! $orphan->is_eligible || $orphan->status === Orphan::STATUS_ARCHIVED) {
+            return false;
+        }
+
+        // Rule 1: Boys 18 and older are not eligible
         if (
             $orphan->gender === Gender::MALE &&
-            $orphan->birth_date?->age > 17
+            $orphan->birth_date?->age >= 18
         ) {
             return false;
         }
@@ -40,16 +44,19 @@ class OrphanEligibilityService
      */
     public function getEligibleOrphansQuery(): Builder
     {
-        return Orphan::query()
+        return Orphan::withoutGlobalScope(EligibleOrphanScope::class)
+            ->where('is_eligible', true)
+            ->where('status', '!=', Orphan::STATUS_ARCHIVED)
             ->where(function ($query) {
-                // Males must be 17 or younger
-                $query->where('gender', 'MALE')
-                    ->where('age', '<=', 17);
-            })
-            ->orWhere(function ($query) {
-                // Females must not be married
-                $query->where('gender', 'FEMALE')
-                    ->where('is_married', false); // Ensure this column exists
+                $query->where(function ($query) {
+                    // Males must be under 18
+                    $query->where('gender', Gender::MALE)
+                        ->whereDate('birth_date', '>', now()->subYears(18)->toDateString());
+                })->orWhere(function ($query) {
+                    // Females must not be married
+                    $query->where('gender', Gender::FEMALE)
+                        ->where('is_married', false);
+                });
             });
     }
 
@@ -60,18 +67,23 @@ class OrphanEligibilityService
     {
         Orphan::withoutGlobalScope(EligibleOrphanScope::class)
             ->where('gender', 'MALE')
-            ->where('age', '>', 17)
+            ->whereDate('birth_date', '<=', now()->subYears(18)->toDateString())
+            ->where(function ($query) {
+                $query->where('is_eligible', true)
+                    ->orWhere('status', '!=', Orphan::STATUS_ARCHIVED);
+            })
             ->get()
             ->each(function ($orphan) {
-                // Logic to ensure we don't fire the event every day for the same orphan
-                // (e.g., check a flag on the db). For simplicity:
                 event(new OrphanBecameIneligible($orphan, 'AGE_LIMIT'));
             });
 
         Orphan::withoutGlobalScope(EligibleOrphanScope::class)
             ->where('gender', 'FEMALE')
             ->where('is_married', true)
-            ->where('status', 'active') // Assuming a status column
+            ->where(function ($query) {
+                $query->where('is_eligible', true)
+                    ->orWhere('status', '!=', Orphan::STATUS_ARCHIVED);
+            })
             ->get()
             ->each(function ($orphan) {
                 event(new OrphanBecameIneligible($orphan, 'MARRIAGE'));

@@ -12,7 +12,6 @@ use App\Models\Institution;
 use App\Models\InterventionType;
 use App\Models\Orphan;
 use App\Models\OrphanClass;
-use App\Models\OrphanEducation;
 use App\Models\Zone;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
@@ -85,7 +84,7 @@ class OrphansTable
                     ->sortable(),
                 TextColumn::make('age')
                     ->label('Age')
-                    ->state(fn($record) => $record->birth_date?->age)
+                    ->state(fn ($record) => $record->birth_date?->age)
                     ->sortable('birth_date')
                     ->alignCenter(),
                 TextColumn::make('deceased.full_name')
@@ -98,10 +97,11 @@ class OrphansTable
                     ->searchable(),
                 TextColumn::make('status')
                     ->badge()
-                    ->color(fn(string $state): string => match ($state) {
+                    ->color(fn (string $state): string => match ($state) {
                         'active' => 'success',
                         'pending' => 'warning',
                         'inactive' => 'danger',
+                        Orphan::STATUS_ARCHIVED => 'gray',
                         default => 'gray',
                     }),
                 IconColumn::make('is_eligible')
@@ -143,17 +143,17 @@ class OrphansTable
                     ])
                     ->query(function (Builder $query, array $data) {
                         return $query
-                            ->when($data['age_from'], fn($q) => $q->whereRaw('EXTRACT(YEAR FROM AGE(birth_date)) >= ?', [$data['age_from']]))
-                            ->when($data['age_to'], fn($q) => $q->whereRaw('EXTRACT(YEAR FROM AGE(birth_date)) <= ?', [$data['age_to']]));
+                            ->when($data['age_from'], fn ($q) => $q->whereRaw('EXTRACT(YEAR FROM AGE(birth_date)) >= ?', [$data['age_from']]))
+                            ->when($data['age_to'], fn ($q) => $q->whereRaw('EXTRACT(YEAR FROM AGE(birth_date)) <= ?', [$data['age_to']]));
                     }),
 
                 // 3. Query by School (Institution)
                 SelectFilter::make('school_filter')
                     ->label('School')
-                    ->options(fn() => Institution::pluck('name', 'id'))
-                    ->query(fn(Builder $query, array $data) => $query->when(
+                    ->options(fn () => Institution::pluck('name', 'id'))
+                    ->query(fn (Builder $query, array $data) => $query->when(
                         $data['value'],
-                        fn(Builder $query, $value) => $query->whereHas('educations', fn($q) => $q->where('institution_id', $value))
+                        fn (Builder $query, $value) => $query->whereHas('educations', fn ($q) => $q->where('institution_id', $value))
                     ))
                     ->searchable()
                     ->preload(),
@@ -169,9 +169,7 @@ class OrphansTable
                     ->query(function (Builder $query, array $data) {
                         $query->when(
                             $data['value'] ?? null,
-                            fn (Builder $query, $value) =>
-                            $query->whereHas('educations', fn ($q) =>
-                            $q->where('orphan_class_id', $value)
+                            fn (Builder $query, $value) => $query->whereHas('educations', fn ($q) => $q->where('orphan_class_id', $value)
                             )
                         );
                     }),
@@ -180,18 +178,18 @@ class OrphansTable
                 SelectFilter::make('vulnerability_filter')
                     ->label('Vulnerability')
                     ->options(VulnerabilityStatus::class)
-                    ->query(fn(Builder $query, array $data) => $query->when(
+                    ->query(fn (Builder $query, array $data) => $query->when(
                         $data['value'],
-                        fn(Builder $query, $value) => $query->whereHas('deceased', fn($q) => $q->where('vulnerability_status', $value))
+                        fn (Builder $query, $value) => $query->whereHas('deceased', fn ($q) => $q->where('vulnerability_status', $value))
                     )),
 
                 // 6. Query by Zone (Linked to Deceased Parent)
                 SelectFilter::make('zone_filter')
                     ->label('Zone')
-                    ->options(fn() => Zone::pluck('name', 'id'))
-                    ->query(fn(Builder $query, array $data) => $query->when(
+                    ->options(fn () => Zone::pluck('name', 'id'))
+                    ->query(fn (Builder $query, array $data) => $query->when(
                         $data['value'],
-                        fn(Builder $query, $value) => $query->whereHas('deceased', fn($q) => $q->where('zone_id', $value))
+                        fn (Builder $query, $value) => $query->whereHas('deceased', fn ($q) => $q->where('zone_id', $value))
                     ))
                     ->searchable()
                     ->preload(),
@@ -199,10 +197,10 @@ class OrphansTable
                 // 7. Query by Intervention Received
                 SelectFilter::make('intervention_type_filter')
                     ->label('Support Received')
-                    ->options(fn() => InterventionType::pluck('name', 'id'))
-                    ->query(fn(Builder $query, array $data) => $query->when(
+                    ->options(fn () => InterventionType::pluck('name', 'id'))
+                    ->query(fn (Builder $query, array $data) => $query->when(
                         $data['value'],
-                        fn(Builder $query, $value) => $query->whereHas('interventions', fn($q) => $q->whereHas('request', fn($sq) => $sq->where('intervention_type_id', $value))
+                        fn (Builder $query, $value) => $query->whereHas('interventions', fn ($q) => $q->whereHas('request', fn ($sq) => $sq->where('intervention_type_id', $value))
                         )
                     ))
                     ->searchable()
@@ -213,6 +211,7 @@ class OrphansTable
                         'active' => 'Active',
                         'pending' => 'Pending',
                         'inactive' => 'Inactive',
+                        Orphan::STATUS_ARCHIVED => 'Archived',
                     ]),
             ], layout: FiltersLayout::Modal)
             ->deferFilters(false)
@@ -229,26 +228,26 @@ class OrphansTable
                         ->label('View ID Card')
                         ->icon('heroicon-o-eye')
                         ->color('info')
-                        ->url(fn(Orphan $record) => $record->idCards()->where('status', 'active')->first()
+                        ->url(fn (Orphan $record) => $record->idCards()->where('status', 'active')->first()
                             ? IdCardResource::getUrl('view', [
-                                'record' => $record->idCards()->where('status', 'active')->first()
+                                'record' => $record->idCards()->where('status', 'active')->first(),
                             ])
                             : null
                         )
                         ->openUrlInNewTab()
-                        ->visible(fn(Orphan $record): bool => $record->idCards()->where('status', 'active')->exists()
+                        ->visible(fn (Orphan $record): bool => $record->idCards()->where('status', 'active')->exists()
                         ),
 
                     Action::make('print_card')
                         ->label('Print Card')
                         ->icon('heroicon-o-printer')
                         ->color('success')
-                        ->url(fn(Orphan $record) => ($card = $record->idCards()->where('status', 'active')->first())
+                        ->url(fn (Orphan $record) => ($card = $record->idCards()->where('status', 'active')->first())
                             ? route('id-cards.download', ['idCard' => $card])
                             : null
                         )
                         ->openUrlInNewTab()
-                        ->visible(fn(Orphan $record): bool => $record->idCards()->where('status', 'active')->exists()
+                        ->visible(fn (Orphan $record): bool => $record->idCards()->where('status', 'active')->exists()
                         ),
 
                     Action::make('markAsMarried')
@@ -259,7 +258,7 @@ class OrphansTable
                         ->modalHeading('Mark as Married')
                         ->modalDescription('This will revoke all benefits and eligibility. This action cannot be undone.')
                         ->modalSubmitActionLabel('Yes, Mark as Married')
-                        ->visible(fn($record) => !$record->is_married && (($record->gender->value ?? $record->gender) === Gender::FEMALE->value))
+                        ->visible(fn ($record) => ! $record->is_married && (($record->gender->value ?? $record->gender) === Gender::FEMALE->value))
                         ->schema([
                             DatePicker::make('married_at')
                                 ->label('Marriage Date')
@@ -287,7 +286,7 @@ class OrphansTable
                         }),
 
                     DeleteAction::make(),
-                ])
+                ]),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

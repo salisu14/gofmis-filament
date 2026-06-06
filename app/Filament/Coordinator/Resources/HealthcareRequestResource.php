@@ -87,7 +87,7 @@ class HealthcareRequestResource extends Resource
 
     public static function canDelete($record): bool
     {
-        return auth()->user()?->hasRole(['admin', 'super-admin']) ?? false;
+        return auth()->user()?->hasRole(['admin', 'super_admin']) ?? false;
     }
 
     public static function form(Schema $schema): Schema

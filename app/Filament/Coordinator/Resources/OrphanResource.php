@@ -238,11 +238,14 @@ class OrphanResource extends Resource
 
                         FileUpload::make('picture_url')
                             ->label('Profile Photo')
+                            ->image()
                             ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
                             ->avatar()
                             ->directory('orphans')
                             ->disk('public')
                             ->visibility('public')
+                            ->imageEditor()
+                            ->circleCropper()
                             ->maxSize(5120),
                     ]),
 
@@ -291,6 +294,7 @@ class OrphanResource extends Resource
                         'active', 'approved' => 'success',
                         'pending', 'pending_review' => 'warning',
                         'rejected', 'inactive' => 'danger',
+                        Orphan::STATUS_ARCHIVED => 'gray',
                         default => 'gray',
                     }),
 
@@ -307,7 +311,16 @@ class OrphanResource extends Resource
             ->defaultSort('created_at', 'desc')
             ->filters([
                 Tables\Filters\SelectFilter::make('gender')->options(Gender::class),
-                Tables\Filters\SelectFilter::make('status'),
+                Tables\Filters\SelectFilter::make('status')
+                    ->options([
+                        'active' => 'Active',
+                        'approved' => 'Approved',
+                        'pending' => 'Pending',
+                        'pending_review' => 'Pending Review',
+                        'inactive' => 'Inactive',
+                        'rejected' => 'Rejected',
+                        Orphan::STATUS_ARCHIVED => 'Archived',
+                    ]),
                 Tables\Filters\TernaryFilter::make('is_eligible')->label('Eligible Only'),
                 Tables\Filters\TernaryFilter::make('is_married')->label('Married Only'),
             ])
@@ -335,13 +348,7 @@ class OrphanResource extends Resource
                             ->rows(2),
                     ])
                     ->action(function ($record, array $data) {
-                        $record->update([
-                            'is_married' => true,
-                            'married_at' => $data['married_at'] ?? now(),
-                        ]);
-
-                        // Call the model method to handle side effects
-                        $record->markAsMarried($data['notes'] ?? null);
+                        $record->markAsMarried($data['notes'] ?? null, $data['married_at'] ?? now());
 
                         Notification::make()
                             ->title('Marked as Married')

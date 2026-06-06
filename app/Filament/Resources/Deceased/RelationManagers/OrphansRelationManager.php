@@ -32,9 +32,13 @@ use Filament\Tables\Table;
 class OrphansRelationManager extends RelationManager
 {
     protected static string $relationship = 'orphans';
+
     protected static ?string $relatedResource = DeceasedResource::class;
+
     protected static ?string $recordTitleAttribute = 'full_name';
+
     protected static ?string $title = 'Orphans';
+
     protected static string|null|\BackedEnum $icon = 'heroicon-o-user-group';
 
     public function form(Schema $schema): Schema
@@ -115,8 +119,8 @@ class OrphansRelationManager extends RelationManager
                         DatePicker::make('married_at')
                             ->label('Marriage Date')
                             ->native(false)
-                            ->visible(fn(Get $get) => $get('is_married'))
-                            ->required(fn(Get $get) => $get('is_married'))
+                            ->visible(fn (Get $get) => $get('is_married'))
+                            ->required(fn (Get $get) => $get('is_married'))
                             ->columnSpanFull(),
                     ]),
 
@@ -148,7 +152,7 @@ class OrphansRelationManager extends RelationManager
                                         ->default(true),
                                 ]),
                             ])
-                            ->itemLabel(fn(array $state): ?string => $state['level'] ?? null)
+                            ->itemLabel(fn (array $state): ?string => $state['level'] ?? null)
                             ->collapsible()
                             ->collapsed()
                             ->addActionLabel('Add Enrollment Record')
@@ -178,7 +182,7 @@ class OrphansRelationManager extends RelationManager
                                     ->image()
                                     ->avatar()
                                     ->disk('public')
-                                    ->directory('orphan-photos')
+                                    ->directory('orphans')
                                     ->imageEditor()
                                     ->circleCropper(),
 
@@ -190,7 +194,7 @@ class OrphansRelationManager extends RelationManager
                                             ->live(),
                                         FileUpload::make('birth_certificate_path')
                                             ->label('Certificate Scan')
-                                            ->visible(fn($get) => $get('has_birth_cert'))
+                                            ->visible(fn ($get) => $get('has_birth_cert'))
                                             ->directory('birth-certificates')
                                             ->disk('public')
                                             ->acceptedFileTypes(['application/pdf', 'image/*']),
@@ -205,6 +209,7 @@ class OrphansRelationManager extends RelationManager
                     ]),
             ]);
     }
+
     public function table(Table $table): Table
     {
         return $table
@@ -225,7 +230,7 @@ class OrphansRelationManager extends RelationManager
 
                 Tables\Columns\TextColumn::make('age')
                     ->label('Age')
-                    ->state(fn($record) => $record->age ?? 'N/A'),
+                    ->state(fn ($record) => $record->age ?? 'N/A'),
 
                 Tables\Columns\TextColumn::make('reg_no')
                     ->label('Reg No')
@@ -235,6 +240,16 @@ class OrphansRelationManager extends RelationManager
                     ->label('Eligible')
                     ->boolean()
                     ->alignCenter(),
+
+                Tables\Columns\TextColumn::make('status')
+                    ->badge()
+                    ->color(fn (string $state): string => match ($state) {
+                        'active', 'approved' => 'success',
+                        'pending', 'pending_review' => 'warning',
+                        'inactive', 'rejected' => 'danger',
+                        Orphan::STATUS_ARCHIVED => 'gray',
+                        default => 'gray',
+                    }),
             ])
             ->headerActions([
                 CreateAction::make()
@@ -249,7 +264,7 @@ class OrphansRelationManager extends RelationManager
                             ->generateOrphanData($deceased);
 
                         return array_merge($data, $generated);
-                    })
+                    }),
             ])
             ->recordActions([
                 // IMPROVED MEDICAL RECORDS ACTION
@@ -257,7 +272,7 @@ class OrphansRelationManager extends RelationManager
                     ->label('Medical')
                     ->icon('heroicon-m-beaker')
                     ->color('success')
-                    ->modalHeading(fn(Orphan $record) => "Medical History: {$record->full_name}")
+                    ->modalHeading(fn (Orphan $record) => "Medical History: {$record->full_name}")
                     ->modalWidth('5xl')
                     ->modalSubmitActionLabel('Save Updates')
                     ->schema([
@@ -276,7 +291,7 @@ class OrphansRelationManager extends RelationManager
                                         ->searchable()
                                         ->preload()
                                         ->required()
-                                        ->getOptionLabelFromRecordUsing(fn(Illness $record) => "{$record->name} (" . ($record->category?->label() ?? 'Other') . ")")
+                                        ->getOptionLabelFromRecordUsing(fn (Illness $record) => "{$record->name} (".($record->category?->label() ?? 'Other').')')
                                         ->createOptionForm([
                                             TextInput::make('name')
                                                 ->required()
@@ -323,17 +338,17 @@ class OrphansRelationManager extends RelationManager
                                     : 'New Diagnosis';
 
                                 $date = isset($state['prescription_date'])
-                                    ? " (" . date('d/m/Y', strtotime($state['prescription_date'])) . ")"
-                                    : "";
+                                    ? ' ('.date('d/m/Y', strtotime($state['prescription_date'])).')'
+                                    : '';
 
-                                return $illnessName . $date;
+                                return $illnessName.$date;
                             })
                             ->collapsible()
                             ->collapsed()
                             ->cloneable()
                             ->addActionLabel('New Medical Record'),
                     ])
-                    ->action(fn(Orphan $record) => $record->touch()),
+                    ->action(fn (Orphan $record) => $record->touch()),
 
                 EditAction::make()->modalWidth('4xl'),
                 DeleteAction::make(),

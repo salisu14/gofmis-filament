@@ -27,13 +27,14 @@ use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
 
-;
-
 class WidowsRelationManager extends RelationManager
 {
     protected static string $relationship = 'widows';
+
     protected static ?string $recordTitleAttribute = 'full_name';
+
     protected static ?string $title = 'Widows';
+
     protected static ?string $relatedRecordTitleAttribute = 'full_name';
 
     protected static string|null|\BackedEnum $icon = 'heroicon-o-heart';
@@ -94,9 +95,7 @@ class WidowsRelationManager extends RelationManager
                                     ->directory('widow-photos')
                                     ->visibility('public')
                                     ->nullable()
-                                    ->storeFileNamesIn('picture_original_name') // optional but stabilizes state
                                     ->dehydrated(true)
-                                    ->preserveFilenames()
                                     ->imageEditor()
                                     ->circleCropper(),
                             ]),
@@ -182,7 +181,7 @@ class WidowsRelationManager extends RelationManager
 
                         return array_merge($data, $generated);
                     })
-                    ->hidden(fn(RelationManager $livewire) => $livewire->getRelationship()->count() >= 4),
+                    ->hidden(fn (RelationManager $livewire) => $livewire->getRelationship()->count() >= 4),
             ])
             ->recordActions([
                 // NEW: MEDICAL RECORDS ACTION
@@ -190,7 +189,7 @@ class WidowsRelationManager extends RelationManager
                     ->label('Medical Records')
                     ->icon('heroicon-m-beaker')
                     ->color('success')
-                    ->modalHeading(fn(Widow $record) => "Prescriptions for {$record->full_name}")
+                    ->modalHeading(fn (Widow $record) => "Prescriptions for {$record->full_name}")
                     ->modalWidth('5xl')
                     ->modalSubmitActionLabel('Save Records')
                     ->schema([
@@ -232,7 +231,7 @@ class WidowsRelationManager extends RelationManager
                                 Hidden::make('user_id')
                                     ->default(auth()->id()),
                             ])
-                            ->itemLabel(fn(array $state): ?string => $state['illness'] ?? null)
+                            ->itemLabel(fn (array $state): ?string => $state['illness'] ?? null)
                             ->collapsible()
                             ->collapsed()
                             ->cloneable()

@@ -3,7 +3,6 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Str;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
@@ -75,7 +74,7 @@ class RolesAndPermissionsSeeder extends Seeder
         // --------------------------------------------------------------
         // Super Admin: Full Access
         // --------------------------------------------------------------
-        $superAdmin = Role::firstOrCreate(['name' => 'super-admin', 'guard_name' => $guard]);
+        $superAdmin = Role::firstOrCreate(['name' => 'super_admin', 'guard_name' => $guard]);
         $superAdmin->syncPermissions(Permission::all());
 
         // --------------------------------------------------------------

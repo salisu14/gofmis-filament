@@ -30,7 +30,7 @@ class OrphanResource extends Resource
 
     protected static function applyZoneScope(Builder $query, string $zoneId): Builder
     {
-        return $query->whereHas('deceased', fn($q) => $q->where('zone_id', $zoneId));
+        return $query->whereHas('deceased', fn ($q) => $q->where('zone_id', $zoneId));
     }
 
     protected static function getRecordZoneId($record): ?string
@@ -113,6 +113,7 @@ class OrphanResource extends Resource
     {
         return parent::getRecordRouteBindingEloquentQuery()
             ->withoutGlobalScopes([
+                EligibleOrphanScope::class,
                 SoftDeletingScope::class,
             ]);
     }

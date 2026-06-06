@@ -40,7 +40,7 @@ class RoleResource extends Resource
                             ->unique(ignoreRecord: true),
 
                         TextInput::make('guard_name')
-                            ->default('sanctum')
+                            ->default('web')
                             ->required(),
                     ]),
 
@@ -80,7 +80,7 @@ class RoleResource extends Resource
             ->filters([
                 //
             ])
-            ->modifyQueryUsing(fn($query) => $query->withCount('permissions'))
+            ->modifyQueryUsing(fn ($query) => $query->withCount('permissions'))
             ->recordActions([
                 ViewAction::make(),
                 EditAction::make(),
@@ -99,6 +99,34 @@ class RoleResource extends Resource
             'index' => ManageRoles::route('/'),
             'view' => ViewRole::route('/{record}'),
         ];
+    }
+
+    public static function canViewAny(): bool
+    {
+        $user = auth()->user();
+
+        return $user?->can('view_roles') || $user?->can('role_access');
+    }
+
+    public static function canCreate(): bool
+    {
+        $user = auth()->user();
+
+        return $user?->can('create_roles') || $user?->can('role_create');
+    }
+
+    public static function canEdit($record): bool
+    {
+        $user = auth()->user();
+
+        return $user?->can('edit_roles') || $user?->can('role_edit');
+    }
+
+    public static function canDelete($record): bool
+    {
+        $user = auth()->user();
+
+        return $user?->can('delete_roles') || $user?->can('role_delete');
     }
 
     public static function infolist(Schema $schema): Schema

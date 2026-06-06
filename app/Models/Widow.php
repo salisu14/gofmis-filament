@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Storage;
 
 class Widow extends Model
 {
@@ -38,6 +39,15 @@ class Widow extends Model
         'married_at' => 'datetime',
         'skills' => 'array',
     ];
+
+    public function setPictureUrlAttribute($value): void
+    {
+        if (is_array($value)) {
+            $value = reset($value) ?: null;
+        }
+
+        $this->attributes['picture_url'] = $value;
+    }
 
     /**
      * Mark widow as married and revoke eligibility.
@@ -120,7 +130,7 @@ class Widow extends Model
             ->whereIn('status', array_column(\App\Enums\WidowLoanStatus::activeStatuses(), 'value'))
             ->exists();
 
-        return !$hasActiveLoan;
+        return ! $hasActiveLoan;
     }
 
     protected static function booted(): void
@@ -130,14 +140,14 @@ class Widow extends Model
         static::addGlobalScope('zone', function ($query) {
             $user = auth()->user();
 
-            if (!$user || $user->hasAnyRole(['admin', 'super_admin'])) {
+            if (! $user || $user->hasAnyRole(['admin', 'super_admin'])) {
                 return;
             }
 
             // ✅ FIXED: Use coordinatedZone instead of zone_id
             $zoneId = $user->coordinatedZone?->id;
 
-            if (!$zoneId) {
+            if (! $zoneId) {
                 return $query->whereRaw('1 = 0');
             }
 
@@ -150,7 +160,7 @@ class Widow extends Model
             $model->full_name = trim(implode(' ', array_filter([
                 $model->first_name,
                 $model->middle_name,
-                $model->last_name
+                $model->last_name,
             ])));
         });
 
@@ -159,9 +169,28 @@ class Widow extends Model
                 $model->full_name = trim(implode(' ', array_filter([
                     $model->first_name,
                     $model->middle_name,
-                    $model->last_name
+                    $model->last_name,
                 ])));
             }
         });
+
+        static::updated(function (Widow $widow) {
+            if ($widow->wasChanged('picture_url')) {
+                static::deleteStoredImage($widow->getOriginal('picture_url'));
+            }
+        });
+
+        static::deleted(function (Widow $widow) {
+            static::deleteStoredImage($widow->picture_url);
+        });
+    }
+
+    protected static function deleteStoredImage(?string $path): void
+    {
+        if (! $path || str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            return;
+        }
+
+        Storage::disk('public')->delete($path);
     }
 }

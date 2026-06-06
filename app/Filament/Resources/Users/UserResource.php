@@ -44,4 +44,32 @@ class UserResource extends Resource
             'edit' => Pages\EditUser::route('/{record}/edit'),
         ];
     }
+
+    public static function canViewAny(): bool
+    {
+        $user = auth()->user();
+
+        return $user?->can('view_users') || $user?->can('user_access');
+    }
+
+    public static function canCreate(): bool
+    {
+        $user = auth()->user();
+
+        return $user?->can('create_users') || $user?->can('user_create');
+    }
+
+    public static function canEdit($record): bool
+    {
+        $user = auth()->user();
+
+        return $user?->can('edit_users') || $user?->can('user_edit');
+    }
+
+    public static function canDelete($record): bool
+    {
+        $user = auth()->user();
+
+        return $user?->can('delete_users') || $user?->can('user_delete');
+    }
 }
