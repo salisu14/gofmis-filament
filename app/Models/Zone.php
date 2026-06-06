@@ -64,6 +64,16 @@ class Zone extends Model
         return $this->belongsTo(User::class, 'coordinator_id');
     }
 
+    public function getCoordinatorNameAttribute(): ?string
+    {
+        return $this->coordinator?->name;
+    }
+
+    public function getCoordinatorPhoneAttribute(): ?string
+    {
+        return $this->coordinator?->phone;
+    }
+
     public function coordinatorHistories(): HasMany
     {
         return $this->hasMany(ZoneCoordinatorHistory::class);

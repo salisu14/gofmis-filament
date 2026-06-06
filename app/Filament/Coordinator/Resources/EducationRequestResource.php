@@ -131,7 +131,7 @@ class EducationRequestResource extends Resource
                     ->schema([
                         Select::make('intervention_type_id')
                             ->label('Education Support Type')
-                            ->options(fn() => \App\Models\InterventionType::where('name', 'like', '%education%')->pluck('name', 'id'))
+                            ->options(fn() => \App\Models\InterventionType::where('name', 'ilike', '%education%')->pluck('name', 'id'))
                             ->required()
                             ->searchable(),
 

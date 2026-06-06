@@ -99,6 +99,13 @@ class IdCardPDFService
     {
         $beneficiary = $idCard->cardable;
 
+        $beneficiary->loadMissing([
+            'deceased.zone.coordinator',
+        ]);
+
+        $zone = $beneficiary->deceased?->zone;
+        $coordinator = $zone?->coordinator;
+
         if (! $beneficiary) {
             throw new \Exception("Beneficiary not found for ID Card: {$idCard->card_number}");
         }
@@ -140,9 +147,12 @@ class IdCardPDFService
             'age' => $isWidow ? null : ($beneficiary->age ?? null),
             'gender' => $gender,
             'address' => Str::limit($beneficiary->address ?? 'N/A', 60),
-            'zone' => $beneficiary->zone?->name ?? 'N/A',
-            'coordinator_name' => $beneficiary->zone?->coordinator_name ?? 'N/A',
-            'coordinator_phone' => $beneficiary->zone?->coordinator_phone ?? 'N/A',
+            'zone' => $zone?->name ?? 'N/A',
+            'coordinator_name' => $coordinator?->name ?? 'N/A',
+            'coordinator_phone' => $coordinator?->phone ?? $coordinator?->phone_number ?? 'N/A',
+//            'zone' => $beneficiary->zone?->name ?? 'N/A',
+//            'coordinator_name' => $beneficiary->zone?->coordinator_name ?? 'N/A',
+//            'coordinator_phone' => $beneficiary->zone?->coordinator_phone ?? 'N/A',
             'foundation_address' => 'Shop No.1, Garko Juma\'at Mosque, Garko Local Government, Kano',
             'issue_date' => $idCard->issued_at?->format('M d, Y') ?? now()->format('M d, Y'),
             'expiry_date' => $idCard->expires_at?->format('M d, Y'),
