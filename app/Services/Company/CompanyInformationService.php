@@ -5,189 +5,224 @@ namespace App\Services\Company;
 use App\Models\CompanyInformation;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
+use Throwable;
 
 class CompanyInformationService
 {
-    private const LOGO_MAX_SIZE_KB = 2048;
+    private const DISK = 'public';
+
+    private const LOGO_MAX_SIZE_KB    = 2048;
     private const FAVICON_MAX_SIZE_KB = 512;
-    private const LOGO_ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/svg+xml', 'image/webp'];
-    private const FAVICON_ALLOWED_TYPES = ['image/x-icon', 'image/png', 'image/svg+xml', 'image/vnd.microsoft.icon'];
+
+    private const LOGO_DIRECTORY    = 'company/logos';
+    private const FAVICON_DIRECTORY = 'company/favicons';
+
+    private const LOGO_ALLOWED_TYPES = [
+        'image/jpeg',
+        'image/png',
+        'image/webp',
+        'image/svg+xml',
+    ];
+
+    private const FAVICON_ALLOWED_TYPES = [
+        'image/x-icon',
+        'image/png',
+        'image/svg+xml',
+        'image/vnd.microsoft.icon',
+    ];
 
     /**
-     * Get the singleton company profile.
+     * Defense-in-depth XSS check for uploaded SVGs. For production, install
+     * enshrined/svg-sanitize and use it to rewrite the stored file in place.
      */
+    private const SVG_DANGEROUS_PATTERNS = [
+        '/<script\b/i',
+        '/\bon\w+\s*=/i',
+        '/javascript:/i',
+        '/<foreignObject\b/i',
+        '/<use\b[^>]*\bxlink:href\s*=\s*["\']?\s*data:/i',
+    ];
+
+    public function __construct(
+        private readonly CompanyReportFormatter $formatter,
+    ) {}
+
     public function get(): CompanyInformation
     {
         return CompanyInformation::instance();
     }
 
-    /**
-     * Update company information with file handling.
-     *
-     * @throws ValidationException
-     */
     public function update(array $data): CompanyInformation
     {
-        return DB::transaction(function () use ($data) {
-            $company = CompanyInformation::instance();
-
-            $filesToDelete = [];
-            $updateData = $this->extractFileData($data, $company, $filesToDelete);
-
-            $company->update($updateData);
-
-            $this->deleteFiles($filesToDelete);
-
-            return $company->fresh();
-        });
+        return $this->performUpdate(CompanyInformation::instance(), $data);
     }
 
     /**
-     * Update a specific company record directly.
+     * Backward-compatible entry point for callers that pass a specific record.
+     * Unlike the previous implementation, this now actually updates the passed
+     * CompanyInformation (the old version silently dropped the parameter and
+     * targeted the singleton, which was a bug for any Filament page that
+     * handed in a non-singleton record).
      *
-     * @deprecated Use update() instead. Kept for backward compatibility with Filament pages.
+     * @deprecated Prefer update() unless you have a specific record to target.
      */
     public function updateRecord(CompanyInformation $company, array $data, ?int $businessId = null): CompanyInformation
     {
-        return $this->update($data);
+        return $this->performUpdate($company, $data);
     }
-
-    // ─── Report Formatters ─────────────────────────────────────────
 
     public function reportHeader(): array
     {
-        $company = $this->get();
-
-        return [
-            'name' => $company->display_name,
-            'trading_name' => $company->trading_name,
-            'legal_name' => $company->company_name,
-            'address_lines' => CompanyInformation::addressLines(),
-            'phone' => $company->phone_no,
-            'email' => $company->email,
-            'website' => $company->website,
-            'logo_url' => $company->logo_url,
-            'logo_path' => $company->logo_path,
-            'logo_abs_path' => $this->absolutePath($company->logo_path),
-            'logo_data_uri' => $this->buildDataUri($company->logo_path),
-            'tax_no' => $company->tax_registration_no,
-            'registration_no' => $company->registration_no,
-        ];
+        return $this->formatter->format($this->get());
     }
 
     public function invoiceFooter(): string
     {
-        $company = $this->get();
-
-        $parts = array_filter([
-            $company->display_name,
-            $company->phone_no ? "Tel: {$company->phone_no}" : null,
-            $company->email,
-            $company->tax_registration_no ? "Tax No: {$company->tax_registration_no}" : null,
-        ]);
-
-        return implode(' | ', $parts);
+        return $this->formatter->invoiceFooter($this->get());
     }
 
-    // ─── File Handling ─────────────────────────────────────────────
-
-    private function extractFileData(array $data, CompanyInformation $company, array &$filesToDelete): array
+    private function performUpdate(CompanyInformation $company, array $data): CompanyInformation
     {
-        if (! empty($data['logo']) && $data['logo'] instanceof UploadedFile) {
-            $data['logo_path'] = $this->storeFile(
-                $data['logo'],
-                'company/logos',
+        $changes = $this->extractFileData($data, $company);
+
+        try {
+            $updated = DB::transaction(function () use ($company, $changes) {
+                $company->update($changes->updateData);
+                return $company->fresh();
+            });
+        } catch (Throwable $e) {
+            $this->safeDelete($changes->filesToCleanupOnFailure);
+            throw $e;
+        }
+
+        $this->safeDelete($changes->filesToDelete);
+
+        return $updated;
+    }
+
+    private function extractFileData(array $data, CompanyInformation $company): CompanyFileChanges
+    {
+        $updateData              = $data;
+        $filesToDelete           = [];
+        $filesToCleanupOnFailure = [];
+
+        if ($this->isUploadedFile($updateData, 'logo')) {
+            $newPath = $this->storeImage(
+                $updateData['logo'],
+                self::LOGO_DIRECTORY,
                 self::LOGO_ALLOWED_TYPES,
                 self::LOGO_MAX_SIZE_KB,
                 'logo'
             );
-            $filesToDelete[] = $company->logo_path;
-            unset($data['logo']);
+            $updateData['logo_path'] = $newPath;
+            $filesToCleanupOnFailure[] = $newPath;
+            if ($company->logo_path) {
+                $filesToDelete[] = $company->logo_path;
+            }
+            unset($updateData['logo']);
         }
 
-        if (! empty($data['favicon']) && $data['favicon'] instanceof UploadedFile) {
-            $data['favicon_path'] = $this->storeFile(
-                $data['favicon'],
-                'company/favicons',
+        if ($this->isUploadedFile($updateData, 'favicon')) {
+            $newPath = $this->storeImage(
+                $updateData['favicon'],
+                self::FAVICON_DIRECTORY,
                 self::FAVICON_ALLOWED_TYPES,
                 self::FAVICON_MAX_SIZE_KB,
                 'favicon'
             );
-            $filesToDelete[] = $company->favicon_path;
-            unset($data['favicon']);
+            $updateData['favicon_path'] = $newPath;
+            $filesToCleanupOnFailure[] = $newPath;
+            if ($company->favicon_path) {
+                $filesToDelete[] = $company->favicon_path;
+            }
+            unset($updateData['favicon']);
         }
 
-        if (($data['remove_logo'] ?? false) && $company->logo_path) {
-            $filesToDelete[] = $company->logo_path;
-            $data['logo_path'] = null;
+        foreach (['logo' => 'logo_path', 'favicon' => 'favicon_path'] as $key => $pathField) {
+            if (($updateData["remove_{$key}"] ?? false) && $company->{$pathField}) {
+                $filesToDelete[]         = $company->{$pathField};
+                $updateData[$pathField]  = null;
+            }
+            unset($updateData["remove_{$key}"]);
         }
-        unset($data['remove_logo']);
 
-        if (($data['remove_favicon'] ?? false) && $company->favicon_path) {
-            $filesToDelete[] = $company->favicon_path;
-            $data['favicon_path'] = null;
-        }
-        unset($data['remove_favicon']);
+        $updateData = array_intersect_key(
+            $updateData,
+            array_flip($company->getFillable())
+        );
 
-        return array_intersect_key($data, array_flip((new CompanyInformation)->getFillable()));
+        return new CompanyFileChanges(
+            updateData:              $updateData,
+            filesToDelete:           array_values(array_unique(array_filter($filesToDelete))),
+            filesToCleanupOnFailure: array_values(array_unique(array_filter($filesToCleanupOnFailure))),
+        );
     }
 
-    private function storeFile(
+    private function isUploadedFile(array $data, string $key): bool
+    {
+        return ! empty($data[$key]) && $data[$key] instanceof UploadedFile;
+    }
+
+    private function storeImage(
         UploadedFile $file,
         string $directory,
         array $allowedTypes,
         int $maxSizeKb,
         string $fieldName
     ): string {
-        if (! in_array($file->getMimeType(), $allowedTypes, true)) {
+        $mime = $file->getMimeType();
+
+        if (! in_array($mime, $allowedTypes, true)) {
             throw ValidationException::withMessages([
-                $fieldName => "Invalid file type. Allowed: " . implode(', ', $allowedTypes),
+                $fieldName => 'Invalid file type. Allowed: ' . implode(', ', $allowedTypes) . '.',
             ]);
         }
 
         if ($file->getSize() > $maxSizeKb * 1024) {
             throw ValidationException::withMessages([
-                $fieldName => "File must not exceed {$maxSizeKb}KB.",
+                $fieldName => "File must not exceed {$maxSizeKb} KB.",
             ]);
         }
 
-        return $file->store($directory, 'public');
-    }
-
-    private function deleteFiles(array $paths): void
-    {
-        foreach (array_filter($paths) as $path) {
-            Storage::disk('public')->delete($path);
-        }
-    }
-
-    private function absolutePath(?string $path): ?string
-    {
-        if (blank($path)) {
-            return null;
+        if ($mime === 'image/svg+xml') {
+            $this->assertSafeSvg($file, $fieldName);
         }
 
-        $fullPath = public_path('storage/' . ltrim($path, '/'));
-
-        return is_file($fullPath) ? $fullPath : null;
+        return $file->store($directory, self::DISK);
     }
 
-    private function buildDataUri(?string $path): ?string
+    private function assertSafeSvg(UploadedFile $file, string $fieldName): void
     {
-        $absolutePath = $this->absolutePath($path);
-        if ($absolutePath === null) {
-            return null;
-        }
-
-        $mime = mime_content_type($absolutePath) ?: 'application/octet-stream';
-        $contents = file_get_contents($absolutePath);
-
+        $contents = @file_get_contents($file->getRealPath());
         if ($contents === false) {
-            return null;
+            throw ValidationException::withMessages([
+                $fieldName => 'Could not read uploaded SVG for inspection.',
+            ]);
         }
 
-        return 'data:' . $mime . ';base64,' . base64_encode($contents);
+        foreach (self::SVG_DANGEROUS_PATTERNS as $pattern) {
+            if (preg_match($pattern, $contents)) {
+                throw ValidationException::withMessages([
+                    $fieldName => 'SVG contains potentially dangerous content.',
+                ]);
+            }
+        }
+    }
+
+    private function safeDelete(array $paths): void
+    {
+        foreach (array_unique(array_filter($paths)) as $path) {
+            try {
+                Storage::disk(self::DISK)->delete($path);
+            } catch (Throwable $e) {
+                Log::warning('Failed to delete company asset', [
+                    'path'  => $path,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
     }
 }
