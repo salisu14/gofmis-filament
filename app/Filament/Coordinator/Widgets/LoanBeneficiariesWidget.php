@@ -20,7 +20,7 @@ class LoanBeneficiariesWidget extends BaseWidget
     {
         // ✅ FIXED: Use coordinatedZone instead of zone_id
         $zoneId = auth()->user()?->coordinatedZone?->id;
-        $isAdmin = auth()->user()?->hasRole(['admin', 'super_admin']);
+        $isAdmin = auth()->user()?->hasAnyRole(['admin', 'super_admin']);
 
         return $table
             ->query(

@@ -12,7 +12,7 @@ trait ZoneScoped
 
         $user = auth()->user();
 
-        if (!$user) {
+        if (! $user) {
             return $query;
         }
 
@@ -27,7 +27,7 @@ trait ZoneScoped
         $zoneId = $user->coordinatedZone?->id;
 
         // If coordinator has no zone → block access (or return empty)
-        if (!$zoneId) {
+        if (! $zoneId) {
             return $query->whereRaw('1 = 0'); // safer than abort in query context
         }
 
@@ -38,19 +38,40 @@ trait ZoneScoped
 
     public static function canViewAny(): bool
     {
-        return auth()->user()?->hasAnyRole(['coordinator', 'admin', 'super_admin']) ?? false;
+        $user = auth()->user();
+
+        return $user?->hasAnyRole(['admin', 'super_admin'])
+            || $user?->managesZone();
     }
 
     public static function canCreate(): bool
     {
-        return auth()->user()?->hasAnyRole(['coordinator', 'admin', 'super_admin']) ?? false;
+        $user = auth()->user();
+
+        return $user?->hasAnyRole(['admin', 'super_admin'])
+            || $user?->managesZone();
+    }
+
+    public static function canView($record): bool
+    {
+        $user = auth()->user();
+
+        if (! $user) {
+            return false;
+        }
+
+        if ($user->hasAnyRole(['admin', 'super_admin'])) {
+            return true;
+        }
+
+        return $user->managesZone(static::getRecordZoneId($record));
     }
 
     public static function canEdit($record): bool
     {
         $user = auth()->user();
 
-        if (!$user) return false;
+        if (! $user) return false;
 
         if ($user->hasAnyRole(['admin', 'super_admin'])) {
             return true;
@@ -58,7 +79,7 @@ trait ZoneScoped
 
         $zoneId = $user->coordinatedZone?->id;
 
-        if (!$zoneId) return false;
+        if (! $zoneId) return false;
 
         return static::getRecordZoneId($record) === $zoneId;
     }

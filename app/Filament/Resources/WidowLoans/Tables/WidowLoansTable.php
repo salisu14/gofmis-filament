@@ -65,6 +65,11 @@ class WidowLoansTable
                     ->label('Cleared')
                     ->boolean()
                     ->alignCenter(),
+
+                TextColumn::make('collector.name')
+                    ->label('Collected By')
+                    ->placeholder('Not collected')
+                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
                 SelectFilter::make('status')

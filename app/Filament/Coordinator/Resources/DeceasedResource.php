@@ -65,12 +65,12 @@ class DeceasedResource extends Resource
             return true;
         }
 
-        return $record->zone_id === $user->coordinatedZone?->id;
+        return $user->managesZone($record->zone_id);
     }
 
     public static function canDelete($record): bool
     {
-        return auth()->user()?->hasRole(['admin', 'super_admin']) ?? false;
+        return auth()->user()?->hasAnyRole(['admin', 'super_admin']) ?? false;
     }
 
     /* -------------------------------------------------------------------------

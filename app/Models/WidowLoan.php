@@ -70,6 +70,7 @@ class WidowLoan extends Model
         'status',
         'disbursed_at',
         'collected_at',
+        'collected_by',
         'approval_flow_id',
         'purpose',
         'fully_repaid',
@@ -118,6 +119,11 @@ class WidowLoan extends Model
     public function repaymentBank(): BelongsTo
     {
         return $this->belongsTo(BankAccount::class, 'repayment_bank_id');
+    }
+
+    public function collector(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'collected_by');
     }
 
     public function repayments(): HasMany

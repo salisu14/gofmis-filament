@@ -42,12 +42,16 @@ class HealthcareRequestResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         $zoneId = auth()->user()?->coordinatedZone?->id;
-        $isAdmin = auth()->user()?->hasRole(['admin', 'super_admin']);
+        $isAdmin = auth()->user()?->hasAnyRole(['admin', 'super_admin']);
 
         $query = parent::getEloquentQuery();
 
-        if ($isAdmin || !$zoneId) {
+        if ($isAdmin) {
             return $query;
+        }
+
+        if (! $zoneId) {
+            return $query->whereRaw('1 = 0');
         }
 
         return $query->where(function (Builder $q) use ($zoneId) {
@@ -65,29 +69,47 @@ class HealthcareRequestResource extends Resource
 
     public static function canCreate(): bool
     {
-        return auth()->user()?->hasAnyRole(['coordinator', 'admin', 'super_admin']) ?? false;
+        $user = auth()->user();
+
+        return $user?->hasAnyRole(['admin', 'super_admin'])
+            || $user?->managesZone();
+    }
+
+    public static function canView($record): bool
+    {
+        $user = auth()->user();
+
+        if (! $user) {
+            return false;
+        }
+
+        if ($user->hasAnyRole(['admin', 'super_admin'])) {
+            return true;
+        }
+
+        return $user->managesZone(static::recordZoneId($record));
     }
 
     public static function canEdit($record): bool
     {
         $user = auth()->user();
-        if ($user->hasRole(['admin', 'super_admin'])) return true;
+        if ($user?->hasAnyRole(['admin', 'super_admin'])) return true;
 
-        $zoneId = $user?->coordinatedZone?->id;
-        $recordZoneId = null;
-
-        if ($record->prescribable_type === Orphan::class) {
-            $recordZoneId = $record->prescribable?->deceased?->zone_id;
-        } elseif ($record->prescribable_type === Widow::class) {
-            $recordZoneId = $record->prescribable?->deceased?->zone_id;
-        }
-
-        return $record->created_at->diffInDays(now()) <= 7 && $recordZoneId === $zoneId;
+        return $record->created_at->diffInDays(now()) <= 7 && $user?->managesZone(static::recordZoneId($record));
     }
 
     public static function canDelete($record): bool
     {
-        return auth()->user()?->hasRole(['admin', 'super_admin']) ?? false;
+        return auth()->user()?->hasAnyRole(['admin', 'super_admin']) ?? false;
+    }
+
+    protected static function recordZoneId($record): ?string
+    {
+        if ($record->prescribable_type === Orphan::class || $record->prescribable_type === Widow::class) {
+            return $record->prescribable?->deceased?->zone_id;
+        }
+
+        return null;
     }
 
     public static function form(Schema $schema): Schema

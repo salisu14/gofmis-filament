@@ -16,7 +16,7 @@ class ProjectPolicy
     public function view(User $user, Project $project): bool
     {
         if ($user->hasAnyRole(['admin', 'super_admin'])) return true;
-        return $project->zone_id === $user->zone_id;
+        return $user->managesZone($project->zone_id);
     }
 
     public function create(User $user): bool
@@ -27,7 +27,7 @@ class ProjectPolicy
     public function update(User $user, Project $project): bool
     {
         if ($user->hasAnyRole(['admin', 'super_admin'])) return true;
-        if ($project->zone_id !== $user->zone_id) return false;
+        if (! $user->managesZone($project->zone_id)) return false;
         // Coordinators can only edit planning projects
         return in_array($project->status->value, ['planning']);
     }
@@ -35,6 +35,6 @@ class ProjectPolicy
     public function delete(User $user, Project $project): bool
     {
         if ($user->hasAnyRole(['admin', 'super_admin'])) return true;
-        return $project->zone_id === $user->zone_id && $project->status->value === 'planning';
+        return $user->managesZone($project->zone_id) && $project->status->value === 'planning';
     }
 }

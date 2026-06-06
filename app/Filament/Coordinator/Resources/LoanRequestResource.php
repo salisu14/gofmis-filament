@@ -41,12 +41,16 @@ class LoanRequestResource extends Resource
     {
         // ✅ FIXED: Use coordinatedZone instead of zone_id
         $zoneId = auth()->user()?->coordinatedZone?->id;
-        $isAdmin = auth()->user()?->hasRole(['admin', 'super_admin']);
+        $isAdmin = auth()->user()?->hasAnyRole(['admin', 'super_admin']);
 
         $query = parent::getEloquentQuery();
 
-        if ($isAdmin || !$zoneId) {
+        if ($isAdmin) {
             return $query;
+        }
+
+        if (! $zoneId) {
+            return $query->whereRaw('1 = 0');
         }
 
         return $query->whereHas('widow', fn(Builder $q) => $q->whereHas('deceased', fn($q2) =>
@@ -56,25 +60,43 @@ class LoanRequestResource extends Resource
 
     public static function canCreate(): bool
     {
-        return auth()->user()?->hasAnyRole(['coordinator', 'admin', 'super_admin']) ?? false;
+        $user = auth()->user();
+
+        return $user?->hasAnyRole(['admin', 'super_admin'])
+            || $user?->managesZone();
+    }
+
+    public static function canView($record): bool
+    {
+        $user = auth()->user();
+
+        if (! $user) {
+            return false;
+        }
+
+        if ($user->hasAnyRole(['admin', 'super_admin'])) {
+            return true;
+        }
+
+        return $user->managesZone($record->widow?->deceased?->zone_id);
     }
 
     public static function canEdit($record): bool
     {
         $user = auth()->user();
-        if ($user->hasRole(['admin', 'super_admin'])) return true;
+        if ($user?->hasAnyRole(['admin', 'super_admin'])) return true;
 
         // ✅ FIXED: Use coordinatedZone for zone comparison
         $zoneId = $user?->coordinatedZone?->id;
 
         // Coordinators can only edit draft/pending loans they created
         return $record->status === WidowLoanStatus::DRAFT &&
-            $record->widow?->deceased?->zone_id === $zoneId;
+            $user?->managesZone($record->widow?->deceased?->zone_id);
     }
 
     public static function canDelete($record): bool
     {
-        return auth()->user()?->hasRole(['admin', 'super_admin']) ?? false;
+        return auth()->user()?->hasAnyRole(['admin', 'super_admin']) ?? false;
     }
 
     public static function form(Schema $schema): Schema

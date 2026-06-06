@@ -128,10 +128,18 @@ class Project extends Model
     {
         static::addGlobalScope('zone', function ($query) {
             $user = auth()->user();
-            if (!$user || $user->hasAnyRole(['admin', 'super_admin'])) {
+
+            if (! $user || $user->hasAnyRole(['admin', 'super_admin'])) {
                 return;
             }
-            $query->where('zone_id', $user->zone_id);
+
+            $zoneId = $user->coordinatedZone?->id;
+
+            if (! $zoneId) {
+                return $query->whereRaw('1 = 0');
+            }
+
+            $query->where('zone_id', $zoneId);
         });
     }
 }

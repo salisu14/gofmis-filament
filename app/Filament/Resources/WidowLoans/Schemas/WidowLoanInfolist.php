@@ -85,7 +85,7 @@ class WidowLoanInfolist
                     ->description('Fund release timeline and widow confirmation of receipt.')
                     ->icon('heroicon-m-scale')
                     ->schema([
-                        Grid::make(3)->schema([
+                        Grid::make(4)->schema([
                             TextEntry::make('disbursed_at')
                                 ->label('Disbursed On')
                                 ->dateTime()
@@ -96,6 +96,10 @@ class WidowLoanInfolist
                                 ->dateTime()
                                 ->placeholder('Awaiting Collection Confirmation')
                                 ->color(fn ($state) => $state ? 'success' : 'warning'),
+
+                            TextEntry::make('collector.name')
+                                ->label('Marked Collected By')
+                                ->placeholder('Not Yet Collected'),
 
                             IconEntry::make('fully_repaid')
                                 ->label('Settlement Status')

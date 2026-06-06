@@ -16,7 +16,7 @@ class EditHealthcareRequest extends EditRecord
         return [
             Actions\ViewAction::make(),
             Actions\DeleteAction::make()
-                ->visible(fn() => auth()->user()?->hasRole(['admin', 'super_admin'])),
+                ->visible(fn() => auth()->user()?->hasAnyRole(['admin', 'super_admin'])),
         ];
     }
 }

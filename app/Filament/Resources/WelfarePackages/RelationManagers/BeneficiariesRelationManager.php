@@ -25,6 +25,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class BeneficiariesRelationManager extends RelationManager
 {
@@ -39,7 +40,23 @@ class BeneficiariesRelationManager extends RelationManager
         return $schema
             ->schema([
                 Select::make('deceased_id')
-                    ->relationship('deceased', 'name')
+                    ->relationship(
+                        'deceased',
+                        'name',
+                        modifyQueryUsing: function (Builder $query): Builder {
+                            $user = auth()->user();
+
+                            if ($user?->hasAnyRole(['admin', 'super_admin'])) {
+                                return $query;
+                            }
+
+                            $zoneId = $user?->coordinatedZone?->id;
+
+                            return $zoneId
+                                ? $query->where('zone_id', $zoneId)
+                                : $query->whereRaw('1 = 0');
+                        }
+                    )
                     ->searchable()
                     ->preload()
                     ->required()
@@ -108,7 +125,7 @@ class BeneficiariesRelationManager extends RelationManager
             ->headerActions([
                 CreateAction::make()
                     ->label('Suggest Beneficiary')
-                    ->visible(fn() => $this->getOwnerRecord()->isOpen())
+                    ->visible(fn() => $this->getOwnerRecord()->isOpen() && auth()->user()?->can('suggest', WelfareBeneficiary::class))
                     ->mutateDataUsing(function (array $data) {
                         $data['suggested_by'] = auth()->id();
                         $data['status'] = BeneficiaryStatus::PENDING;
@@ -124,7 +141,7 @@ class BeneficiariesRelationManager extends RelationManager
                         ->icon('heroicon-o-check-circle')
                         ->color('success')
                         ->requiresConfirmation()
-                        ->visible(fn(WelfareBeneficiary $record): bool => $record->canBeApproved())
+                        ->visible(fn(WelfareBeneficiary $record): bool => auth()->user()?->can('approve', $record) ?? false)
                         ->action(function (WelfareBeneficiary $record) {
                             app(BeneficiaryService::class)->approveBeneficiary($record);
                         }),
@@ -137,7 +154,7 @@ class BeneficiariesRelationManager extends RelationManager
                                 ->required()
                                 ->label('Rejection Reason'),
                         ])
-                        ->visible(fn(WelfareBeneficiary $record): bool => $record->canBeRejected())
+                        ->visible(fn(WelfareBeneficiary $record): bool => auth()->user()?->can('reject', $record) ?? false)
                         ->action(function (WelfareBeneficiary $record, array $data) {
                             app(BeneficiaryService::class)->rejectBeneficiary($record, $data['reason']);
                         }),
@@ -151,7 +168,7 @@ class BeneficiariesRelationManager extends RelationManager
                             Textarea::make('notes')
                                 ->label('Collection Notes'),
                         ])
-                        ->visible(fn(WelfareBeneficiary $record): bool => $record->canBeCollected())
+                        ->visible(fn(WelfareBeneficiary $record): bool => auth()->user()?->can('collect', $record) ?? false)
                         ->action(function (WelfareBeneficiary $record, array $data) {
                             app(BeneficiaryService::class)->collectPackage(
                                 $record,
@@ -160,10 +177,10 @@ class BeneficiariesRelationManager extends RelationManager
                         }),
 
                     EditAction::make()
-                        ->visible(fn(WelfareBeneficiary $record): bool => $record->isPending()),
+                        ->visible(fn(WelfareBeneficiary $record): bool => auth()->user()?->can('view', $record) && $record->isPending()),
 
                     DeleteAction::make()
-                        ->visible(fn(WelfareBeneficiary $record): bool => $record->isPending()),
+                        ->visible(fn(WelfareBeneficiary $record): bool => auth()->user()?->can('delete', $record) ?? false),
                 ]),
             ])
             ->toolbarActions([
@@ -172,6 +189,7 @@ class BeneficiariesRelationManager extends RelationManager
                         ->icon('heroicon-o-check-circle')
                         ->color('success')
                         ->requiresConfirmation()
+                        ->visible(fn (): bool => auth()->user()?->hasAnyRole(['admin', 'super_admin']) ?? false)
                         ->action(function ($records) {
                             app(BeneficiaryService::class)->bulkApprove($records->pluck('id')->toArray());
                         }),
@@ -180,6 +198,7 @@ class BeneficiariesRelationManager extends RelationManager
                         ->icon('heroicon-o-check-badge')
                         ->color('primary')
                         ->requiresConfirmation()
+                        ->visible(fn (): bool => auth()->user()?->hasAnyRole(['admin', 'super_admin']) ?? false)
                         ->action(function ($records) {
                             app(BeneficiaryService::class)->bulkCollect($records->pluck('id')->toArray());
                         }),

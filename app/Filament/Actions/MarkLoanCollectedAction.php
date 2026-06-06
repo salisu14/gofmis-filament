@@ -24,7 +24,7 @@ class MarkLoanCollectedAction
             ->modalSubmitActionLabel('Confirm Collection')
             ->action(function (WidowLoan $record): void {
                 try {
-                    app(WidowLoanService::class)->collectLoan($record);
+                    app(WidowLoanService::class)->collectLoan($record, auth()->id());
 
                     Notification::make()
                         ->success()
@@ -41,7 +41,8 @@ class MarkLoanCollectedAction
             })
             ->visible(fn (WidowLoan $record) =>
                 $record->canCollect() &&
-                auth()->user()->can('collect_widow_loans')
+                auth()->user()?->can('collect_widow_loans') &&
+                (auth()->user()?->hasAnyRole(['admin', 'super_admin']) || auth()->user()?->managesZone($record->widow?->deceased?->zone_id))
             );
     }
 }

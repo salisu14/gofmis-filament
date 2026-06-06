@@ -151,7 +151,7 @@ class WidowLoanService
      *
      * @throws \RuntimeException|\Throwable
      */
-    public function collectLoan(WidowLoan $loan): void
+    public function collectLoan(WidowLoan $loan, ?string $collectedBy = null): void
     {
         if (! $loan->canCollect()) {
             throw new \RuntimeException(
@@ -160,7 +160,10 @@ class WidowLoanService
         }
 
         // Only set the timestamp — status stays DISBURSED
-        $loan->update(['collected_at' => now()]);
+        $loan->update([
+            'collected_at' => now(),
+            'collected_by' => $collectedBy ?? auth()->id(),
+        ]);
     }
 
     /**

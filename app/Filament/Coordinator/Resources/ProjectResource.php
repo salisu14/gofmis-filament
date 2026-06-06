@@ -37,14 +37,12 @@ class ProjectResource extends Resource
 
     protected static function applyZoneScope(Builder $query, string $zoneId): Builder
     {
-        return $query->whereHas('deceased', function ($q) use ($zoneId) {
-            $q->where('zone_id', $zoneId);
-        });
+        return $query->where('zone_id', $zoneId);
     }
 
     protected static function getRecordZoneId($record): ?string
     {
-        return $record->deceased?->zone_id;
+        return $record->zone_id;
     }
 
     public static function canCreate(): bool
@@ -62,12 +60,12 @@ class ProjectResource extends Resource
             return true;
         }
 
-        return $record->deceased?->zone_id === $user->coordinatedZone?->id;
+        return $user->managesZone($record->zone_id);
     }
 
     public static function canDelete($record): bool
     {
-        return auth()->user()?->hasRole(['admin', 'super_admin']) ?? false;
+        return auth()->user()?->hasAnyRole(['admin', 'super_admin']) ?? false;
     }
 
     public static function form(Schema $schema): Schema

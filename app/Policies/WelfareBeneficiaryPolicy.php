@@ -12,23 +12,23 @@ class WelfareBeneficiaryPolicy
 
     public function viewAny(User $user): bool
     {
-        return $user->hasRole(['super_admin', 'admin', 'coordinator']);
+        return $user->hasAnyRole(['super_admin', 'admin']) || $user->managesZone();
     }
 
     public function view(User $user, WelfareBeneficiary $beneficiary): bool
     {
-        return $user->hasRole(['super_admin', 'admin']) ||
-            ($user->hasRole('coordinator') && $beneficiary->suggested_by === $user->id);
+        return $user->hasAnyRole(['super_admin', 'admin']) ||
+            ($user->managesZone($beneficiary->deceased?->zone_id) && $beneficiary->suggested_by === $user->id);
     }
 
     public function create(User $user): bool
     {
-        return $user->hasRole(['super_admin', 'admin', 'coordinator']);
+        return $user->hasAnyRole(['super_admin', 'admin']) || $user->managesZone();
     }
 
     public function suggest(User $user): bool
     {
-        return $user->hasRole('coordinator');
+        return $user->managesZone();
     }
 
     public function approve(User $user, WelfareBeneficiary $beneficiary): bool
