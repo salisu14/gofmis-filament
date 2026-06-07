@@ -2,12 +2,15 @@
 
 namespace App\Filament\Resources\Illnesses\Tables;
 
+use App\Enums\IllnessCategory;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ForceDeleteBulkAction;
 use Filament\Actions\RestoreBulkAction;
+use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 
@@ -18,29 +21,66 @@ class IllnessesTable
         return $table
             ->columns([
                 TextColumn::make('id')
-                    ->label('ID'),
+                    ->label('UUID')
+                    ->limit(8) // Prevents long UUID from breaking layout
+                    ->tooltip(fn ($record) => $record->id) // Shows full UUID on hover
+                    ->copyable() // Click to copy full UUID
+                    ->copyMessage('UUID copied!')
+                    ->toggleable(isToggledHiddenByDefault: true), // Hidden by default
+
                 TextColumn::make('name')
-                    ->searchable(),
+                    ->label('Illness Name')
+                    ->searchable()
+                    ->sortable()
+                    ->weight('bold'),
+
                 TextColumn::make('category')
+                    ->label('Category')
                     ->badge()
-                    ->searchable(),
-                TextColumn::make('updated_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('deleted_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->searchable()
+                    ->sortable(),
+
+                TextColumn::make('description')
+                    ->label('Description')
+                    ->limit(40)
+                    ->wrap()
+                    ->toggleable()
+                    ->placeholder('—'),
+
+                TextColumn::make('prescriptions_count')
+                    ->label('Prescriptions')
+                    ->counts('prescriptions')
+                    ->badge()
+                    ->color('info')
+                    ->sortable(),
+
                 TextColumn::make('created_at')
-                    ->dateTime()
+                    ->label('Created')
+                    ->dateTime('d/m/Y H:i')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+
+                TextColumn::make('updated_at')
+                    ->label('Updated')
+                    ->dateTime('d/m/Y H:i')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+
+                TextColumn::make('deleted_at')
+                    ->label('Deleted')
+                    ->dateTime('d/m/Y H:i')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
                 TrashedFilter::make(),
+
+                SelectFilter::make('category')
+                    ->label('Category')
+                    ->options(IllnessCategory::class),
             ])
             ->recordActions([
+                ViewAction::make(),
                 EditAction::make(),
             ])
             ->toolbarActions([
@@ -49,6 +89,7 @@ class IllnessesTable
                     ForceDeleteBulkAction::make(),
                     RestoreBulkAction::make(),
                 ]),
-            ]);
+            ])
+            ->defaultSort('name', 'asc');
     }
 }
