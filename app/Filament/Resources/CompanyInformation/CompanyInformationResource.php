@@ -23,18 +23,24 @@ class CompanyInformationResource extends Resource
     protected static string|BackedEnum|null $navigationIcon = Heroicon::BuildingOffice2;
 
     protected static ?string $recordTitleAttribute = 'company_name';
-
     protected static ?string $navigationLabel = 'Company Information';
 
     protected static string|null|\UnitEnum $navigationGroup = 'Settings';
 
     protected static ?int $navigationSort = 1;
 
-    public static function canDelete($model): bool
+    public static function canDelete($record): bool
     {
         return false;
     }
-
+    public static function canCreate(): bool
+    {
+        return false; // singleton — no creation
+    }
+    public static function canDeleteAny(): bool
+    {
+        return false;
+    }
     public static function form(Schema $schema): Schema
     {
         return CompanyInformationForm::configure($schema);

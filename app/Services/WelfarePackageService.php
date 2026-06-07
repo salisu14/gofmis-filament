@@ -97,8 +97,13 @@ class WelfarePackageService
     {
         return DB::transaction(function () use ($package, $newName, $newStartDate, $newEndDate) {
             $newPackage = $package->replicate([
+                'id',
                 'approved_by',
                 'approved_at',
+                'created_at',
+                'updated_at',
+                'deleted_at',
+                'beneficiaries_count',
             ]);
 
             $newPackage->fill([

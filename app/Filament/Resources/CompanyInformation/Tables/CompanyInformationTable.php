@@ -49,13 +49,13 @@ class CompanyInformationTable
                 //
             ])
             ->recordActions([
-                Action::make('set_active')
-                    ->label('Set Active')
-                    ->icon('heroicon-m-check-circle')
-                    ->color('success')
-                    ->action(function ($record): void {
-                        session(['active_business_id' => $record->business_id]);
-                    }),
+//                Action::make('set_active')
+//                    ->label('Set Active')
+//                    ->icon('heroicon-m-check-circle')
+//                    ->color('success')
+//                    ->action(function ($record): void {
+//                        session(['active_business_id' => $record->business_id]);
+//                    }),
                 ViewAction::make(),
                 EditAction::make()
                     ->label('Manage'),

@@ -11,8 +11,11 @@ class CreateCompanyInformation extends CreateRecord
 {
     protected static string $resource = CompanyInformationResource::class;
 
+    /**
+     * @throws \Throwable
+     */
     protected function handleRecordCreation(array $data): Model
     {
-        return app(CompanyInformationService::class)->update($data);
+        return app(CompanyInformationService::class)->create($data);
     }
 }

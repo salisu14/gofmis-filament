@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources\WelfarePackages\Schemas;
 
+use App\Models\WelfareBeneficiary;
+use App\Models\WelfarePackage;
 use App\Services\WelfarePackageService;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Section;
@@ -84,11 +86,32 @@ class WelfarePackageInfolist
     {
         static $cache = [];
 
-        if (!isset($cache[$record->id])) {
-            $cache[$record->id] = app(WelfarePackageService::class)
-                ->getPackageStatistics($record);
+        $package = match (true) {
+            $record instanceof WelfarePackage => $record,
+            $record instanceof WelfareBeneficiary => $record->welfarePackage,
+            default => null,
+        };
+
+        if (! $package) {
+            return [];
         }
 
-        return $cache[$record->id];
+        if (! isset($cache[$package->id])) {
+            $cache[$package->id] = app(WelfarePackageService::class)
+                ->getPackageStatistics($package);
+        }
+
+        return $cache[$package->id];
     }
+//    protected static function getStats($record): array
+//    {
+//        static $cache = [];
+//
+//        if (!isset($cache[$record->id])) {
+//            $cache[$record->id] = app(WelfarePackageService::class)
+//                ->getPackageStatistics($record);
+//        }
+//
+//        return $cache[$record->id];
+//    }
 }

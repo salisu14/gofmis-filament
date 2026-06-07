@@ -5,6 +5,7 @@ namespace App\Filament\Resources\WelfarePackages\Tables;
 use App\Enums\WelfarePackageStatus;
 use App\Models\WelfarePackage;
 use App\Services\WelfarePackageService;
+use Carbon\Carbon;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
@@ -122,8 +123,8 @@ class WelfarePackagesTable
                             app(WelfarePackageService::class)->duplicatePackage(
                                 $record,
                                 $data['new_name'],
-                                $data['new_start_date'],
-                                $data['new_end_date']
+                                Carbon::parse($data['new_start_date']),
+                                Carbon::parse($data['new_end_date'])
                             );
                         }),
 

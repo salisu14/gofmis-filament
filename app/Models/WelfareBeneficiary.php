@@ -30,6 +30,7 @@ class WelfareBeneficiary extends Model
     protected $casts = [
         'status' => BeneficiaryStatus::class,
         'collection_status' => CollectionStatus::class,
+        'approved_at' => 'datetime',
         'collected_at' => 'datetime',
     ];
 
@@ -120,20 +121,20 @@ class WelfareBeneficiary extends Model
     {
         return $this->collection_status === CollectionStatus::NOT_COLLECTED;
     }
-
     public function canBeCollected(): bool
     {
-        return $this->isApproved() && $this->isNotCollected();
+        return $this->status === BeneficiaryStatus::APPROVED
+            && $this->collection_status === CollectionStatus::NOT_COLLECTED;
     }
 
     public function canBeApproved(): bool
     {
-        return $this->isPending();
+        return $this->status === BeneficiaryStatus::PENDING;
     }
 
     public function canBeRejected(): bool
     {
-        return $this->isPending();
+        return $this->status === BeneficiaryStatus::PENDING;
     }
 
     public function markAsCollected(?string $notes = null, ?string $collectedBy = null): bool

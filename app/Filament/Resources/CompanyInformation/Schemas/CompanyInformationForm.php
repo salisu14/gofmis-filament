@@ -2,11 +2,13 @@
 
 namespace App\Filament\Resources\CompanyInformation\Schemas;
 
+use App\Services\Company\CompanyInformationService;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
+use Illuminate\Http\UploadedFile;
 
 class CompanyInformationForm
 {
@@ -18,24 +20,12 @@ class CompanyInformationForm
                     ->schema([
                         Grid::make(2)
                             ->schema([
-                                // IMPORTANT: Use logo_path (DB column), not logo
                                 FileUpload::make('logo_path')
-                                    ->label('Company Logo')
-                                    ->image()
-                                    ->imageEditor()
+                                    ->disk('public')
                                     ->directory('company/logos')
-                                    ->maxSize(2048)
-                                    ->visibility('public')
-                                    ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/svg+xml', 'image/webp'])
-                                    ->downloadable()
-                                    ->openable()
-                                    // CRITICAL: Resolve stored path to full URL for preview
-                                    ->getUploadedFileNameForStorageUsing(
-                                        fn ($file): string => (string) str()->uuid() . '.' . $file->getClientOriginalExtension()
-                                    )
-                                    // Ensure the preview loads from the correct URL
-                                    ->previewable(true)
-                                    ->helperText('Max 2MB. JPEG, PNG, SVG, or WebP.'),
+                                    ->saveUploadedFileUsing(function (UploadedFile $file): string {
+                                        return app(CompanyInformationService::class)->storeLogo($file);
+                                    }),
 
                                 FileUpload::make('favicon_path')
                                     ->label('Favicon')

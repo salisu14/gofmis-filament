@@ -34,7 +34,7 @@ class EditCompanyInformation extends EditRecord
 
     protected function handleRecordUpdate(Model $record, array $data): Model
     {
-        return app(CompanyInformationService::class)->updateRecord($record, $data);
+        return app(CompanyInformationService::class)->update($data, $record);
     }
 
     protected function getSavedNotification(): ?Notification
@@ -48,5 +48,10 @@ class EditCompanyInformation extends EditRecord
     protected function getRedirectUrl(): string
     {
         return $this->getResource()::getUrl('edit', ['record' => $this->record->id]);
+    }
+
+    protected function getCreateAnotherFormAction(): ?Action
+    {
+        return null;
     }
 }
