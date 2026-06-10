@@ -74,4 +74,17 @@ class WidowLoanRepayment extends Model
 
         return max(0, $totalPayable - (float) $totalPaidUpToThis);
     }
+
+    protected static function booted(): void
+    {
+        // If a repayment is updated, ensure the parent loan recalculates
+        static::updated(function (WidowLoanRepayment $repayment) {
+            $repayment->widowLoan->refreshBalance();
+        });
+
+        // If a repayment is deleted, ensure the parent loan recalculates
+        static::deleted(function (WidowLoanRepayment $repayment) {
+            $repayment->widowLoan->refreshBalance();
+        });
+    }
 }

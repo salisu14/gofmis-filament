@@ -219,6 +219,11 @@ class AdminPanelProvider extends PanelProvider
                                     ->icon('heroicon-o-square-2-stack')
                                     ->url('/admin/widow-loans')
                                     ->isActiveWhen(fn () => request()->is('admin/widow-loans*')),
+
+                                NavigationItem::make('Loan Repayment')
+                                    ->icon('heroicon-o-currency-dollar')
+                                    ->url('/admin/widow-loan-repayments')
+                                    ->isActiveWhen(fn () => request()->is('admin/widow-loan-repayments*')),
                             ])
                     );
                 }

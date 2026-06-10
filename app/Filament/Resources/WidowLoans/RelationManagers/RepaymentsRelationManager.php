@@ -35,13 +35,25 @@ class RepaymentsRelationManager extends RelationManager
         return $schema
             ->schema([
                 TextInput::make('amount')
+                    ->label('Amount Paid')
+                    ->required()
                     ->numeric()
                     ->prefix('₦')
-                    ->required(),
+                    ->minValue(1)
+                    ->step(0.01)
+                    // 🔒 Lock the amount if we are editing an existing record
+                    ->disabled(fn (string $operation): bool => $operation === 'edit')
+                    ->dehydrated() // Important! Ensures the disabled value is still sent to the server/save action
+                    ->maxValue(fn (callable $get) => WidowLoan::find($get('widow_loan_id'))?->outstanding_balance ?? 999999),
                 DatePicker::make('paid_at')
-                    ->default(now())
+                    ->label('Date Paid')
                     ->required()
-                    ->native(false),
+                    ->default(now())
+                    ->maxDate(now())
+                    ->native(false)
+                    // 🔒 Lock the date if we are editing an existing record
+                    ->disabled(fn (string $operation): bool => $operation === 'edit')
+                    ->dehydrated(),
                 Select::make('bank_account_id')
                     ->label('Receiving Bank Account')
                     ->options(
@@ -142,10 +154,39 @@ class RepaymentsRelationManager extends RelationManager
                     ->label('Download PDF')
                     ->icon('heroicon-m-document-arrow-down')
                     ->color('success')
-                    // Generate the URL using the route name and pass the record's ID
-                    ->url(fn (WidowLoanRepayment $record) => route('repayments.receipt.download', $record))
-                    // Open the URL in a new tab so the user stays on the Filament table page
+                    ->url(fn(WidowLoanRepayment $record) => route('repayments.receipt.download', $record))
                     ->openUrlInNewTab(),
+
+                // ✅ NEW: Edit Action with chronological safeguard
+                \Filament\Actions\EditAction::make()
+                    ->disabled(fn(WidowLoanRepayment $record): bool =>
+                        // Disable if ANY repayment exists on this loan that was paid AFTER this one
+                    $record->widowLoan->repayments()
+                        ->where(function ($q) use ($record) {
+                            $q->where('paid_at', '>', $record->paid_at)
+                                ->orWhere(function ($q2) use ($record) {
+                                    // Also check created_at if multiple payments happen on the exact same day
+                                    $q2->where('paid_at', $record->paid_at)
+                                        ->where('created_at', '>', $record->created_at);
+                                });
+                        })
+                        ->exists()
+                    )
+                    ->tooltip(function (\Filament\Actions\EditAction $action, WidowLoanRepayment $record) {
+                        if ($record->widowLoan->repayments()
+                            ->where(function ($q) use ($record) {
+                                $q->where('paid_at', '>', $record->paid_at)
+                                    ->orWhere(function ($q2) use ($record) {
+                                        $q2->where('paid_at', $record->paid_at)
+                                            ->where('created_at', '>', $record->created_at);
+                                    });
+                            })
+                            ->exists()
+                        ) {
+                            return 'Cannot edit: A subsequent repayment has been recorded.';
+                        }
+                        return $action->getLabel();
+                    }),
             ]);
     }
 }
