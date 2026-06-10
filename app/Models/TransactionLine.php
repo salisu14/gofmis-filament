@@ -30,9 +30,4 @@ class TransactionLine extends Model
     {
         return $this->belongsTo(Transaction::class);
     }
-
-    public function account(): BelongsTo
-    {
-        return $this->belongsTo(ChartOfAccount::class, 'account_id');
-    }
 }

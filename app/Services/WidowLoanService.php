@@ -136,6 +136,7 @@ class WidowLoanService
                 'type' => 'loan_disbursement',
                 'amount' => $loan->principal_amount,
                 'description' => "Loan disbursement for widow: {$loan->widow->full_name}",
+                'is_system' => true,
             ]);
 
             // Generate repayment schedule anchored to the actual disbursement date.
@@ -227,6 +228,7 @@ class WidowLoanService
                 'type' => 'loan_repayment',
                 'amount' => $data->amount,
                 'description' => "Repayment for widow loan: {$loan->widow->full_name}",
+                'is_system' => true,
             ]);
 
             $repayment->update(['transaction_id' => $transaction->id]);

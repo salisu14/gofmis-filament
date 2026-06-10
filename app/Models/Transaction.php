@@ -20,11 +20,19 @@ class Transaction extends Model
         'amount',
         'type',
         'date',
+        'is_system',
     ];
 
     protected $casts = [
         'date' => 'datetime',
     ];
+
+    // In app/Models/Transaction.php
+
+    public function bankAccount(): BelongsTo
+    {
+        return $this->belongsTo(BankAccount::class);
+    }
 
     public function transactionable(): MorphTo
     {
@@ -34,5 +42,30 @@ class Transaction extends Model
     public function transactionLines(): HasMany
     {
         return $this->hasMany(TransactionLine::class);
+    }
+
+    protected static function booted(): void
+    {
+        // When a manual transaction is created, credit or debit the bank
+        static::created(function (Transaction $transaction) {
+            if ($transaction->bankAccount) {
+                if (in_array($transaction->type, ['deposit', 'loan_repayment'])) {
+                    $transaction->bankAccount->credit((float) $transaction->amount);
+                } else {
+                    $transaction->bankAccount->debit((float) $transaction->amount);
+                }
+            }
+        });
+
+        // If a manual transaction is deleted, reverse it
+        static::deleted(function (Transaction $transaction) {
+            if ($transaction->bankAccount) {
+                if (in_array($transaction->type, ['deposit', 'loan_repayment'])) {
+                    $transaction->bankAccount->debit((float) $transaction->amount);
+                } else {
+                    $transaction->bankAccount->credit((float) $transaction->amount);
+                }
+            }
+        });
     }
 }

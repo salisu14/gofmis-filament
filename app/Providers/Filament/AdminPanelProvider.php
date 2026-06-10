@@ -64,6 +64,24 @@ class AdminPanelProvider extends PanelProvider
                             ->isActiveWhen(fn () => request()->is('admin')),
                     ]);
 
+                // Finance (admin + super-admin)
+                if ($user?->can('view_finances')) {
+                    $builder = $builder->group(
+                        NavigationGroup::make('Finance')
+                            ->items([
+                                NavigationItem::make('Bank Accounts')
+                                    ->icon('heroicon-o-document-currency-dollar')
+                                    ->url('/admin/bank-accounts')
+                                    ->isActiveWhen(fn () => request()->is('admin/bank-accounts*')),
+
+                                NavigationItem::make('Transactions')
+                                    ->icon('heroicon-o-document-text')
+                                    ->url('/admin/transactions')
+                                    ->isActiveWhen(fn () => request()->is('admin/transactions*')),
+                            ])
+                    );
+                }
+
                 // Deceased Module (admin + super-admin)
                 if ($user?->can('view_deceased')) {
                     $builder = $builder->group(
