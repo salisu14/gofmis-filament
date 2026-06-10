@@ -56,4 +56,22 @@ class WidowLoanRepayment extends Model
     {
         return $this->belongsTo(Transaction::class);
     }
+
+    public function getBalanceAfterAttribute(): float
+    {
+        // Safety check in case relationship isn't loaded
+        if (!$this->widowLoan) {
+            return 0;
+        }
+
+        $totalPayable = (float) $this->widowLoan->total_payable;
+
+        // Sum all repayments made up to and including this one's date/time
+        $totalPaidUpToThis = $this->widowLoan->repayments()
+            ->where('paid_at', '<=', $this->paid_at)
+            ->where('created_at', '<=', $this->created_at)
+            ->sum('amount');
+
+        return max(0, $totalPayable - (float) $totalPaidUpToThis);
+    }
 }

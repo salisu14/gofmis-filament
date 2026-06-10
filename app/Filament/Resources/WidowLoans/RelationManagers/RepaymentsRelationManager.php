@@ -7,11 +7,10 @@ namespace App\Filament\Resources\WidowLoans\RelationManagers;
  ------------------------------*/
 
 use App\Data\Loan\RecordWidowLoanRepaymentData;
-use App\Enums\WidowLoanStatus;
-use App\Services\WidowLoanService;
+use App\Models\BankAccount;
 use App\Models\WidowLoan;
 use App\Models\WidowLoanRepayment;
-use App\Models\BankAccount;
+use App\Services\WidowLoanService;
 use Filament\Actions\Action;
 use Filament\Actions\CreateAction;
 use Filament\Forms\Components\DatePicker;
@@ -49,18 +48,18 @@ class RepaymentsRelationManager extends RelationManager
                         BankAccount::query()
                             ->orderBy('account_name')
                             ->get()
-                            ->mapWithKeys(fn (BankAccount $bank) => [
+                            ->mapWithKeys(fn(BankAccount $bank) => [
                                 $bank->id => "{$bank->account_name} ({$bank->account_number})",
                             ])
                             ->toArray()
                     )
-                    ->default(fn () => $this->ownerRecord?->repayment_bank_id ?? $this->ownerRecord?->bank_account_id)
+                    ->default(fn() => $this->ownerRecord?->repayment_bank_id ?? $this->ownerRecord?->bank_account_id)
                     ->searchable()
                     ->required(),
                 Select::make('payment_method')
                     ->options([
-                        'cash'      => 'Cash',
-                        'transfer'  => 'Bank Transfer',
+                        'cash' => 'Cash',
+                        'transfer' => 'Bank Transfer',
                         'deduction' => 'Monthly Deduction',
                     ])
                     ->required(),
@@ -72,11 +71,43 @@ class RepaymentsRelationManager extends RelationManager
     {
         return $table
             ->columns([
-                TextColumn::make('paid_at')->date()->sortable(),
-                TextColumn::make('amount')->money('NGN')->summarize(Sum::make()->money('NGN')),
-                TextColumn::make('bankAccount.account_name')->label('Bank'),
-                TextColumn::make('payment_method')->badge()->color('gray'),
-                TextColumn::make('transaction.reference')->label('Ref')->placeholder('No Transaction'),
+                TextColumn::make('paid_at')
+                    ->date()
+                    ->sortable(),
+                TextColumn::make('amount')
+                    ->money('NGN')
+                    ->summarize(Sum::make()
+                        ->money('NGN')),
+                TextColumn::make('running_balance')
+                    ->label('Balance After Payment')
+                    ->money('NGN')
+                    ->alignEnd()
+                    ->state(function ($record, $livewire) {
+                        // Fallback to principal_amount if total_payable is null
+                        $totalPayable = (float) ($livewire->ownerRecord->total_payable ?? $livewire->ownerRecord->principal_amount);
+
+                        $paidSoFar = $livewire->getTableRecords()
+                            ->filter(function ($row) use ($record) {
+                                if ($row->paid_at < $record->paid_at) {
+                                    return true;
+                                }
+                                if ($row->paid_at->eq($record->paid_at) && $row->created_at <= $record->created_at) {
+                                    return true;
+                                }
+                                return false;
+                            })
+                            ->sum('amount');
+
+                        return max(0, $totalPayable - (float) $paidSoFar);
+                    }),
+                TextColumn::make('bankAccount.account_name')
+                    ->label('Bank'),
+                TextColumn::make('payment_method')
+                    ->badge()
+                    ->color('gray'),
+                TextColumn::make('transaction.reference')
+                    ->label('Ref')
+                    ->placeholder('No Transaction'),
             ])
             ->headerActions([
                 CreateAction::make()
@@ -84,17 +115,17 @@ class RepaymentsRelationManager extends RelationManager
                     ->icon('heroicon-m-banknotes')
                     ->modalWidth('xl')
                     // Guard: only allow repayments on disbursed loans
-                    ->visible(fn () => $this->ownerRecord->canRecordRepayment())
+                    ->visible(fn() => $this->ownerRecord->canRecordRepayment())
                     ->failureNotificationTitle('Failed to record repayment')
                     ->using(function (array $data): WidowLoanRepayment {
                         return app(WidowLoanService::class)->recordRepayment(
                             new RecordWidowLoanRepaymentData(
-                                widowLoanId:   $this->ownerRecord->id,
-                                amount:        (float) $data['amount'],
-                                paidAt:        $data['paid_at'],
+                                widowLoanId: $this->ownerRecord->id,
+                                amount: (float)$data['amount'],
+                                paidAt: $data['paid_at'],
                                 bankAccountId: $data['bank_account_id'] ?? null,
                                 paymentMethod: $data['payment_method'] ?? null,
-                                notes:         $data['notes'] ?? null,
+                                notes: $data['notes'] ?? null,
                             )
                         );
                     })
@@ -108,23 +139,13 @@ class RepaymentsRelationManager extends RelationManager
             ])
             ->recordActions([
                 Action::make('printReceipt')
-                    ->label('Receipt')
-                    ->icon('heroicon-m-printer')
-                    ->color('info')
-                    ->modalHeading('Repayment Receipt')
-                    ->modalContent(fn (WidowLoanRepayment $record) => view('components.loan-receipt', [
-                        'record' => $record,
-                        'widow'  => $record->widowLoan->widow,
-                        'balance' => max(
-                            0,
-                            (float) $record->widowLoan->total_payable
-                            - (float) $record->widowLoan->repayments()
-                                ->where('paid_at', '<=', $record->paid_at)
-                                ->sum('amount')
-                        ),
-                    ]))
-                    ->modalSubmitAction(false)
-                    ->modalCancelActionLabel('Close'),
+                    ->label('Download PDF')
+                    ->icon('heroicon-m-document-arrow-down')
+                    ->color('success')
+                    // Generate the URL using the route name and pass the record's ID
+                    ->url(fn (WidowLoanRepayment $record) => route('repayments.receipt.download', $record))
+                    // Open the URL in a new tab so the user stays on the Filament table page
+                    ->openUrlInNewTab(),
             ]);
     }
 }

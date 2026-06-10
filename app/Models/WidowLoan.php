@@ -206,7 +206,8 @@ class WidowLoan extends Model
     {
         return $this->status === WidowLoanStatus::DISBURSED
             && ! is_null($this->collected_at)
-            && ! $this->fully_repaid;
+            && ! $this->fully_repaid
+            && $this->outstanding_balance > 0; // Added extra safety check
     }
 
     /**
@@ -259,11 +260,14 @@ class WidowLoan extends Model
      */
     public function refreshBalance(): void
     {
-        $totalPaid = $this->repayments()->sum('amount');
-        $outstanding = max(0, $this->total_payable - $totalPaid);
+        // Fallback to principal_amount if total_payable was somehow lost
+        $totalPayable = (float) ($this->total_payable ?? $this->principal_amount);
+        $totalPaid = (float) $this->repayments()->sum('amount');
+        $outstanding = max(0, $totalPayable - $totalPaid);
         $fullyRepaid = $outstanding <= 0;
 
         $updateData = [
+            'total_payable' => $totalPayable, // <-- Re-save it to fix the null data!
             'total_paid' => $totalPaid,
             'outstanding_balance' => $outstanding,
             'fully_repaid' => $fullyRepaid,
@@ -282,25 +286,27 @@ class WidowLoan extends Model
     /**
      * Generate the repayment installment schedule.
      * MUST only be called after disbursed_at is set.
+     * @throws \Throwable
      */
     public function generateLedger(): void
     {
         DB::transaction(function () {
-            // Clear any stale schedule entries
             $this->schedules()->delete();
 
             $isWeekly = $this->repayment_frequency === LoanRepaymentFrequency::WEEKLY;
             $intervalsPerMonth = $isWeekly ? 4 : 1;
             $totalIntervals = $this->duration_months * $intervalsPerMonth;
 
-            // Anchor due dates to the actual disbursement date
             $startDate = $this->disbursed_at ?? now();
 
             if ($totalIntervals <= 0) {
                 throw new \RuntimeException('Loan duration must generate at least one repayment installment.');
             }
 
-            $installmentAmount = round($this->total_payable / $totalIntervals, 2);
+            // Fallback to principal_amount if total_payable is missing
+            $totalPayable = (float) ($this->total_payable ?? $this->principal_amount);
+
+            $installmentAmount = round($totalPayable / $totalIntervals, 2);
             $scheduledTotal = 0;
 
             for ($i = 1; $i <= $totalIntervals; $i++) {
@@ -309,7 +315,7 @@ class WidowLoan extends Model
                     : $startDate->copy()->addMonths($i);
 
                 $amountDue = $i === $totalIntervals
-                    ? round($this->total_payable - $scheduledTotal, 2)
+                    ? round($totalPayable - $scheduledTotal, 2)
                     : $installmentAmount;
 
                 $this->schedules()->create([
@@ -323,7 +329,6 @@ class WidowLoan extends Model
             }
         });
     }
-
     /**
      * Synchronize the is_paid flag on schedule installments
      * based on the running cumulative total_paid.

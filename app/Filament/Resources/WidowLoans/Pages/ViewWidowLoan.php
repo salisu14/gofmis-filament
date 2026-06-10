@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\WidowLoans\Pages;
 
 use App\Filament\Resources\WidowLoans\WidowLoanResource;
+use Filament\Actions\Action;
 use Filament\Actions\EditAction;
 use Filament\Resources\Pages\ViewRecord;
 
@@ -27,6 +28,15 @@ class ViewWidowLoan extends ViewRecord
 
             // 4. Confirm the widow has physically collected the funds
             \App\Filament\Actions\MarkLoanCollectedAction::make(),
+
+
+            Action::make('downloadStatement')
+                ->label('Download Statement')
+                ->icon('heroicon-m-document-text')
+                ->color('info')
+                ->url(fn ($record) => route('loans.statement.download', $record))
+                ->openUrlInNewTab()
+                ->visible(fn ($record) => $record->status !== \App\Enums\WidowLoanStatus::DRAFT),
         ];
     }
 }

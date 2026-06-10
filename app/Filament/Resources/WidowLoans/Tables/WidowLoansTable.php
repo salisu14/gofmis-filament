@@ -5,6 +5,7 @@ namespace App\Filament\Resources\WidowLoans\Tables;
 use App\Enums\WidowLoanStatus;
 use App\Models\WidowLoan;
 use Filament\Actions\Action;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\IconColumn;
@@ -38,15 +39,15 @@ class WidowLoansTable
 
                 TextColumn::make('bankAccount.account_name')
                     ->label('Bank Account')
-                    ->formatStateUsing(fn ($state, WidowLoan $record) => $state
+                    ->formatStateUsing(fn($state, WidowLoan $record) => $state
                         ? "{$record->bankAccount->account_name} ({$record->bankAccount->account_number})"
                         : 'N/A'),
 
                 TextColumn::make('outstanding_balance')
                     ->label('Remaining Balance')
                     ->money('NGN')
-                    ->state(fn (WidowLoan $record) => (float) $record->total_payable - (float) $record->total_paid)
-                    ->color(fn ($state) => $state > 0 ? 'danger' : 'success')
+                    ->state(fn(WidowLoan $record) => (float)$record->total_payable - (float)$record->total_paid)
+                    ->color(fn($state) => $state > 0 ? 'danger' : 'success')
                     ->weight('bold'),
 
                 TextColumn::make('status')
@@ -55,7 +56,7 @@ class WidowLoansTable
 
                 TextColumn::make('repayment_progress')
                     ->label('Repaid')
-                    ->state(fn (WidowLoan $record) => $record->total_payable > 0
+                    ->state(fn(WidowLoan $record) => $record->total_payable > 0
                         ? round(($record->total_paid / $record->total_payable) * 100) . '%'
                         : '0%')
                     ->badge()
@@ -76,26 +77,35 @@ class WidowLoansTable
                     ->options(WidowLoanStatus::class),
             ])
             ->recordActions([
-                // Generate schedule manually (only if APPROVED but schedule not yet created)
-                Action::make('generateSchedule')
-                    ->label('Generate Schedule')
-                    ->icon('heroicon-m-calendar-days')
-                    ->color('warning')
-                    ->requiresConfirmation()
-                    ->visible(fn (WidowLoan $record) =>
-                        $record->status === WidowLoanStatus::DISBURSED &&
-                        $record->schedules()->count() === 0
-                    )
-                    ->action(fn (WidowLoan $record) => $record->generateLedger()),
+                ActionGroup::make([
+                    // Generate schedule manually (only if APPROVED but schedule not yet created)
+                    Action::make('generateSchedule')
+                        ->label('Generate Schedule')
+                        ->icon('heroicon-m-calendar-days')
+                        ->color('warning')
+                        ->requiresConfirmation()
+                        ->visible(fn(WidowLoan $record) => $record->status === WidowLoanStatus::DISBURSED &&
+                            $record->schedules()->count() === 0
+                        )
+                        ->action(fn(WidowLoan $record) => $record->generateLedger()),
 
-                ViewAction::make(),
-                EditAction::make(),
+                    ViewAction::make(),
+                    EditAction::make(),
 
-                // Workflow actions in order
-                \App\Filament\Actions\ApproveWidowLoanAction::make(),
-                \App\Filament\Actions\RejectWidowLoanAction::make(),
-                \App\Filament\Actions\DisburseWidowLoanAction::make(),
-                \App\Filament\Actions\MarkLoanCollectedAction::make(),
+                    Action::make('downloadStatement')
+                        ->label('Download Statement')
+                        ->icon('heroicon-m-document-text')
+                        ->color('info')
+                        ->url(fn($record) => route('loans.statement.download', $record))
+                        ->openUrlInNewTab()
+                        ->visible(fn($record) => $record->status !== \App\Enums\WidowLoanStatus::DRAFT),
+
+                    // Workflow actions in order
+                    \App\Filament\Actions\ApproveWidowLoanAction::make(),
+                    \App\Filament\Actions\RejectWidowLoanAction::make(),
+                    \App\Filament\Actions\DisburseWidowLoanAction::make(),
+                    \App\Filament\Actions\MarkLoanCollectedAction::make(),
+                ])
             ]);
     }
 }

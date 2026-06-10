@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\IdCardController;
 use App\Http\Controllers\IdCardDownloadController;
+use App\Http\Controllers\WidowLoanRepaymentController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -73,3 +74,11 @@ Route::get('/debug-routes', function () {
 
     return response()->json($routes);
 });
+
+
+// Loan Repayment Receipt Download Route
+Route::get('/repayments/{repayment}/receipt', [WidowLoanRepaymentController::class, 'downloadReceipt'])
+    ->name('repayments.receipt.download');
+
+Route::get('/loans/{loan}/statement', [WidowLoanRepaymentController::class, 'downloadStatement'])
+    ->name('loans.statement.download');
