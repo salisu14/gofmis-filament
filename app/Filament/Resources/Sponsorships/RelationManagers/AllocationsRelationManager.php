@@ -12,6 +12,7 @@ use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
+use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
@@ -32,38 +33,40 @@ class AllocationsRelationManager extends RelationManager
         return $schema
             ->schema([
                 Section::make('Allocation Details')
-                    ->description('Direct sponsorship funds to specific educational enrollments.')
+                    ->compact() // Reduces internal padding/spacing
+                    ->columns(2)
                     ->schema([
                         Select::make('orphan_education_id')
                             ->label('Education Enrollment')
-                            ->placeholder('Select an enrollment')
                             ->required()
+                            ->searchable()
+                            ->preload()
                             ->options(function (RelationManager $livewire): array {
                                 /** @var Sponsorship $sponsorship */
                                 $sponsorship = $livewire->getOwnerRecord();
 
-                                // Only allow allocations to the sponsored orphan's education records
                                 return OrphanEducation::query()
                                     ->where('orphan_id', $sponsorship->orphan_id)
                                     ->with('institution')
                                     ->get()
                                     ->mapWithKeys(fn($edu) => [
-                                        $edu->id => "{$edu->institution->name} — {$edu->orphanClass->name} (" . ($edu->institution->type->value ?? 'N/A') . ")"
+                                        $edu->id => "{$edu->institution->name} — {$edu->orphanClass->name}"
                                     ])
                                     ->toArray();
-                            })
-                            ->searchable()
-                            ->preload()
-                            ->hint('Only enrollments for this sponsored orphan are shown.'),
+                            }),
 
                         TextInput::make('amount_allocated')
                             ->label('Amount to Allocate')
                             ->required()
                             ->numeric()
                             ->prefix('₦')
-                            ->minValue(1)
-                            ->helperText('The amount deducted from the total commitment for this specific school/period.'),
-                    ])->columns(2),
+                            ->minValue(1),
+
+                        TextEntry::make('info')
+                            ->state('Funds will be applied to the selected enrollment record.')
+                            ->columnSpanFull()
+                            ->extraAttributes(['class' => 'text-sm text-gray-500 italic']),
+                    ]),
             ]);
     }
 
@@ -75,45 +78,66 @@ class AllocationsRelationManager extends RelationManager
                     ->label('Institution')
                     ->searchable()
                     ->sortable()
-                    ->weight('bold'),
+                    ->weight('bold')
+                    ->placeholder('N/A'),
 
                 TextColumn::make('education.level')
                     ->label('Level')
                     ->badge()
-                    ->color('gray'),
+                    ->color('gray')
+                    ->placeholder('N/A'),
 
                 TextColumn::make('amount_allocated')
-                    ->label('Amount')
+                    ->label('Amount Allocated')
                     ->money('NGN')
                     ->sortable()
-                    ->summarize(Sum::make()->money('NGN')->label('Total Allocated')),
+                    ->alignment('right')
+                    ->summarize(
+                        Sum::make()
+                            ->money('NGN')
+                            ->label('Total Allocated')
+                    ),
 
                 TextColumn::make('created_at')
                     ->label('Allocated On')
-                    ->dateTime()
+                    ->dateTime('M j, Y g:i A')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
                 SelectFilter::make('institution')
                     ->relationship('education.institution', 'name')
-                    ->label('Filter by Institution'),
+                    ->label('Filter by Institution')
+                    ->searchable()
+                    ->preload(),
             ])
             ->headerActions([
                 CreateAction::make()
                     ->label('New Allocation')
                     ->icon('heroicon-m-plus')
                     ->modalWidth('2xl')
-                    ->modalHeading('Allocate Funds'),
+                    ->modalHeading('Allocate Funds')
+                    ->modalDescription('Allocate a portion of the sponsorship commitment to a specific educational enrollment.')
+                    ->createAnother(false),
             ])
             ->recordActions([
-                EditAction::make()->modalWidth('2xl'),
-                DeleteAction::make(),
+                EditAction::make()
+                    ->modalWidth('2xl')
+                    ->modalHeading('Edit Allocation'),
+
+                DeleteAction::make()
+                    ->modalHeading('Delete Allocation')
+                    ->modalDescription('Are you sure you want to delete this allocation? The funds will be returned to the sponsorship balance.'),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make(),
-                ]),
-            ]);
+                    DeleteBulkAction::make()
+                        ->modalHeading('Delete Selected Allocations'),
+                ])->label('Bulk Actions'),
+            ])
+            ->emptyStateHeading('No allocations yet')
+            ->emptyStateDescription('Start by allocating funds from this sponsorship to an educational enrollment.')
+            ->emptyStateIcon('heroicon-o-banknotes')
+            ->defaultSort('created_at', 'desc');
     }
 }
