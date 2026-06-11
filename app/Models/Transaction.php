@@ -21,6 +21,8 @@ class Transaction extends Model
         'type',
         'date',
         'is_system',
+        'transactionable_type',
+        'transactionable_id',
     ];
 
     protected $casts = [
@@ -46,26 +48,59 @@ class Transaction extends Model
 
     protected static function booted(): void
     {
-        // When a manual transaction is created, credit or debit the bank
         static::created(function (Transaction $transaction) {
-            if ($transaction->bankAccount) {
-                if (in_array($transaction->type, ['deposit', 'loan_repayment'])) {
-                    $transaction->bankAccount->credit((float) $transaction->amount);
-                } else {
-                    $transaction->bankAccount->debit((float) $transaction->amount);
-                }
+            if (! $transaction->is_system) {
+                $transaction->postToBank();
             }
         });
 
-        // If a manual transaction is deleted, reverse it
+        static::updated(function (Transaction $transaction) {
+            if ($transaction->is_system || ! $transaction->wasChanged(['bank_account_id', 'type', 'amount'])) {
+                return;
+            }
+
+            $transaction->reverseBankPosting(
+                $transaction->getOriginal('bank_account_id'),
+                $transaction->getOriginal('type'),
+                (float) $transaction->getOriginal('amount')
+            );
+
+            $transaction->postToBank();
+        });
+
         static::deleted(function (Transaction $transaction) {
-            if ($transaction->bankAccount) {
-                if (in_array($transaction->type, ['deposit', 'loan_repayment'])) {
-                    $transaction->bankAccount->debit((float) $transaction->amount);
-                } else {
-                    $transaction->bankAccount->credit((float) $transaction->amount);
-                }
+            if (! $transaction->is_system) {
+                $transaction->reverseBankPosting($transaction->bank_account_id, $transaction->type, (float) $transaction->amount);
             }
         });
+    }
+
+    public function isCreditType(?string $type = null): bool
+    {
+        return in_array($type ?? $this->type, ['deposit', 'loan_repayment', 'imprest_replenishment_reversal'], true);
+    }
+
+    public function postToBank(): void
+    {
+        if (! $this->bankAccount) {
+            return;
+        }
+
+        $this->isCreditType()
+            ? $this->bankAccount->credit((float) $this->amount)
+            : $this->bankAccount->debit((float) $this->amount);
+    }
+
+    public function reverseBankPosting(?string $bankAccountId, ?string $type, float $amount): void
+    {
+        $bankAccount = $bankAccountId ? BankAccount::find($bankAccountId) : null;
+
+        if (! $bankAccount) {
+            return;
+        }
+
+        $this->isCreditType($type)
+            ? $bankAccount->debit($amount)
+            : $bankAccount->credit($amount);
     }
 }

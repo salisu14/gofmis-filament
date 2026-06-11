@@ -44,7 +44,7 @@ class RepaymentsRelationManager extends RelationManager
                     // 🔒 Lock the amount if we are editing an existing record
                     ->disabled(fn (string $operation): bool => $operation === 'edit')
                     ->dehydrated() // Important! Ensures the disabled value is still sent to the server/save action
-                    ->maxValue(fn (callable $get) => WidowLoan::find($get('widow_loan_id'))?->outstanding_balance ?? 999999),
+                    ->maxValue(fn () => $this->ownerRecord?->outstanding_balance ?? 999999),
                 DatePicker::make('paid_at')
                     ->label('Date Paid')
                     ->required()

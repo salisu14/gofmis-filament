@@ -30,8 +30,7 @@ class TransactionForm
                                     ->preload()
                                     ->required()
                                     // 🔒 LOCKED: Bank account can never be changed after creation
-                                    ->disabled(fn (string $operation, ?Model $record): bool => $operation === 'edit')
-                                    ->disabled($isSystem)
+                                    ->disabled(fn (string $operation, ?Model $record): bool => $operation === 'edit' || $isSystem($record))
                                     ->dehydrated(),
 
                                 Select::make('type')
@@ -47,8 +46,7 @@ class TransactionForm
                                     ])
                                     ->required()
                                     // 🔒 LOCKED: Type can never be changed after creation
-                                    ->disabled(fn (string $operation, ?Model $record): bool => $operation === 'edit')
-                                    ->disabled($isSystem)
+                                    ->disabled(fn (string $operation, ?Model $record): bool => $operation === 'edit' || $isSystem($record))
                                     ->dehydrated(),
                             ]),
                         Grid::make(2)
@@ -82,11 +80,13 @@ class TransactionForm
                             ->numeric()
                             ->prefix('₦')
                             ->step(0.01)
-                            // 🔒 LOCKED: Amount cannot be changed if it has line items or is system-generated
-//                            ->disabled(fn (string $operation, ?Model $record): bool =>
-//                                $operation === 'edit' && ($record?->transactionable_type !== null || $record?->transactionLines()->exists())
-//                            )
-                            ->disabled($isSystem)
+                            // 🔒 LOCKED: Amount changes must be entered as a new transaction or adjustment.
+                            ->disabled(fn (string $operation, ?Model $record): bool =>
+                                $isSystem($record)
+                                || $operation === 'edit'
+                                || $record?->transactionable_type !== null
+                                || $record?->transactionLines()->exists()
+                            )
                             ->dehydrated(),
 
                         Textarea::make('description')

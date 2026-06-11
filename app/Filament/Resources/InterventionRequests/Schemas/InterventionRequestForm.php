@@ -44,13 +44,16 @@ class InterventionRequestForm
                             Select::make('status')
                                 ->options([
                                     'pending' => 'Pending',
+                                    'under_review' => 'Under Review',
                                     'approved' => 'Approved',
                                     'partially_fulfilled' => 'Partially Fulfilled',
                                     'fulfilled' => 'Fulfilled',
                                     'rejected' => 'Rejected',
                                 ])
                                 ->required()
-                                ->default('pending'),
+                                ->default('pending')
+                                ->disabled()
+                                ->dehydrated(),
                         ]),
                     ]),
 
@@ -60,11 +63,14 @@ class InterventionRequestForm
                     ->schema([
                         Select::make('verification_status')
                             ->options([
-                                'unverified' => 'Unverified',
+                                'pending' => 'Pending',
+                                'in_progress' => 'In Progress',
                                 'verified' => 'Verified',
-                                'flagged' => 'Flagged',
+                                'failed' => 'Failed',
                             ])
-                            ->default('unverified'),
+                            ->default('pending')
+                            ->disabled()
+                            ->dehydrated(),
 
                         Select::make('verified_by')
                             ->relationship('verifier', 'name')

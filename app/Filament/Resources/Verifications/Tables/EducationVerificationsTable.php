@@ -6,6 +6,7 @@ use App\Models\InterventionRequest;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\EditAction;
+use Filament\Forms\Components\Textarea;
 use Filament\Actions\ViewAction;
 use Filament\Notifications\Notification;
 use Filament\Tables\Columns\TextColumn;
@@ -94,12 +95,8 @@ class EducationVerificationsTable
                         ->modalDescription(fn($record) => "Approve education request for {$record->orphan?->full_name} and skip detailed audit?")
                         ->visible(fn($record) => in_array($record->status, ['pending', 'under_review']))
                         ->action(function (InterventionRequest $record) {
-                            $record->update([
-                                'status' => 'approved',
-                                'verification_status' => 'verified',
-                                'verified_by' => auth()->id(),
-                                'verified_at' => now(),
-                            ]);
+                            $record->markVerified(auth()->id());
+                            $record->approveRequest(auth()->id());
 
                             Notification::make()
                                 ->title('Request Approved')
@@ -114,14 +111,15 @@ class EducationVerificationsTable
                         ->color('danger')
                         ->requiresConfirmation()
                         ->modalHeading('Confirm Quick Rejection')
+                        ->schema([
+                            Textarea::make('rejection_reason')
+                                ->label('Reason')
+                                ->required()
+                                ->rows(3),
+                        ])
                         ->visible(fn($record) => in_array($record->status, ['pending', 'under_review']))
-                        ->action(function (InterventionRequest $record) {
-                            $record->update([
-                                'status' => 'rejected',
-                                'verification_status' => 'failed',
-                                'verified_by' => auth()->id(),
-                                'verified_at' => now(),
-                            ]);
+                        ->action(function (InterventionRequest $record, array $data) {
+                            $record->rejectRequest($data['rejection_reason'], auth()->id());
 
                             Notification::make()
                                 ->title('Request Rejected')

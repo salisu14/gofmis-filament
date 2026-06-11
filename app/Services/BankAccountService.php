@@ -11,7 +11,7 @@ class BankAccountService
      */
     public function getTotalSystemBalance(): float
     {
-        return (float) BankAccount::sum('balance');
+        return (float) BankAccount::sum('ledger_balance');
     }
 
     /**

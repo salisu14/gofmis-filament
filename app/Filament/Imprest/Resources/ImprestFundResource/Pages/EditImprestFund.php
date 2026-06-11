@@ -28,6 +28,7 @@ class EditImprestFund extends EditRecord
     {
         // Prevent changing authorized amount without proper workflow
         unset($data['current_balance']);
+        unset($data['bank_account_id']);
         return $data;
     }
 }

@@ -11,6 +11,8 @@ class IdCardDownloadController extends Controller
 {
     public function __invoke(IdCard $idCard, Request $request)
     {
+        $this->authorizeCardAccess($idCard);
+
         // Mark as printed if it's a real download (not just a preview)
         if (! $request->has('preview')) {
             $idCard->markAsPrinted();
@@ -37,5 +39,19 @@ class IdCardDownloadController extends Controller
             'id-card-'.$idCard->card_number.'.pdf',
             ['Content-Type' => 'application/pdf']
         );
+    }
+
+    private function authorizeCardAccess(IdCard $card): void
+    {
+        $user = auth()->user();
+
+        if ($user?->hasAnyRole(['admin', 'super_admin']) || $user?->can('view_id_cards')) {
+            return;
+        }
+
+        $beneficiary = $card->cardable;
+        $zoneId = $beneficiary?->deceased?->zone_id ?? $beneficiary?->zone_id ?? null;
+
+        abort_unless($zoneId && $user?->managesZone($zoneId), 403);
     }
 }

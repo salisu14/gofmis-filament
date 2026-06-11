@@ -2,6 +2,11 @@
 
 namespace App\Filament\Resources\InterventionRequests\Tables;
 
+use App\Filament\Actions\ApproveInterventionRequestAction;
+use App\Filament\Actions\RejectInterventionRequestAction;
+use App\Filament\Actions\StartInterventionRequestReviewAction;
+use App\Models\InterventionRequest;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -42,7 +47,17 @@ class InterventionRequestsTable
                 TextColumn::make('verification_status')
                     ->label('Verified')
                     ->badge()
-                    ->color(fn($state) => $state === 'verified' ? 'success' : 'gray'),
+                    ->color(fn($state) => match ($state) {
+                        'verified' => 'success',
+                        'failed' => 'danger',
+                        'in_progress' => 'info',
+                        default => 'gray',
+                    }),
+
+                TextColumn::make('approver.name')
+                    ->label('Approved By')
+                    ->placeholder('-')
+                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
                 SelectFilter::make('status'),
@@ -51,7 +66,13 @@ class InterventionRequestsTable
                     ->label('Type'),
             ])
             ->recordActions([
-                EditAction::make(),
+                ActionGroup::make([
+                    EditAction::make()
+                        ->visible(fn (InterventionRequest $record): bool => in_array($record->status, ['pending', 'under_review'], true)),
+                    StartInterventionRequestReviewAction::make(),
+                    ApproveInterventionRequestAction::make(),
+                    RejectInterventionRequestAction::make(),
+                ]),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

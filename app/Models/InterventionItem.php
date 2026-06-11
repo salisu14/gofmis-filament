@@ -14,11 +14,14 @@ class InterventionItem extends Model
         'intervention_id',
         'intervention_request_item_id', // Critical for tracking what was fulfilled
         'item_name',
-        'quantity_given'
+        'specification',
+        'quantity',
+        'unit_value',
     ];
 
     protected $casts = [
-        'quantity_given' => 'integer',
+        'quantity' => 'integer',
+        'unit_value' => 'decimal:2',
     ];
 
     public function intervention(): BelongsTo

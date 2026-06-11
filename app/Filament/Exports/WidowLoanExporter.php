@@ -19,6 +19,11 @@ class WidowLoanExporter extends Exporter
                 ->label('ID'),
             ExportColumn::make('widow.id'),
             ExportColumn::make('principal_amount'),
+            ExportColumn::make('original_principal_amount'),
+            ExportColumn::make('amount_adjustment_note'),
+            ExportColumn::make('amountAdjuster.name')
+                ->label('Amount Adjusted By'),
+            ExportColumn::make('amount_adjusted_at'),
             ExportColumn::make('total_payable'),
             ExportColumn::make('total_paid'),
             ExportColumn::make('outstanding_balance'),
@@ -26,6 +31,11 @@ class WidowLoanExporter extends Exporter
             ExportColumn::make('repayment_frequency'),
             ExportColumn::make('status'),
             ExportColumn::make('disbursed_at'),
+            ExportColumn::make('collected_at'),
+            ExportColumn::make('collector.name')
+                ->label('Marked Collected By'),
+            ExportColumn::make('collector_name')
+                ->label('Collector Name'),
             ExportColumn::make('approval_flow_id'),
             ExportColumn::make('purpose'),
             ExportColumn::make('fully_repaid'),

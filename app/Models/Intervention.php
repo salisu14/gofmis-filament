@@ -14,15 +14,21 @@ class Intervention extends Model
     protected $fillable = [
         'intervention_request_id',
         'orphan_id',
-        'date_given',
+        'intervention_type_id',
+        'bank_account_id',
+        'amount',
+        'status',
+        'disbursed_at',
+        'disbursed_by',
         'collected_by',
         'collected_at',
         'notes',
-        'document_url'
+        'support_document_url',
     ];
 
     protected $casts = [
-        'date_given' => 'date',
+        'amount' => 'decimal:2',
+        'disbursed_at' => 'datetime',
         'collected_at' => 'datetime',
     ];
 
@@ -35,6 +41,11 @@ class Intervention extends Model
     public function orphan(): BelongsTo
     {
         return $this->belongsTo(Orphan::class);
+    }
+
+    public function bankAccount(): BelongsTo
+    {
+        return $this->belongsTo(BankAccount::class);
     }
 
     public function items(): HasMany

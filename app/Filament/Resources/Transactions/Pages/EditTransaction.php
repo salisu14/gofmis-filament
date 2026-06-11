@@ -15,7 +15,8 @@ class EditTransaction extends EditRecord
     {
         return [
             ViewAction::make(),
-            DeleteAction::make(),
+            DeleteAction::make()
+                ->visible(fn () => ! $this->record?->is_system),
         ];
     }
 }

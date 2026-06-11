@@ -43,7 +43,7 @@ class EducationVerificationResource extends Resource
 
     public static function canDelete($record): bool
     {
-        return auth()->user()?->hasRole(['admin', 'super_admin']) ?? false;
+        return auth()->user()?->hasAnyRole(['admin', 'super_admin']) ?? false;
     }
 
     public static function canView($record): bool
@@ -57,7 +57,7 @@ class EducationVerificationResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         $query = parent::getEloquentQuery()
-            ->whereHas('type', fn($q) => $q->where('name', 'like', '%education%'));
+            ->education();
 
         if (auth()->user()?->hasRole('education-verifier')) {
             $query->whereIn('status', ['pending', 'under_review']);

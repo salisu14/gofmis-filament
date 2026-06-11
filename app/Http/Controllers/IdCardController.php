@@ -61,6 +61,8 @@ class IdCardController extends Controller
      */
     public function preview(IdCard $card)
     {
+        $this->authorizeCardAccess($card);
+
         $pdf = $this->pdfService->generateSingle($card);
 
         $content = $pdf->output();
@@ -79,6 +81,8 @@ class IdCardController extends Controller
      */
     public function download(IdCard $card)
     {
+        $this->authorizeCardAccess($card);
+
         $card->markAsPrinted();
 
         $pdf = $this->pdfService->generateSingle($card);
@@ -153,6 +157,8 @@ class IdCardController extends Controller
      */
     public function batchStatus(IdCardPrintBatch $batch)
     {
+        $this->authorizeBatchAccess($batch);
+
         return response()->json([
             'data' => $batch,
             'progress_percentage' => $batch->progressPercentage(),
@@ -167,6 +173,8 @@ class IdCardController extends Controller
      */
     public function downloadBatch(IdCardPrintBatch $batch)
     {
+        $this->authorizeBatchAccess($batch);
+
         if ($batch->status !== 'completed') {
             return response()->json([
                 'message' => 'Batch is still processing',
@@ -202,6 +210,8 @@ class IdCardController extends Controller
      */
     public function revoke(Request $request, IdCard $card)
     {
+        $this->authorizeCardAccess($card);
+
         $request->validate([
             'reason' => 'required|string|max:500',
         ]);
@@ -249,5 +259,31 @@ class IdCardController extends Controller
         return $query->where('is_eligible', true)
             ->whereDoesntHave('idCards', fn ($q) => $q->where('status', 'active'))
             ->get();
+    }
+
+    private function authorizeCardAccess(IdCard $card): void
+    {
+        $user = auth()->user();
+
+        if ($user?->hasAnyRole(['admin', 'super_admin']) || $user?->can('view_id_cards')) {
+            return;
+        }
+
+        $beneficiary = $card->cardable;
+        $zoneId = $beneficiary?->deceased?->zone_id ?? $beneficiary?->zone_id ?? null;
+
+        abort_unless($zoneId && $user?->managesZone($zoneId), 403);
+    }
+
+    private function authorizeBatchAccess(IdCardPrintBatch $batch): void
+    {
+        $user = auth()->user();
+
+        abort_unless(
+            $user?->hasAnyRole(['admin', 'super_admin'])
+            || $user?->can('view_id_cards')
+            || $batch->created_by === $user?->id,
+            403
+        );
     }
 }

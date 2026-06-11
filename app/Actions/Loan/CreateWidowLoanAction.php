@@ -5,7 +5,6 @@ namespace App\Actions\Loan;
 use App\Data\Loan\CreateWidowLoanData;
 use App\Enums\WidowLoanStatus;
 use App\Exceptions\InsufficientBankBalanceException;
-use App\Exceptions\InsufficientFundsException;
 use App\Models\BankAccount;
 use App\Models\WidowLoan;
 use Exception;
@@ -14,7 +13,6 @@ class CreateWidowLoanAction
 {
 
     /**
-     * @throws InsufficientFundsException
      * @throws InsufficientBankBalanceException
      */
     public function execute(CreateWidowLoanData $data): WidowLoan
@@ -29,11 +27,6 @@ class CreateWidowLoanAction
         // 2. Check Balance
         if (!$bank->hasSufficientFunds($data->principalAmount)) {
             throw new InsufficientBankBalanceException('Insufficient funds in the selected bank account.');
-        }
-
-        // Using strict float comparison
-        if ($data->principalAmount > $bank->balance) {
-            throw new InsufficientFundsException('Insufficient funds to grant this loan.');
         }
 
         // 2. Create the Loan

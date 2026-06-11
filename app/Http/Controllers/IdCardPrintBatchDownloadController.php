@@ -10,6 +10,15 @@ class IdCardPrintBatchDownloadController extends Controller
 {
     public function __invoke(IdCardPrintBatch $record, Request $request)
     {
+        $user = auth()->user();
+
+        abort_unless(
+            $user?->hasAnyRole(['admin', 'super_admin'])
+            || $user?->can('view_id_cards')
+            || $record->created_by === $user?->id,
+            403
+        );
+
         $disposition = $request->has('preview') ? 'inline' : 'attachment';
 
         if ($record->pdf_path && Storage::disk('public')->exists($record->pdf_path)) {

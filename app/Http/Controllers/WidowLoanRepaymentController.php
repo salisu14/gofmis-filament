@@ -55,6 +55,10 @@ class WidowLoanRepaymentController extends Controller
             abort(403);
         }
 
+        if (! $loan->repayments()->exists()) {
+            abort(403, 'Loan statement cannot be downloaded until repayment has started.');
+        }
+
         // Eager load relationships
         $loan->load(['widow.deceased.zone', 'repayments']);
 

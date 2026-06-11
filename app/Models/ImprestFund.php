@@ -17,6 +17,7 @@ class ImprestFund extends Model
 
     protected $fillable = [
         'custodian_id',
+        'bank_account_id',
         'location',
         'authorized_amount',
         'current_balance',
@@ -34,6 +35,11 @@ class ImprestFund extends Model
     public function custodian(): BelongsTo
     {
         return $this->belongsTo(User::class, 'custodian_id');
+    }
+
+    public function bankAccount(): BelongsTo
+    {
+        return $this->belongsTo(BankAccount::class);
     }
 
     public function transactions(): HasMany

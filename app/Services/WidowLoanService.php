@@ -90,6 +90,89 @@ class WidowLoanService
         }
     }
 
+    public function availableForLoanApproval(WidowLoan $loan): float
+    {
+        $bankAccount = $loan->bankAccount;
+        if (! $bankAccount) {
+            return 0;
+        }
+
+        $reservedForOtherCommitments = max(
+            0,
+            (float) $bankAccount->reserved_balance - (float) $loan->principal_amount
+        );
+
+        return max(0, (float) $bankAccount->ledger_balance - $reservedForOtherCommitments);
+    }
+
+    /**
+     * @throws InsufficientBankBalanceException
+     */
+    public function ensureApprovalFundsAvailable(WidowLoan $loan): void
+    {
+        if (! $loan->bankAccount) {
+            throw new \RuntimeException('A disbursement account must be assigned before approval.');
+        }
+
+        $available = $this->availableForLoanApproval($loan);
+        $required = (float) $loan->principal_amount;
+
+        if ($available < $required) {
+            throw new InsufficientBankBalanceException(
+                'Insufficient funds in the disbursement account. Available: ₦'
+                . number_format($available, 2)
+                . ', Required: ₦'
+                . number_format($required, 2)
+                . '.'
+            );
+        }
+    }
+
+    public function adjustPendingLoanAmount(WidowLoan $loan, float $newAmount, string $note, ?string $adjustedBy = null): void
+    {
+        if (! $loan->isAwaitingApproval()) {
+            throw new \RuntimeException('Only loans awaiting approval can be adjusted.');
+        }
+
+        if (blank(trim($note))) {
+            throw new \RuntimeException('An adjustment note is required when reducing the loan amount.');
+        }
+
+        $currentAmount = (float) $loan->principal_amount;
+
+        if ($newAmount <= 0) {
+            throw new \RuntimeException('Adjusted loan amount must be greater than zero.');
+        }
+
+        if ($newAmount > $currentAmount) {
+            throw new \RuntimeException('The adjusted loan amount cannot exceed the current requested amount.');
+        }
+
+        if ($newAmount > $this->availableForLoanApproval($loan)) {
+            throw new InsufficientBankBalanceException(
+                'Adjusted amount still exceeds available disbursement funds.'
+            );
+        }
+
+        DB::transaction(function () use ($loan, $newAmount, $note, $adjustedBy, $currentAmount) {
+            $difference = $currentAmount - $newAmount;
+
+            if ($difference > 0 && $loan->bankAccount) {
+                $loan->bankAccount->unreserve($difference);
+            }
+
+            $loan->update([
+                'original_principal_amount' => $loan->original_principal_amount ?: $currentAmount,
+                'principal_amount' => $newAmount,
+                'total_payable' => $newAmount,
+                'outstanding_balance' => max(0, $newAmount - (float) $loan->total_paid),
+                'amount_adjustment_note' => $note,
+                'amount_adjusted_by' => $adjustedBy ?? auth()->id(),
+                'amount_adjusted_at' => now(),
+            ]);
+        });
+    }
+
     /**
      * Disburse an approved loan.
      *
@@ -131,6 +214,8 @@ class WidowLoanService
             // Create a disbursement Transaction record
             Transaction::create([
                 'bank_account_id' => $bankAccount->id,
+                'transactionable_type' => WidowLoan::class,
+                'transactionable_id' => $loan->id,
                 'reference' => 'DISB-'.strtoupper(substr($loan->id, 0, 8)),
                 'date' => $disbursedAt,
                 'type' => 'loan_disbursement',
@@ -152,7 +237,7 @@ class WidowLoanService
      *
      * @throws \RuntimeException|\Throwable
      */
-    public function collectLoan(WidowLoan $loan, ?string $collectedBy = null): void
+    public function collectLoan(WidowLoan $loan, ?string $collectedBy = null, ?string $collectorName = null): void
     {
         if (! $loan->canCollect()) {
             throw new \RuntimeException(
@@ -164,6 +249,7 @@ class WidowLoanService
         $loan->update([
             'collected_at' => now(),
             'collected_by' => $collectedBy ?? auth()->id(),
+            'collector_name' => $collectorName,
         ]);
     }
 
@@ -223,6 +309,8 @@ class WidowLoanService
             // Create a transaction record for audit trail
             $transaction = Transaction::create([
                 'bank_account_id' => $bankAccount->id,
+                'transactionable_type' => WidowLoanRepayment::class,
+                'transactionable_id' => $repayment->id,
                 'reference' => 'REP-'.strtoupper(substr($repayment->id, 0, 8)),
                 'date' => $data->paidAt,
                 'type' => 'loan_repayment',

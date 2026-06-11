@@ -7,6 +7,7 @@ use App\Events\LoanFullyRepaid;
 use App\Models\BankAccount;
 use App\Models\Repayment;
 use App\Models\Loan;
+use App\Models\Transaction;
 use Exception;
 use Illuminate\Support\Facades\DB;
 
@@ -50,11 +51,18 @@ class RecordLoanRepaymentAction
                 'user_id' => auth()->id(),
             ]);
 
-            // 6. Update Bank (Assuming default bank account #1)
-            // Ideally, you might want to link this to a specific BankTransaction record for audit
+            // 6. Update Bank through an auditable transaction.
             $bank = BankAccount::first();
             if ($bank) {
-                $bank->increment('balance', $data->amount);
+                Transaction::create([
+                    'bank_account_id' => $bank->id,
+                    'reference' => 'REP-'.strtoupper(substr($repayment->id, 0, 8)),
+                    'date' => now(),
+                    'type' => 'loan_repayment',
+                    'amount' => $data->amount,
+                    'description' => "Repayment for loan {$loan->id}",
+                    'is_system' => false,
+                ]);
             }
 
             // 7. Check if Loan is now Fully Paid

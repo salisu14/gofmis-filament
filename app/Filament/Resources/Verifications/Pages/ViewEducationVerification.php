@@ -7,6 +7,7 @@ use App\Filament\Resources\Verifications\EducationVerificationResource;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
+use Filament\Forms\Components\Textarea;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ViewRecord;
 
@@ -30,11 +31,8 @@ class ViewEducationVerification extends ViewRecord
                 ->modalDescription('Confirm approval of this education request.')
                 ->visible(fn($record) => in_array($record->status, ['pending', 'under_review']))
                 ->action(function ($record) {
-                    $record->update([
-                        'status' => 'approved',
-                        'verification_status' => 'verified',
-                        'verified_by' => auth()->id(),
-                    ]);
+                    $record->markVerified(auth()->id());
+                    $record->approveRequest(auth()->id());
 
                     Notification::make()
                         ->title('Request Approved')
@@ -51,13 +49,15 @@ class ViewEducationVerification extends ViewRecord
                 ->requiresConfirmation()
                 ->modalHeading('Reject Request')
                 ->modalDescription('Confirm rejection of this education request.')
+                ->schema([
+                    Textarea::make('rejection_reason')
+                        ->label('Reason')
+                        ->required()
+                        ->rows(3),
+                ])
                 ->visible(fn($record) => in_array($record->status, ['pending', 'under_review']))
-                ->action(function ($record) {
-                    $record->update([
-                        'status' => 'rejected',
-                        'verification_status' => 'failed',
-                        'verified_by' => auth()->id(),
-                    ]);
+                ->action(function ($record, array $data) {
+                    $record->rejectRequest($data['rejection_reason'], auth()->id());
 
                     Notification::make()
                         ->title('Request Rejected')

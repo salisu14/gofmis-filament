@@ -59,6 +59,12 @@ class WidowLoanInfolist
                                 ->label('Principal')
                                 ->money('NGN'),
 
+                            TextEntry::make('original_principal_amount')
+                                ->label('Original Principal')
+                                ->money('NGN')
+                                ->placeholder('Not adjusted')
+                                ->visible(fn (WidowLoan $record) => filled($record->original_principal_amount)),
+
                             TextEntry::make('total_payable')
                                 ->label('Total Payable')
                                 ->money('NGN'),
@@ -78,6 +84,25 @@ class WidowLoanInfolist
                                 )
                                 ->color(fn ($state) => $state > 0 ? 'danger' : 'success')
                                 ->weight('bold'),
+                        ]),
+
+                        Grid::make(2)->schema([
+                            TextEntry::make('amountAdjuster.name')
+                                ->label('Amount Adjusted By')
+                                ->placeholder('Not adjusted')
+                                ->visible(fn (WidowLoan $record) => filled($record->amount_adjusted_at)),
+
+                            TextEntry::make('amount_adjusted_at')
+                                ->label('Amount Adjusted At')
+                                ->dateTime()
+                                ->placeholder('Not adjusted')
+                                ->visible(fn (WidowLoan $record) => filled($record->amount_adjusted_at)),
+
+                            TextEntry::make('amount_adjustment_note')
+                                ->label('Adjustment Note')
+                                ->placeholder('No adjustment note')
+                                ->columnSpanFull()
+                                ->visible(fn (WidowLoan $record) => filled($record->amount_adjustment_note)),
                         ]),
                     ]),
 
@@ -99,6 +124,10 @@ class WidowLoanInfolist
 
                             TextEntry::make('collector.name')
                                 ->label('Marked Collected By')
+                                ->placeholder('Not Yet Collected'),
+
+                            TextEntry::make('collector_name')
+                                ->label('Collector Name')
                                 ->placeholder('Not Yet Collected'),
 
                             IconEntry::make('fully_repaid')

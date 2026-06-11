@@ -17,7 +17,7 @@ Route::get('/id-cards/{card}/preview', [IdCardController::class, 'preview'])
     ->name('id-cards.preview')
     ->middleware('auth');
 
-// Local debug route: render the card HTML directly (no auth) to isolate preview issues.
+// Local debug route: render the card HTML directly to isolate preview issues.
 if (app()->environment('local')) {
     Route::get('/dev/id-cards/{card}/preview-debug', function (\App\Models\IdCard $card) {
         $beneficiary = $card->cardable;
@@ -56,7 +56,7 @@ if (app()->environment('local')) {
                 ? \Illuminate\Support\Facades\Storage::disk('public')->url($card->qr_code_path)
                 : null,
         ]);
-    });
+    })->middleware('auth');
 }
 Route::get('/id-card-print-batches/{record}/download', \App\Http\Controllers\IdCardPrintBatchDownloadController::class)
     ->name('id-card-print-batches.download')
@@ -66,19 +66,23 @@ Route::get('/verify-id-card/{card}', [IdCardController::class, 'verify'])
     ->name('id-cards.verify')
     ->middleware('signed');
 
-Route::get('/debug-routes', function () {
-    $routes = collect(\Illuminate\Support\Facades\Route::getRoutes())
-        ->filter(fn($r) => str_contains($r->getName() ?? '', 'healthcare'))
-        ->map(fn($r) => $r->getName())
-        ->values();
+if (app()->environment('local')) {
+    Route::get('/debug-routes', function () {
+        $routes = collect(\Illuminate\Support\Facades\Route::getRoutes())
+            ->filter(fn($r) => str_contains($r->getName() ?? '', 'healthcare'))
+            ->map(fn($r) => $r->getName())
+            ->values();
 
-    return response()->json($routes);
-});
+        return response()->json($routes);
+    })->middleware('auth');
+}
 
 
 // Loan Repayment Receipt Download Route
 Route::get('/repayments/{repayment}/receipt', [WidowLoanRepaymentController::class, 'downloadReceipt'])
-    ->name('repayments.receipt.download');
+    ->name('repayments.receipt.download')
+    ->middleware('auth');
 
 Route::get('/loans/{loan}/statement', [WidowLoanRepaymentController::class, 'downloadStatement'])
-    ->name('loans.statement.download');
+    ->name('loans.statement.download')
+    ->middleware('auth');

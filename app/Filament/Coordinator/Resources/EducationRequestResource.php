@@ -41,7 +41,7 @@ class EducationRequestResource extends Resource
         $isAdmin = auth()->user()?->hasAnyRole(['admin', 'super_admin']);
 
         $query = parent::getEloquentQuery()
-            ->whereHas('type', fn($q) => $q->where('name', 'like', '%education%'));
+            ->education();
 
         if ($isAdmin) {
             return $query;
@@ -131,7 +131,9 @@ class EducationRequestResource extends Resource
                     ->schema([
                         Select::make('intervention_type_id')
                             ->label('Education Support Type')
-                            ->options(fn() => \App\Models\InterventionType::where('name', 'ilike', '%education%')->pluck('name', 'id'))
+                            ->options(fn() => \App\Models\InterventionType::query()
+                                ->whereRaw('LOWER(name) LIKE ?', ['%education%'])
+                                ->pluck('name', 'id'))
                             ->required()
                             ->searchable(),
 

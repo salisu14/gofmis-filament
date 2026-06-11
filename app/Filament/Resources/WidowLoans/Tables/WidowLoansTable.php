@@ -68,9 +68,15 @@ class WidowLoansTable
                     ->alignCenter(),
 
                 TextColumn::make('collector.name')
-                    ->label('Collected By')
+                    ->label('Marked Collected By')
                     ->placeholder('Not collected')
                     ->toggleable(isToggledHiddenByDefault: true),
+
+                TextColumn::make('collector_name')
+                    ->label('Collector Name')
+                    ->placeholder('Not collected')
+                    ->searchable()
+                    ->toggleable(),
             ])
             ->filters([
                 SelectFilter::make('status')
@@ -98,7 +104,7 @@ class WidowLoansTable
                         ->color('info')
                         ->url(fn($record) => route('loans.statement.download', $record))
                         ->openUrlInNewTab()
-                        ->visible(fn($record) => $record->status !== \App\Enums\WidowLoanStatus::DRAFT),
+                        ->visible(fn(WidowLoan $record) => $record->repayments()->exists()),
 
                     // Workflow actions in order
                     \App\Filament\Actions\ApproveWidowLoanAction::make(),

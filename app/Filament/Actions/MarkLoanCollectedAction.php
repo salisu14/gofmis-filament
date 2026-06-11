@@ -5,6 +5,7 @@ namespace App\Filament\Actions;
 use App\Models\WidowLoan;
 use App\Services\WidowLoanService;
 use Filament\Actions\Action;
+use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 
 class MarkLoanCollectedAction
@@ -21,10 +22,21 @@ class MarkLoanCollectedAction
                 "Confirm that {$record->widow->full_name} has physically received and collected " .
                 "the disbursed funds of ₦" . number_format($record->principal_amount, 2) . "."
             )
+            ->schema([
+                TextInput::make('collector_name')
+                    ->label('Collector Name')
+                    ->helperText('Enter the name of the person who collected the funds for audit records.')
+                    ->required()
+                    ->maxLength(255),
+            ])
             ->modalSubmitActionLabel('Confirm Collection')
-            ->action(function (WidowLoan $record): void {
+            ->action(function (WidowLoan $record, array $data): void {
                 try {
-                    app(WidowLoanService::class)->collectLoan($record, auth()->id());
+                    app(WidowLoanService::class)->collectLoan(
+                        $record,
+                        auth()->id(),
+                        $data['collector_name'],
+                    );
 
                     Notification::make()
                         ->success()

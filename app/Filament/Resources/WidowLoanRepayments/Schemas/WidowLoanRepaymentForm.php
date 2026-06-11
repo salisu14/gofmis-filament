@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\WidowLoanRepayments\Schemas;
 
 use App\Models\WidowLoan;
+use App\Enums\WidowLoanStatus;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -25,7 +26,12 @@ class WidowLoanRepaymentForm
                             ->relationship(
                                 name: 'widowLoan',
                                 titleAttribute: 'id',
-                                modifyQueryUsing: fn ($query) => $query->with('widow')->whereIn('status', ['disbursed', 'completed']),
+                                modifyQueryUsing: fn ($query) => $query
+                                    ->with('widow')
+                                    ->where('status', WidowLoanStatus::DISBURSED->value)
+                                    ->whereNotNull('collected_at')
+                                    ->where('fully_repaid', false)
+                                    ->where('outstanding_balance', '>', 0),
                             )
                             ->getOptionLabelFromRecordUsing(fn (WidowLoan $record) => "{$record->widow->full_name} — {$record->purpose}")
                             ->searchable(['purpose']) // Allows searching by loan purpose

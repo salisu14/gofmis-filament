@@ -172,11 +172,6 @@ class AdminPanelProvider extends PanelProvider
                                     ->icon('heroicon-o-building-storefront')
                                     ->url('/admin/items')
                                     ->isActiveWhen(fn () => request()->is('admin/items*')),
-
-                                NavigationItem::make('Bank Accounts')
-                                    ->icon('heroicon-o-document-currency-dollar')
-                                    ->url('/admin/bank-accounts')
-                                    ->isActiveWhen(fn () => request()->is('admin/bank-accounts*')),
                             ])
                     );
                 }
@@ -288,7 +283,7 @@ class AdminPanelProvider extends PanelProvider
                 }
 
                 // Education Verification (admin + super-admin + verifier)
-                if ($user?->can('verify_education')) {
+                if ($user?->can('verify_education_interventions')) {
                     $builder = $builder->group(
                         NavigationGroup::make('Education Verification')
                             ->items([

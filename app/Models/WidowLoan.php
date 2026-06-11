@@ -62,6 +62,10 @@ class WidowLoan extends Model
         'disbursement_bank_id',
         'repayment_bank_id',
         'principal_amount',
+        'original_principal_amount',
+        'amount_adjustment_note',
+        'amount_adjusted_by',
+        'amount_adjusted_at',
         'duration_months',
         'repayment_frequency',
         'total_payable',
@@ -71,6 +75,7 @@ class WidowLoan extends Model
         'disbursed_at',
         'collected_at',
         'collected_by',
+        'collector_name',
         'approval_flow_id',
         'purpose',
         'fully_repaid',
@@ -80,11 +85,13 @@ class WidowLoan extends Model
 
     protected $casts = [
         'principal_amount' => 'decimal:2',
+        'original_principal_amount' => 'decimal:2',
         'total_payable' => 'decimal:2',
         'total_paid' => 'decimal:2',
         'outstanding_balance' => 'decimal:2',
         'disbursed_at' => 'datetime',
         'collected_at' => 'datetime',
+        'amount_adjusted_at' => 'datetime',
         'fully_repaid' => 'boolean',
         'status' => WidowLoanStatus::class,
         'repayment_frequency' => LoanRepaymentFrequency::class,
@@ -119,6 +126,11 @@ class WidowLoan extends Model
     public function repaymentBank(): BelongsTo
     {
         return $this->belongsTo(BankAccount::class, 'repayment_bank_id');
+    }
+
+    public function amountAdjuster(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'amount_adjusted_by');
     }
 
     public function collector(): BelongsTo

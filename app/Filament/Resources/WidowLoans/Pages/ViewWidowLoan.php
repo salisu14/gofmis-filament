@@ -36,7 +36,7 @@ class ViewWidowLoan extends ViewRecord
                 ->color('info')
                 ->url(fn ($record) => route('loans.statement.download', $record))
                 ->openUrlInNewTab()
-                ->visible(fn ($record) => $record->status !== \App\Enums\WidowLoanStatus::DRAFT),
+                ->visible(fn ($record) => $record->repayments()->exists()),
         ];
     }
 }

@@ -6,7 +6,9 @@ use App\Data\Imprest\CreateReplenishmentDto;
 use App\Events\Imprest\ReplenishmentApproved;
 use App\Events\Imprest\ReplenishmentProcessed;
 use App\Events\Imprest\ReplenishmentRequested;
+use App\Models\BankAccount;
 use App\Models\ImprestReplenishment;
+use App\Models\Transaction;
 use App\Repositories\Contracts\Imprest\ImprestFundRepositoryInterface;
 use App\Repositories\Contracts\Imprest\ImprestReplenishmentRepositoryInterface;
 use App\Repositories\Contracts\Imprest\ImprestTransactionRepositoryInterface;
@@ -65,10 +67,29 @@ class ImprestReplenishmentService implements ImprestReplenishmentServiceInterfac
             $replenishment = $this->replenishmentRepo->process($replenishmentId);
 
             $fund = $this->fundRepo->findById($replenishment->fund_id);
+            if (! $fund?->bank_account_id) {
+                throw new \RuntimeException('The imprest fund must be linked to a bank account before replenishment can be processed.');
+            }
+
+            $bankAccount = BankAccount::lockForUpdate()->findOrFail($fund->bank_account_id);
+            $bankAccount->debit((float) $replenishment->amount);
+
             $this->fundRepo->updateBalance(
                 $replenishment->fund_id,
                 $fund->authorized_amount
             );
+
+            Transaction::create([
+                'bank_account_id' => $bankAccount->id,
+                'transactionable_type' => ImprestReplenishment::class,
+                'transactionable_id' => $replenishment->id,
+                'reference' => 'IMPR-'.strtoupper(substr($replenishment->id, 0, 8)),
+                'date' => now(),
+                'type' => 'imprest_replenishment',
+                'amount' => $replenishment->amount,
+                'description' => "Imprest replenishment for {$fund->location}",
+                'is_system' => true,
+            ]);
 
             event(new ReplenishmentProcessed($replenishment));
 

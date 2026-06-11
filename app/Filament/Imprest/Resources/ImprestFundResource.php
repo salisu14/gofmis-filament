@@ -69,6 +69,16 @@ class ImprestFundResource extends Resource
                             ->required()
                             ->native(false),
 
+                        Forms\Components\Select::make('bank_account_id')
+                            ->label('Funding Bank Account')
+                            ->relationship('bankAccount', 'account_name')
+                            ->getOptionLabelFromRecordUsing(fn ($record) => "{$record->account_name} ({$record->account_number})")
+                            ->searchable()
+                            ->preload()
+                            ->required()
+                            ->native(false)
+                            ->disabledOn('edit'),
+
                         Forms\Components\TextInput::make('location')
                             ->required()
                             ->maxLength(100)
@@ -121,6 +131,11 @@ class ImprestFundResource extends Resource
                 Tables\Columns\TextColumn::make('custodian.name')
                     ->searchable()
                     ->sortable(),
+
+                Tables\Columns\TextColumn::make('bankAccount.account_name')
+                    ->label('Bank')
+                    ->searchable()
+                    ->toggleable(),
 
                 Tables\Columns\TextColumn::make('authorized_amount')
                     ->money('NGN')
@@ -212,6 +227,10 @@ class ImprestFundResource extends Resource
                         TextEntry::make('custodian.name')
                             ->label('Custodian')
                             ->icon('heroicon-m-user'),
+                        TextEntry::make('bankAccount.account_name')
+                            ->label('Funding Bank')
+                            ->placeholder('Not linked')
+                            ->icon('heroicon-m-building-library'),
                         TextEntry::make('status')
                             ->badge()
                             ->color(fn(string $state): string => match ($state) {
