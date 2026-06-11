@@ -14,6 +14,7 @@ use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Notifications\Notification;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
@@ -97,6 +98,28 @@ class BankAccountsTable
                 ActionGroup::make([
                     EditAction::make(),
 
+                    Action::make('recordDeposit')
+                        ->label('Record Deposit')
+                        ->icon('heroicon-m-arrow-down-circle')
+                        ->color('success')
+                        ->modalHeading('Record External Deposit')
+                        ->schema([
+                            TextInput::make('amount')->required()->numeric()->prefix('₦'),
+                            DatePicker::make('date')->default(now())->required(),
+                            Textarea::make('description')->required()->placeholder('e.g., Cash donation from XYZ'),
+                        ])
+                        ->action(function (BankAccount $record, array $data) {
+                            Transaction::create([
+                                'bank_account_id' => $record->id,
+                                'type' => 'deposit',
+                                'amount' => $data['amount'],
+                                'date' => $data['date'],
+                                'description' => $data['description'],
+                                'reference' => 'DEP-' . strtoupper(substr(md5(now()->timestamp), 0, 8)),
+                                'is_system' => false,
+                            ]);
+                        }),
+
                     // ✅ NEW: Dedicated Transfer Action
                     Action::make('transferFunds')
                         ->label('Transfer Funds')
@@ -167,6 +190,66 @@ class BankAccountsTable
                                 \Filament\Notifications\Notification::make()
                                     ->title('Insufficient Funds')
                                     ->body('The source account does not have enough balance for this transfer.')
+                                    ->danger()
+                                    ->send();
+                            }
+                        }),
+
+                    Action::make('recordWithdrawal')
+                        ->label('Record Withdrawal')
+                        ->icon('heroicon-m-arrow-up-circle')
+                        ->color('danger')
+                        ->modalHeading(fn(BankAccount $record) => "Record Withdrawal from {$record->account_name} (Balance: ₦" . number_format($record->ledger_balance, 2) . ")")
+                        ->requiresConfirmation()
+                        ->schema([
+                            TextInput::make('amount')
+                                ->label('Withdrawal Amount')
+                                ->numeric()
+                                ->prefix('₦')
+                                ->required()
+                                ->minValue(0.01)
+                                ->step(0.01),
+
+                            DatePicker::make('date')
+                                ->label('Withdrawal Date')
+                                ->default(now())
+                                ->required()
+                                ->native(false),
+
+                            TextInput::make('reference')
+                                ->label('Reference / Cheque No.')
+                                ->maxLength(255)
+                                ->placeholder('e.g., CHQ-00345 or leave blank for auto')
+                                ->default('WD-' . strtoupper(substr(md5(now()->timestamp), 0, 8))),
+
+                            Textarea::make('description')
+                                ->label('Reason / Description')
+                                ->placeholder('e.g., Bank charges, Emergency plumbing repair, Stationery')
+                                ->required()
+                                ->columnSpanFull(),
+                        ])
+                        ->action(function (BankAccount $record, array $data) {
+                            try {
+                                Transaction::create([
+                                    'bank_account_id' => $record->id,
+                                    'type' => 'withdrawal',
+                                    'amount' => $data['amount'],
+                                    'date' => $data['date'],
+                                    'reference' => $data['reference'],
+                                    'description' => $data['description'],
+                                    'is_system' => false,
+                                ]);
+
+                                Notification::make()
+                                    ->title('Withdrawal Recorded')
+                                    ->body('₦' . number_format($data['amount'], 2) . ' has been deducted from the account.')
+                                    ->success()
+                                    ->send();
+
+                            } catch (InsufficientBankBalanceException $e) {
+                                Notification::make()
+                                    ->title('Insufficient Funds')
+                                    ->body('This account does not have enough balance to cover this withdrawal.')
                                     ->danger()
                                     ->send();
                             }
