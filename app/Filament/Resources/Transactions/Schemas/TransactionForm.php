@@ -38,7 +38,6 @@ class TransactionForm
                                     ->options([
                                         'deposit' => 'Deposit',
                                         'withdrawal' => 'Withdrawal',
-                                        'transfer' => 'Transfer',
                                         'intervention' => 'Intervention',
                                         'imprest' => 'Imprest',
                                         'loan_disbursement' => 'Loan Disbursement',

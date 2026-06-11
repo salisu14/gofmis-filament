@@ -21,6 +21,11 @@ class TransactionInfolist
                                     ->label('Bank Account')
                                     ->icon('heroicon-o-building-library'),
 
+                                TextEntry::make('destinationBankAccount.account_name')
+                                    ->label('Destination Bank Account')
+                                    ->icon('heroicon-o-building-library')
+                                    ->visible(fn($record) => $record->type === 'transfer'),
+
                                 TextEntry::make('reference')
                                     ->label('Reference No.')
                                     ->badge()
@@ -31,13 +36,13 @@ class TransactionInfolist
                                 TextEntry::make('type')
                                     ->label('Type')
                                     ->badge()
-                                    ->color(fn (string $state): string => match ($state) {
+                                    ->color(fn(string $state): string => match ($state) {
                                         'deposit', 'loan_repayment' => 'success',
                                         'withdrawal', 'loan_disbursement' => 'danger',
                                         'transfer' => 'info',
                                         default => 'gray',
                                     })
-                                    ->formatStateUsing(fn (string $state): string => ucwords(str_replace('_', ' ', $state))),
+                                    ->formatStateUsing(fn(string $state): string => ucwords(str_replace('_', ' ', $state))),
                             ]),
                         Grid::make(3)
                             ->schema([
@@ -67,7 +72,7 @@ class TransactionInfolist
                                 TextEntry::make('id')
                                     ->label('Transaction ID')
                                     ->limit(8)
-                                    ->tooltip(fn ($state) => $state)
+                                    ->tooltip(fn($state) => $state)
                                     ->copyable()
                                     ->icon('heroicon-o-finger-print'),
 

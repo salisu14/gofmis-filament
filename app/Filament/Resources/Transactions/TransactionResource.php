@@ -24,6 +24,11 @@ class TransactionResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'description';
 
+    public static function canCreate(): bool
+    {
+        return false;
+    }
+
     public static function form(Schema $schema): Schema
     {
         return TransactionForm::configure($schema);
@@ -42,7 +47,7 @@ class TransactionResource extends Resource
     public static function getRelations(): array
     {
         return [
-            RelationManagers\TransactionLinesRelationManager::class,
+           // RelationManagers\TransactionLinesRelationManager::class,
         ];
     }
 
@@ -50,9 +55,7 @@ class TransactionResource extends Resource
     {
         return [
             'index' => ListTransactions::route('/'),
-            'create' => CreateTransaction::route('/create'),
             'view' => ViewTransaction::route('/{record}'),
-            'edit' => EditTransaction::route('/{record}/edit'),
         ];
     }
 }

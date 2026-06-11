@@ -55,14 +55,6 @@ class TransactionsTable
             ])
             ->recordActions([
                 ViewAction::make(),
-
-                // Only allow editing if it's a MANUAL entry
-                EditAction::make()
-                    ->visible(fn ($record) => !$record?->is_system),
-
-                // Only allow deleting if it's a MANUAL entry
-                DeleteAction::make()
-                    ->visible(fn ($record) => !$record?->is_system),
             ])
             ->defaultSort('date', 'desc');
     }
