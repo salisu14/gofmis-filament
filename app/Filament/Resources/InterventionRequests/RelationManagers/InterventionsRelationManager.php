@@ -163,49 +163,75 @@ class InterventionsRelationManager extends RelationManager
                         $data['disbursed_by'] = auth()->id();
                         $data['collected_at'] = $data['disbursed_at'] ?? now();
 
+                        $data['intervention_request_id'] = $this->getOwnerRecord()->id;
+
                         return $data;
                     })
-                    ->using(function (array $data): Intervention {
-                        return DB::transaction(function () use ($data): Intervention {
-                            // 1. Debit the Bank Account
-                            $bankAccount = BankAccount::lockForUpdate()->findOrFail($data['bank_account_id']);
-                            $bankAccount->debit((float) $data['amount']);
+                    ->using(function (array $data): ?Intervention {
 
-                            // 2. Extract Repeater Data before creating Intervention
-                            $deliveredItems = Arr::pull($data, 'delivered_items', []);
+                        // ✅ Wrap the entire transaction in a try-catch block
+                        try {
+                            return DB::transaction(function () use ($data): Intervention {
+                                // 1. Debit the Bank Account (This throws InsufficientBankBalanceException if funds are low)
+                                $bankAccount = BankAccount::lockForUpdate()->findOrFail($data['bank_account_id']);
+                                $bankAccount->debit((float) $data['amount']);
 
-                            // 3. Create the Intervention Record
-                            $intervention = Intervention::create($data);
+                                // 2. Extract Repeater Data before creating Intervention
+                                $deliveredItems = Arr::pull($data, 'delivered_items', []);
 
-                            // 4. Create the Transaction Record
-                            Transaction::create([
-                                'bank_account_id' => $bankAccount->id,
-                                'transactionable_type' => Intervention::class,
-                                'transactionable_id' => $intervention->id,
-                                'reference' => 'INTV-'.strtoupper(substr($intervention->id, 0, 8)),
-                                'date' => $data['disbursed_at'] ?? now(),
-                                'type' => 'intervention',
-                                'amount' => $data['amount'],
-                                'description' => "Intervention fulfillment for {$intervention->orphan?->full_name}",
-                                'is_system' => true,
-                            ]);
+                                // 3. Create the Intervention Record
+                                $intervention = Intervention::create($data);
 
-                            // 5. ✅ NEW: Create Intervention Items & Update Fulfilled Quantities
-                            foreach ($deliveredItems as $itemData) {
-                                // Record the specific items handed out
-                                \App\Models\InterventionItem::create([
-                                    'intervention_id' => $intervention->id,
-                                    'intervention_request_item_id' => $itemData['intervention_request_item_id'],
-                                    'quantity' => $itemData['quantity_delivered'],
+                                // 4. Create the Transaction Record
+                                Transaction::create([
+                                    'bank_account_id' => $bankAccount->id,
+                                    'transactionable_type' => Intervention::class,
+                                    'transactionable_id' => $intervention->id,
+                                    'reference' => 'INTV-'.strtoupper(substr($intervention->id, 0, 8)),
+                                    'date' => $data['disbursed_at'] ?? now(),
+                                    'type' => 'intervention',
+                                    'amount' => $data['amount'],
+                                    'description' => "Intervention fulfillment for {$intervention->orphan?->full_name}",
+                                    'is_system' => true,
                                 ]);
 
-                                // Atomically increment the fulfilled count on the parent request item
-                                InterventionRequestItem::where('id', $itemData['intervention_request_item_id'])
-                                    ->increment('quantity_fulfilled', $itemData['quantity_delivered']);
-                            }
+                                // 5. Create Intervention Items & Update Fulfilled Quantities
+                                // 5. Create Intervention Items & Update Fulfilled Quantities
+                                foreach ($deliveredItems as $itemData) {
+                                    // Find the original requested item to inherit its snapshot data
+                                    $requestItem = InterventionRequestItem::find($itemData['intervention_request_item_id']);
 
-                            return $intervention;
-                        });
+                                    if ($requestItem) {
+                                        // Record the specific items handed out (Snapshot pattern)
+                                        \App\Models\InterventionItem::create([
+                                            'intervention_id' => $intervention->id,
+                                            'intervention_request_item_id' => $requestItem->id,
+                                            'item_name' => $requestItem->item_name, // ✅ Inherit the name
+                                            'specification' => $requestItem->specification, // ✅ Inherit the spec
+                                            'quantity' => $itemData['quantity_delivered'], // ✅ Map to the model's 'quantity' column
+                                            // 'item_id' => $requestItem->item_id, // Uncomment if you ran the item_id migration
+                                        ]);
+
+                                        // Atomically increment the fulfilled count on the parent request item
+                                        InterventionRequestItem::where('id', $itemData['intervention_request_item_id'])
+                                            ->increment('quantity_fulfilled', $itemData['quantity_delivered']);
+                                    }
+                                }
+
+                                return $intervention;
+                            });
+
+                        } catch (\App\Exceptions\InsufficientBankBalanceException $e) {
+                            // ✅ Catch the specific exception and show a friendly notification
+                            \Filament\Notifications\Notification::make()
+                                ->title('Insufficient Funds')
+                                ->body('The selected bank account does not have enough available balance to cover this intervention amount.')
+                                ->danger()
+                                ->send();
+
+                            // Return null to halt the Filament action gracefully
+                            return null;
+                        }
                     }),
             ])
             ->recordActions([

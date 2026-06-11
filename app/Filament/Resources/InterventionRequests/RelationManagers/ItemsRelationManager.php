@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\InterventionRequests\RelationManagers;
 
 use App\Filament\Resources\InterventionRequests\InterventionRequestResource;
+use App\Models\Category;
 use App\Models\Item;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\CreateAction;
@@ -37,7 +38,7 @@ class ItemsRelationManager extends RelationManager
                     ->searchable()
                     ->preload()
                     ->required()
-                    // ✅ FIX: Build the options array grouped by Category natively
+                    // Build the options array grouped by Category natively
                     ->options(
                         Item::with('category')->get()
                             ->groupBy(fn ($item) => $item->category?->name ?? 'Uncategorized')
@@ -48,9 +49,9 @@ class ItemsRelationManager extends RelationManager
                         TextInput::make('name')->required()->maxLength(255),
                         Select::make('category_id')
                             ->label('Category')
-                            ->relationship('category', 'name')
+                            // ✅ FIX: Use direct options instead of relationship() to avoid model context crash
+                            ->options(Category::pluck('name', 'id'))
                             ->searchable()
-                            ->preload()
                             ->required(),
                         TextInput::make('description')->maxLength(255),
                     ])
