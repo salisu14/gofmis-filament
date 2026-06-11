@@ -15,6 +15,7 @@ class Sponsorship extends Model
     protected $fillable = [
         'orphan_id',
         'sponsor_id',
+        'sponsor_name',
         'amount_committed',
         'start_date',
         'end_date',
@@ -49,5 +50,14 @@ class Sponsorship extends Model
     public function allocations(): HasMany
     {
         return $this->hasMany(SponsorshipAllocation::class);
+    }
+
+    protected static function booted(): void
+    {
+        static::creating(function (Sponsorship $sponsorship) {
+            if ($sponsorship->sponsor_id && empty($sponsorship->sponsor_name)) {
+                $sponsorship->sponsor_name = Sponsor::find($sponsorship->sponsor_id)?->name;
+            }
+        });
     }
 }
