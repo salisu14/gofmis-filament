@@ -6,6 +6,7 @@ use App\Models\IdCard;
 use App\Models\Orphan;
 use App\Models\Widow;
 use Filament\Actions\Action;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
@@ -96,54 +97,56 @@ class IdCardsTable
                         ->where('status', 'active')),
             ])
             ->recordActions([
-                ViewAction::make(),
-                EditAction::make(),
+                ActionGroup::make([
+                    ViewAction::make(),
+                    EditAction::make(),
 
-                Action::make('preview')
-                    ->label('Preview PDF')
-                    ->icon('heroicon-o-eye')
-                    ->color('info')
-                    ->url(fn(IdCard $record): string => route('filament.admin.resources.id-cards.preview', ['record' => $record])),
+                    Action::make('preview')
+                        ->label('Preview PDF')
+                        ->icon('heroicon-o-eye')
+                        ->color('info')
+                        ->url(fn(IdCard $record): string => route('filament.admin.resources.id-cards.preview', ['record' => $record])),
 
-                Action::make('download')
-                    ->label('Download PDF')
-                    ->icon('heroicon-o-arrow-down-tray')
-                    ->url(fn(IdCard $record) => route(
-                        'id-cards.download',
-                        ['idCard' => $record]
-                    ))
-                    ->openUrlInNewTab(),
+                    Action::make('download')
+                        ->label('Download PDF')
+                        ->icon('heroicon-o-arrow-down-tray')
+                        ->url(fn(IdCard $record) => route(
+                            'id-cards.download',
+                            ['idCard' => $record]
+                        ))
+                        ->openUrlInNewTab(),
 
-                Action::make('regenerate_qr')
-                    ->label('Regenerate QR')
-                    ->icon('heroicon-o-qr-code')
-                    ->color('warning')
-                    ->requiresConfirmation()
-                    ->action(function (IdCard $record) {
-                        $qrService = app(\App\Services\QRCodeService::class);
-                        $newPath = $qrService->generateForCard($record);
-                        $record->update(['qr_code_path' => $newPath]);
-                    })
-                    ->visible(fn(IdCard $record) => $record->status !== 'revoked'),
+                    Action::make('regenerate_qr')
+                        ->label('Regenerate QR')
+                        ->icon('heroicon-o-qr-code')
+                        ->color('warning')
+                        ->requiresConfirmation()
+                        ->action(function (IdCard $record) {
+                            $qrService = app(\App\Services\QRCodeService::class);
+                            $newPath = $qrService->generateForCard($record);
+                            $record->update(['qr_code_path' => $newPath]);
+                        })
+                        ->visible(fn(IdCard $record) => $record->status !== 'revoked'),
 
-                Action::make('revoke')
-                    ->label('Revoke Card')
-                    ->icon('heroicon-o-no-symbol')
-                    ->color('danger')
-                    ->requiresConfirmation()
-                    ->modalHeading('Revoke ID Card')
-                    ->modalDescription('This will permanently invalidate this ID card.')
-                    ->modalSubmitActionLabel('Yes, Revoke')
-                    ->form([
-                        Textarea::make('reason')
-                            ->label('Revocation Reason')
-                            ->required()
-                            ->minLength(10),
-                    ])
-                    ->action(function (IdCard $record, array $data) {
-                        $record->revoke($data['reason']);
-                    })
-                    ->visible(fn(IdCard $record) => $record->status === 'active'),
+                    Action::make('revoke')
+                        ->label('Revoke Card')
+                        ->icon('heroicon-o-no-symbol')
+                        ->color('danger')
+                        ->requiresConfirmation()
+                        ->modalHeading('Revoke ID Card')
+                        ->modalDescription('This will permanently invalidate this ID card.')
+                        ->modalSubmitActionLabel('Yes, Revoke')
+                        ->form([
+                            Textarea::make('reason')
+                                ->label('Revocation Reason')
+                                ->required()
+                                ->minLength(10),
+                        ])
+                        ->action(function (IdCard $record, array $data) {
+                            $record->revoke($data['reason']);
+                        })
+                        ->visible(fn(IdCard $record) => $record->status === 'active'),
+                ])
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

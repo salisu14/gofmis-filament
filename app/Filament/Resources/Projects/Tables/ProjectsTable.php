@@ -6,6 +6,7 @@ use App\Enums\ProjectStatus;
 use App\Enums\ProjectType;
 use App\Filament\Resources\ProjectExpenses\ProjectExpenseResource;
 use Filament\Actions\Action;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -74,15 +75,17 @@ class ProjectsTable
                     ->relationship('zone', 'name'),
             ])
             ->recordActions([
-                ViewAction::make(),
-                EditAction::make(),
+                ActionGroup::make([
+                    ViewAction::make(),
+                    EditAction::make(),
 
-                Action::make('expenses')
-                    ->label('Expenses')
-                    ->icon('heroicon-m-banknotes')
-                    ->url(fn($record) => ProjectExpenseResource::getUrl('index', [
-                        'tableFilters[project_id][value]' => $record->id,
-                    ])),
+                    Action::make('expenses')
+                        ->label('Expenses')
+                        ->icon('heroicon-m-banknotes')
+                        ->url(fn($record) => ProjectExpenseResource::getUrl('index', [
+                            'tableFilters[project_id][value]' => $record->id,
+                        ])),
+                ])
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

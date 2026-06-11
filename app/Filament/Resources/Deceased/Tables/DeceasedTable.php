@@ -7,6 +7,7 @@ use App\Models\Deceased;
 use App\Models\Zone;
 use App\Services\Deceased\ZoneTransferService;
 use Filament\Actions\Action;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -37,7 +38,7 @@ class DeceasedTable
                 // FIX: Used getTitleFromRecordUsing instead of getTitleUsing
                 Group::make('vulnerability_status')
                     ->label('Vulnerability Status')
-                    ->getTitleFromRecordUsing(fn (Deceased $record): string => $record->vulnerability_status->getLabel())
+                    ->getTitleFromRecordUsing(fn(Deceased $record): string => $record->vulnerability_status->getLabel())
                     ->collapsible(),
             ])
             ->columns([
@@ -141,85 +142,87 @@ class DeceasedTable
                     ->label('Death Certificate'),
             ])->deferFilters(false)
             ->recordActions([
-                ViewAction::make(),
-                EditAction::make(),
+                ActionGroup::make([
+                    ViewAction::make(),
+                    EditAction::make(),
 
-                // ============================================
-                // FIXED: Transfer Zone Action
-                // ============================================
-                Action::make('transfer_zone')
-                    ->label('Transfer Zone')
-                    ->icon('heroicon-o-arrows-right-left')
-                    ->color('warning')
+                    // ============================================
+                    // FIXED: Transfer Zone Action
+                    // ============================================
+                    Action::make('transfer_zone')
+                        ->label('Transfer Zone')
+                        ->icon('heroicon-o-arrows-right-left')
+                        ->color('warning')
 
-                    // Only show if deceased has a zone assigned
-                    ->visible(fn(Deceased $record): bool => $record->zone_id !== null
-                    )
-                    ->schema([
-                        Select::make('to_zone_id')
-                            ->label('New Zone')
-                            ->options(fn(Deceased $record): array => Zone::where('id', '!=', $record->zone_id)
-                                ->pluck('name', 'id')
-                                ->toArray()
-                            )
-                            ->searchable()
-                            ->preload()
-                            ->required()
-                            ->helperText(fn(Deceased $record): string => "Current zone: {$record->zone?->name}"
-                            ),
+                        // Only show if deceased has a zone assigned
+                        ->visible(fn(Deceased $record): bool => $record->zone_id !== null
+                        )
+                        ->schema([
+                            Select::make('to_zone_id')
+                                ->label('New Zone')
+                                ->options(fn(Deceased $record): array => Zone::where('id', '!=', $record->zone_id)
+                                    ->pluck('name', 'id')
+                                    ->toArray()
+                                )
+                                ->searchable()
+                                ->preload()
+                                ->required()
+                                ->helperText(fn(Deceased $record): string => "Current zone: {$record->zone?->name}"
+                                ),
 
-                        Textarea::make('reason')
-                            ->label('Reason for Transfer')
-                            ->required()
-                            ->minLength(10)
-                            ->maxLength(500)
-                            ->placeholder('Explain why this family is being transferred...'),
-                    ])
+                            Textarea::make('reason')
+                                ->label('Reason for Transfer')
+                                ->required()
+                                ->minLength(10)
+                                ->maxLength(500)
+                                ->placeholder('Explain why this family is being transferred...'),
+                        ])
 
-                    // Modal configuration
-                    ->modalHeading('Transfer Family to Another Zone')
-                    ->modalDescription('This will move the deceased record and all associated orphans and widows to the selected zone.')
-                    ->modalSubmitActionLabel('Transfer Now')
-                    ->modalIcon('heroicon-o-arrows-right-left')
-                    ->modalIconColor('warning')
+                        // Modal configuration
+                        ->modalHeading('Transfer Family to Another Zone')
+                        ->modalDescription('This will move the deceased record and all associated orphans and widows to the selected zone.')
+                        ->modalSubmitActionLabel('Transfer Now')
+                        ->modalIcon('heroicon-o-arrows-right-left')
+                        ->modalIconColor('warning')
 
-                    // Confirmation before proceeding
-                    ->requiresConfirmation()
+                        // Confirmation before proceeding
+                        ->requiresConfirmation()
 
-                    // The action handler
-                    ->action(function (Deceased $record, array $data) {
-                        try {
-                            $transfer = app(ZoneTransferService::class)->transfer(
-                                deceased: $record,
-                                toZoneId: $data['to_zone_id'],
-                                reason: $data['reason'],
-                                performedBy: auth()->id(),
-                            );
+                        // The action handler
+                        ->action(function (Deceased $record, array $data) {
+                            try {
+                                $transfer = app(ZoneTransferService::class)->transfer(
+                                    deceased: $record,
+                                    toZoneId: $data['to_zone_id'],
+                                    reason: $data['reason'],
+                                    performedBy: auth()->id(),
+                                );
 
-                            Notification::make()
-                                ->title('Zone Transfer Successful')
-                                ->body("Family transferred to {$transfer->toZone->name}. Transfer ID: {$transfer->id}")
-                                ->success()
-                                ->send();
+                                Notification::make()
+                                    ->title('Zone Transfer Successful')
+                                    ->body("Family transferred to {$transfer->toZone->name}. Transfer ID: {$transfer->id}")
+                                    ->success()
+                                    ->send();
 
-                        } catch (\InvalidArgumentException $e) {
-                            // Same zone transfer attempt
-                            Notification::make()
-                                ->title('Transfer Failed')
-                                ->body($e->getMessage())
-                                ->danger()
-                                ->send();
+                            } catch (\InvalidArgumentException $e) {
+                                // Same zone transfer attempt
+                                Notification::make()
+                                    ->title('Transfer Failed')
+                                    ->body($e->getMessage())
+                                    ->danger()
+                                    ->send();
 
-                        } catch (\Exception $e) {
-                            // Any other error
-                            Notification::make()
-                                ->title('Transfer Failed')
-                                ->body('An unexpected error occurred: ' . $e->getMessage())
-                                ->danger()
-                                ->send();
-                        }
-                    }),
-                // ============================================
+                            } catch (\Exception $e) {
+                                // Any other error
+                                Notification::make()
+                                    ->title('Transfer Failed')
+                                    ->body('An unexpected error occurred: ' . $e->getMessage())
+                                    ->danger()
+                                    ->send();
+                            }
+                        }),
+                    // ============================================
+                ])
             ])
             ->filtersFormColumns(2)
             ->toolbarActions([
