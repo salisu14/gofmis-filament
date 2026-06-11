@@ -1,5 +1,9 @@
 {{-- resources/views/id-cards/card-content.blade.php --}}
 <div class="card-container" style="background: linear-gradient(135deg, {{ $background_color }} 0%, #ffffff 100%);">
+    @if($background_image ?? null)
+        <img src="{{ $background_image }}" class="card-background-image" alt="">
+    @endif
+    <div class="card-content">
     <div class="security-hologram"></div>
     <div class="header">
         <div class="logo-container">
@@ -57,5 +61,6 @@
 
     <div class="footer">
         <div class="valid-row">Issued: {{ $issue_date }} | Valid until: {{ $expiry_date }}</div>
+    </div>
     </div>
 </div>

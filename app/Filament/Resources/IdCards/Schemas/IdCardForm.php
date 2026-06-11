@@ -34,7 +34,16 @@ class IdCardForm
                             ->preload(),
 
                         Select::make('template_id')
-                            ->relationship('template', 'name')
+                            ->options(fn () => \App\Models\IdCardTemplate::query()
+                                ->active()
+                                ->orderBy('type')
+                                ->orderBy('name')
+                                ->get()
+                                ->mapWithKeys(fn ($template) => [
+                                    $template->id => "{$template->name} (".ucfirst($template->type).")",
+                                ]))
+                            ->searchable()
+                            ->preload()
                             ->required(),
                     ]),
 

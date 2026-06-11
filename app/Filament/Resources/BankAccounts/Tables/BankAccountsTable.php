@@ -104,7 +104,12 @@ class BankAccountsTable
                         ->color('success')
                         ->modalHeading('Record External Deposit')
                         ->schema([
-                            TextInput::make('amount')->required()->numeric()->prefix('₦'),
+                            TextInput::make('amount')
+                                ->required()
+                                ->numeric()
+                                ->prefix('₦')
+                                ->minValue(0.01)
+                                ->step(0.01),
                             DatePicker::make('date')->default(now())->required(),
                             Textarea::make('description')->required()->placeholder('e.g., Cash donation from XYZ'),
                         ])
@@ -115,7 +120,7 @@ class BankAccountsTable
                                 'amount' => $data['amount'],
                                 'date' => $data['date'],
                                 'description' => $data['description'],
-                                'reference' => 'DEP-' . strtoupper(substr(md5(now()->timestamp), 0, 8)),
+                                'reference' => Transaction::generateReference('deposit'),
                                 'is_system' => false,
                             ]);
                         }),
@@ -143,6 +148,7 @@ class BankAccountsTable
                                 ->prefix('₦')
                                 ->required()
                                 ->minValue(0.01)
+                                ->maxValue(fn (BankAccount $record): float => (float) $record->ledger_balance - (float) $record->reserved_balance)
                                 ->step(0.01),
 
                             DatePicker::make('date')
@@ -153,7 +159,7 @@ class BankAccountsTable
 
                             TextInput::make('reference')
                                 ->label('Reference')
-                                ->default('TRF-' . strtoupper(substr(md5(now()->timestamp), 0, 8)))
+                                ->default(fn () => Transaction::generateReference('transfer'))
                                 ->required()
                                 ->maxLength(255),
 
@@ -175,7 +181,7 @@ class BankAccountsTable
                                     'type' => 'transfer',
                                     'amount' => $data['amount'],
                                     'date' => $data['date'],
-                                    'reference' => $data['reference'],
+                                'reference' => $data['reference'],
                                     'description' => $data['description'],
                                     'is_system' => false, // Manual transfer
                                 ]);
@@ -208,6 +214,7 @@ class BankAccountsTable
                                 ->prefix('₦')
                                 ->required()
                                 ->minValue(0.01)
+                                ->maxValue(fn (BankAccount $record): float => (float) $record->ledger_balance - (float) $record->reserved_balance)
                                 ->step(0.01),
 
                             DatePicker::make('date')
@@ -220,7 +227,7 @@ class BankAccountsTable
                                 ->label('Reference / Cheque No.')
                                 ->maxLength(255)
                                 ->placeholder('e.g., CHQ-00345 or leave blank for auto')
-                                ->default('WD-' . strtoupper(substr(md5(now()->timestamp), 0, 8))),
+                                ->default(fn () => Transaction::generateReference('withdrawal')),
 
                             Textarea::make('description')
                                 ->label('Reason / Description')

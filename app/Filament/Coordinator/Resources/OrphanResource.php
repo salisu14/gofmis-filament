@@ -67,7 +67,10 @@ class OrphanResource extends Resource
 
     public static function canCreate(): bool
     {
-        return auth()->user()?->hasAnyRole(['coordinator', 'admin', 'super_admin']) ?? false;
+        $user = auth()->user();
+
+        return $user?->hasAnyRole(['admin', 'super_admin'])
+            || $user?->managesZone();
     }
 
     public static function canEdit($record): bool
@@ -107,7 +110,9 @@ class OrphanResource extends Resource
                             ->relationship(
                                 'deceased',
                                 'full_name',
-                                fn (Builder $query) => $query->when($coordinatorZoneId, fn ($q) => $q->where('zone_id', $coordinatorZoneId))
+                                fn (Builder $query) => $coordinatorZoneId
+                                    ? $query->where('zone_id', $coordinatorZoneId)
+                                    : $query->whereRaw('1 = 0')
                             )
                             ->getOptionLabelFromRecordUsing(fn ($record) => "{$record->full_name} ({$record->reg_no})")
                             ->searchable()

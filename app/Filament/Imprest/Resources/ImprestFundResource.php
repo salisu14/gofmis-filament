@@ -9,6 +9,7 @@ use App\Filament\Imprest\Resources\ImprestFundResource\Pages\ViewImprestFund;
 use App\Filament\Imprest\Resources\ImprestFundResource\RelationManagers\ReconciliationsRelationManager;
 use App\Filament\Imprest\Resources\ImprestFundResource\RelationManagers\TransactionsRelationManager;
 use App\Models\ImprestFund;
+use App\Models\Zone;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
@@ -79,6 +80,23 @@ class ImprestFundResource extends Resource
                             ->native(false)
                             ->disabledOn('edit'),
 
+                        Forms\Components\Select::make('zone_id')
+                            ->label('Zone Location')
+                            ->relationship('zone', 'name')
+                            ->getOptionLabelFromRecordUsing(fn (Zone $record): string => $record->town?->name
+                                ? "{$record->name} ({$record->town->name})"
+                                : $record->name)
+                            ->searchable()
+                            ->preload()
+                            ->native(false)
+                            ->live()
+                            ->helperText('Optional. Select a zone to make this a zone imprest fund.')
+                            ->afterStateUpdated(function (Set $set, ?string $state): void {
+                                if ($state && $zone = Zone::find($state)) {
+                                    $set('location', $zone->name);
+                                }
+                            }),
+
                         Forms\Components\TextInput::make('location')
                             ->required()
                             ->maxLength(100)
@@ -131,6 +149,11 @@ class ImprestFundResource extends Resource
                 Tables\Columns\TextColumn::make('custodian.name')
                     ->searchable()
                     ->sortable(),
+
+                Tables\Columns\TextColumn::make('zone.name')
+                    ->label('Zone')
+                    ->searchable()
+                    ->toggleable(),
 
                 Tables\Columns\TextColumn::make('bankAccount.account_name')
                     ->label('Bank')
@@ -227,6 +250,10 @@ class ImprestFundResource extends Resource
                         TextEntry::make('custodian.name')
                             ->label('Custodian')
                             ->icon('heroicon-m-user'),
+                        TextEntry::make('zone.name')
+                            ->label('Zone')
+                            ->placeholder('Manual location')
+                            ->icon('heroicon-m-map'),
                         TextEntry::make('bankAccount.account_name')
                             ->label('Funding Bank')
                             ->placeholder('Not linked')

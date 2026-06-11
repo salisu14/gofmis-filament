@@ -98,6 +98,11 @@ class IdCardPDFService
     private function prepareCardData(IdCard $idCard, bool $forBrowser = false): array
     {
         $beneficiary = $idCard->cardable;
+        $template = $idCard->template;
+
+        if (! $beneficiary) {
+            throw new \Exception("Beneficiary not found for ID Card: {$idCard->card_number}");
+        }
 
         $beneficiary->loadMissing([
             'deceased.zone.coordinator',
@@ -105,12 +110,13 @@ class IdCardPDFService
 
         $zone = $beneficiary->deceased?->zone;
         $coordinator = $zone?->coordinator;
-
-        if (! $beneficiary) {
-            throw new \Exception("Beneficiary not found for ID Card: {$idCard->card_number}");
-        }
-
         $isWidow = $idCard->cardable_type === Widow::class;
+
+        $layout = array_replace_recursive(
+            \App\Models\IdCardTemplate::defaultLayoutConfig($isWidow ? 'widow' : 'orphan'),
+            $template?->layout_config ?? []
+        );
+
         $gender = null;
 
         if (! $isWidow) {
@@ -128,6 +134,12 @@ class IdCardPDFService
 
         $fallbackAvatar = file_exists(public_path('images/default-avatar.png'))
             ? public_path('images/default-avatar.png')
+            : null;
+
+        $backgroundImage = ($template?->config('show_background_image', true) && $template?->background_image_path)
+            ? ($forBrowser
+                ? $this->publicDiskImageUrl($template->background_image_path)
+                : $this->publicDiskImagePath($template->background_image_path))
             : null;
 
         return [
@@ -160,8 +172,14 @@ class IdCardPDFService
                 ? $this->publicDiskImageUrl($idCard->qr_code_path)
                 : $this->publicDiskImagePath($idCard->qr_code_path),
             'signature_text' => 'Authorized Signature',
-            'background_color' => $isWidow ? '#FFF8F0' : '#F0F8FF',
-            'accent_color' => $isWidow ? '#8B4513' : '#1E90FF',
+            'background_color' => $layout['secondary_color'],
+            'accent_color' => $layout['primary_color'],
+            'font_family' => $layout['font_family'],
+            'photo_width_mm' => (float) $layout['photo_width_mm'],
+            'photo_height_mm' => (float) $layout['photo_height_mm'],
+            'qr_size_mm' => (float) $layout['qr_size_mm'],
+            'header_height_mm' => (float) $layout['header_height_mm'],
+            'background_image' => $backgroundImage,
         ];
     }
 

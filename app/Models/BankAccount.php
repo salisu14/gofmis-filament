@@ -27,7 +27,8 @@ class BankAccount extends Model
         'opening_balance',  // The initial deposit amount when the account was registered
         'ledger_balance',   // Total actual cash currently sitting in the account
         'reserved_balance', // Funds tied up in "Pending" Approval Flows
-        'user_id'
+        'user_id',
+        'parent_bank_account_id',
     ];
 
     protected $casts = [
@@ -74,6 +75,10 @@ class BankAccount extends Model
      */
     public function hasSufficientFunds(float $amount): bool
     {
+        if ($amount <= 0) {
+            return false;
+        }
+
         $availableBalance = (float) $this->ledger_balance - (float) ($this->reserved_balance ?? 0);
         return $availableBalance >= $amount;
     }
@@ -83,6 +88,10 @@ class BankAccount extends Model
      */
     public function reserve(float $amount): void
     {
+        if ($amount <= 0) {
+            throw new \InvalidArgumentException('Amount must be greater than zero.');
+        }
+
         if (!$this->hasSufficientFunds($amount)) {
             throw new InsufficientBankBalanceException('Cannot reserve funds: Available balance is too low.');
         }
@@ -95,6 +104,10 @@ class BankAccount extends Model
      */
     public function unreserve(float $amount): void
     {
+        if ($amount <= 0) {
+            throw new \InvalidArgumentException('Amount must be greater than zero.');
+        }
+
         $this->reserved_balance = max(0, (float) $this->reserved_balance - $amount);
         $this->save();
     }
@@ -116,6 +129,10 @@ class BankAccount extends Model
      */
     public function debit(float $amount): void
     {
+        if ($amount <= 0) {
+            throw new \InvalidArgumentException('Amount must be greater than zero.');
+        }
+
         if (!$this->hasSufficientFunds($amount)) {
             throw new InsufficientBankBalanceException('Insufficient funds in bank account.');
         }
@@ -128,6 +145,10 @@ class BankAccount extends Model
      */
     public function credit(float $amount): void
     {
+        if ($amount <= 0) {
+            throw new \InvalidArgumentException('Amount must be greater than zero.');
+        }
+
         $this->ledger_balance = (float) $this->ledger_balance + $amount;
         $this->save();
     }

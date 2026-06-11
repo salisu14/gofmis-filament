@@ -26,7 +26,7 @@ class EnsureFundCustodian
         $fundId = $request->route('fund') ?? $request->input('fund_id');
 
         if (!$fundId) {
-            abort(400, 'Fund identifier required.');
+            return $next($request);
         }
 
         $fund = ImprestFund::find($fundId);

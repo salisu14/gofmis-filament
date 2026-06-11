@@ -54,16 +54,18 @@ class HealthcareRequestResource extends Resource
             return $query->whereRaw('1 = 0');
         }
 
-        return $query->where(function (Builder $q) use ($zoneId) {
-            $q->whereHas('prescribable', function (Builder $q2) use ($zoneId) {
-                $q2->where(function (Builder $q3) use ($zoneId) {
-                    $q3->where('prescribable_type', Orphan::class)
-                        ->whereHas('deceased', fn($q4) => $q4->where('zone_id', $zoneId));
-                })->orWhere(function (Builder $q3) use ($zoneId) {
-                    $q3->where('prescribable_type', Widow::class)
-                        ->whereHas('deceased', fn($q4) => $q4->where('zone_id', $zoneId));
+        return $query->where(function (Builder $query) use ($zoneId) {
+            $query
+                ->where(function (Builder $query) use ($zoneId) {
+                    $query->where('prescribable_type', Orphan::class)
+                        ->whereHasMorph('prescribable', [Orphan::class], fn (Builder $query) => $query
+                            ->whereHas('deceased', fn (Builder $query) => $query->where('zone_id', $zoneId)));
+                })
+                ->orWhere(function (Builder $query) use ($zoneId) {
+                    $query->where('prescribable_type', Widow::class)
+                        ->whereHasMorph('prescribable', [Widow::class], fn (Builder $query) => $query
+                            ->whereHas('deceased', fn (Builder $query) => $query->where('zone_id', $zoneId)));
                 });
-            });
         });
     }
 

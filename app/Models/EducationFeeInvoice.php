@@ -80,6 +80,12 @@ class EducationFeeInvoice extends Model
             $invoice->reference ??= static::generateReference();
             $invoice->status ??= 'pending';
         });
+
+        static::saved(function (EducationFeeInvoice $invoice): void {
+            if (! $invoice->wasChanged('status')) {
+                $invoice->refreshPaymentStatus();
+            }
+        });
     }
 
     public static function generateReference(): string

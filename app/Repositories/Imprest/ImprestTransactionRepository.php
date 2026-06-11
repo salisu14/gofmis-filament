@@ -4,6 +4,7 @@ namespace App\Repositories\Imprest;
 
 use App\Data\Imprest\CreateTransactionDto;
 use App\Models\ImprestTransaction;
+use App\Models\Transaction;
 use App\Repositories\Contracts\Imprest\ImprestTransactionRepositoryInterface;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
@@ -86,6 +87,20 @@ class ImprestTransactionRepository implements ImprestTransactionRepositoryInterf
 
             $transaction->fund()->decrement('current_balance', $transaction->total_price);
 
+            if ($transaction->fund?->bank_account_id) {
+                Transaction::create([
+                    'bank_account_id' => $transaction->fund->bank_account_id,
+                    'transactionable_type' => ImprestTransaction::class,
+                    'transactionable_id' => $transaction->id,
+                    'reference' => $transaction->voucher_no,
+                    'date' => $transaction->date,
+                    'type' => 'imprest_expense',
+                    'amount' => $transaction->total_price,
+                    'description' => "Imprest expense {$transaction->voucher_no}: {$transaction->expense_description}",
+                    'is_system' => true,
+                ]);
+            }
+
             return $transaction->fresh();
         });
     }
@@ -109,6 +124,20 @@ class ImprestTransactionRepository implements ImprestTransactionRepositoryInterf
 
             if ($wasActive) {
                 $transaction->fund()->increment('current_balance', $transaction->total_price);
+
+                if ($transaction->fund?->bank_account_id) {
+                    Transaction::create([
+                        'bank_account_id' => $transaction->fund->bank_account_id,
+                        'transactionable_type' => ImprestTransaction::class,
+                        'transactionable_id' => $transaction->id,
+                        'reference' => $transaction->voucher_no.'-VOID',
+                        'date' => now(),
+                        'type' => 'imprest_expense_void',
+                        'amount' => $transaction->total_price,
+                        'description' => "Voided imprest expense {$transaction->voucher_no}: {$reason}",
+                        'is_system' => true,
+                    ]);
+                }
             }
 
             return $transaction->fresh();

@@ -8,7 +8,9 @@ use App\Filament\Imprest\Resources\ImprestTransactionResource\Pages\CreateImpres
 use App\Filament\Imprest\Resources\ImprestTransactionResource\Pages\EditImprestTransaction;
 use App\Filament\Imprest\Resources\ImprestTransactionResource\Pages\ListImprestTransactions;
 use App\Filament\Imprest\Resources\ImprestTransactionResource\Pages\ViewImprestTransaction;
+use App\Models\Deceased;
 use App\Models\ImprestTransaction;
+use App\Models\Item;
 use App\Services\Contracts\Imprest\ImprestTransactionServiceInterface;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
@@ -56,10 +58,13 @@ class ImprestTransactionResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         $query = parent::getEloquentQuery()
-            ->with(['fund', 'custodian', 'approver']);;
+            ->with(['fund.bankAccount', 'fund.zone', 'deceased', 'item', 'transaction', 'custodian', 'approver']);
 
         // Non-admins only see their fund's transactions or those they can approve
-        if (!auth()->user()->hasRole('admin')) {
+        $user = auth()->user();
+        $canManageAll = $user?->hasAnyRole(['admin', 'super_admin']) || $user?->hasPermissionTo('imprest.manage_all');
+
+        if (! $canManageAll) {
             $query->where(function ($q) {
                 $q->where('custodian_id', auth()->id())
                     ->orWhereHas('fund', fn($fq) => $fq->where('custodian_id', auth()->id()));
@@ -94,21 +99,53 @@ class ImprestTransactionResource extends Resource
                             ->maxDate(now())
                             ->native(false),
 
-                        TextInput::make('deceased_id')
+                        Select::make('deceased_id')
+                            ->label('Deceased / Beneficiary Family')
+                            ->relationship('deceased', 'full_name')
                             ->required()
-                            ->maxLength(50)
-                            ->placeholder('DEC-12345')
+                            ->searchable()
+                            ->preload()
+                            ->native(false)
+                            ->getOptionLabelFromRecordUsing(fn (Deceased $record): string => "{$record->full_name} ({$record->reg_no})")
                             ->prefixIcon('heroicon-m-identification'),
 
-                        TextInput::make('name')
-                            ->required()
-                            ->maxLength(255)
-                            ->placeholder('Deceased person name'),
+                        Hidden::make('name'),
 
-                        TextInput::make('item_service')
+                        Select::make('expense_type')
+                            ->label('Expense Type')
+                            ->options([
+                                'item' => 'Item',
+                                'service' => 'Service',
+                            ])
+                            ->default('service')
                             ->required()
+                            ->native(false)
+                            ->live()
+                            ->afterStateUpdated(function (Set $set): void {
+                                $set('item_id', null);
+                                $set('service_description', null);
+                            }),
+
+                        Select::make('item_id')
+                            ->label('Item')
+                            ->relationship('item', 'name')
+                            ->getOptionLabelFromRecordUsing(fn (Item $record): string => $record->category?->name
+                                ? "{$record->name} ({$record->category->name})"
+                                : $record->name)
+                            ->searchable()
+                            ->preload()
+                            ->native(false)
+                            ->required(fn (Get $get): bool => $get('expense_type') === 'item')
+                            ->visible(fn (Get $get): bool => $get('expense_type') === 'item'),
+
+                        TextInput::make('service_description')
+                            ->label('Service Description')
+                            ->required(fn (Get $get): bool => $get('expense_type') === 'service')
                             ->maxLength(255)
-                            ->placeholder('Description of item or service'),
+                            ->placeholder('Description of service rendered')
+                            ->visible(fn (Get $get): bool => $get('expense_type') === 'service'),
+
+                        Hidden::make('item_service'),
 
                         Select::make('category')
                             ->options(collect(TransactionCategory::cases())->mapWithKeys(
@@ -217,13 +254,14 @@ class ImprestTransactionResource extends Resource
                     ->sortable()
                     ->toggleable(),
 
-                Tables\Columns\TextColumn::make('name')
+                Tables\Columns\TextColumn::make('beneficiary_name')
                     ->label('Deceased')
-                    ->searchable()
+                    ->searchable(['name'])
                     ->limit(20),
 
-                Tables\Columns\TextColumn::make('item_service')
-                    ->searchable()
+                Tables\Columns\TextColumn::make('expense_description')
+                    ->label('Item / Service')
+                    ->searchable(['item_service', 'service_description'])
                     ->limit(25)
                     ->toggleable(),
 
@@ -247,6 +285,12 @@ class ImprestTransactionResource extends Resource
                     ->sortable()
                     ->alignment('right')
                     ->weight('font-bold'),
+
+                Tables\Columns\TextColumn::make('transaction.reference')
+                    ->label('Finance Ref')
+                    ->copyable()
+                    ->placeholder('Pending')
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\IconColumn::make('receipt_attached')
                     ->boolean()
@@ -401,6 +445,7 @@ class ImprestTransactionResource extends Resource
                                 default => 'gray',
                             }),
                         TextEntry::make('date')->date(),
+                        TextEntry::make('fund.location')->label('Fund'),
                         TextEntry::make('status')
                             ->badge()
                             ->color(fn(string $state): string => match ($state) {
@@ -415,17 +460,21 @@ class ImprestTransactionResource extends Resource
                 Section::make('Deceased Information')
                     ->columns(2)
                     ->schema([
-                        TextEntry::make('deceased_id')
-                            ->label('Deceased ID')
+                        TextEntry::make('deceased.reg_no')
+                            ->label('Reg No')
                             ->icon('heroicon-m-identification'),
-                        TextEntry::make('name')
+                        TextEntry::make('beneficiary_name')
                             ->label('Name'),
                     ]),
 
                 Section::make('Purchase Details')
                     ->columns(2)
                     ->schema([
-                        TextEntry::make('item_service'),
+                        TextEntry::make('expense_type')
+                            ->badge()
+                            ->formatStateUsing(fn (?string $state): string => ucfirst($state ?? 'service')),
+                        TextEntry::make('expense_description')
+                            ->label('Item / Service'),
                         TextEntry::make('category')->badge(),
                         TextEntry::make('payment_method')->badge(),
                         TextEntry::make('receipt_attached')
@@ -442,6 +491,22 @@ class ImprestTransactionResource extends Resource
                             ->money('NGN')
                             ->weight('font-bold')
                             ->size(TextSize::Large),
+                    ]),
+
+                Section::make('Bank & Finance Link')
+                    ->columns(3)
+                    ->schema([
+                        TextEntry::make('fund.bankAccount.account_name')
+                            ->label('Linked Bank')
+                            ->placeholder('Not linked'),
+                        TextEntry::make('transaction.reference')
+                            ->label('Finance Transaction')
+                            ->copyable()
+                            ->placeholder('Pending approval'),
+                        TextEntry::make('transaction.type')
+                            ->label('Transaction Type')
+                            ->badge()
+                            ->placeholder('Pending approval'),
                     ]),
 
                 Section::make('Audit Trail')
@@ -466,7 +531,8 @@ class ImprestTransactionResource extends Resource
     public static function getGlobalSearchResultDetails(Model $record): array
     {
         return [
-            'Deceased' => $record->name,
+            'Deceased' => $record->beneficiary_name,
+            'Item / Service' => $record->expense_description,
             'Amount' => '₦' . number_format($record->total_price, 2),
             'Status' => $record->status,
         ];

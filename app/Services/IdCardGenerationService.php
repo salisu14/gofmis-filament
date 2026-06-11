@@ -28,15 +28,14 @@ class IdCardGenerationService
         return DB::transaction(function () use ($beneficiary, $template) {
             $type = $beneficiary instanceof Widow ? 'widow' : 'orphan';
 
-            $template ??= IdCardTemplate::where('type', $type)
-                ->where('is_active', true)
-                ->firstOrFail();
+            $template ??= IdCardTemplate::defaultForType($type);
+
+            if ($template->type !== $type || ! $template->is_active) {
+                throw new \RuntimeException("Selected template cannot be used for {$type} cards.");
+            }
 
             // Generate unique card number
-            $prefix = $type === 'widow' ? 'GOF-W' : 'GOF-O';
-            $year = now()->year;
-            $sequence = IdCard::whereYear('created_at', $year)->count() + 1;
-            $cardNumber = sprintf('%s-%d-%04d', $prefix, $year, $sequence);
+            $cardNumber = $this->generateCardNumber($type);
 
             $idCard = IdCard::create([
                 'cardable_type' => get_class($beneficiary),
@@ -84,6 +83,19 @@ class IdCardGenerationService
         }
 
         return $cards;
+    }
+
+    public function generateCardNumber(string $type): string
+    {
+        $prefix = $type === 'widow' ? 'GOF-W' : 'GOF-O';
+        $year = now()->year;
+        $sequence = IdCard::where('card_number', 'like', "{$prefix}-{$year}-%")->count() + 1;
+
+        do {
+            $cardNumber = sprintf('%s-%d-%04d', $prefix, $year, $sequence++);
+        } while (IdCard::where('card_number', $cardNumber)->exists());
+
+        return $cardNumber;
     }
 
     /**

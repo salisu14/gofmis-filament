@@ -13,6 +13,8 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 
 class IdCardTemplateResource extends Resource
 {
@@ -30,6 +32,30 @@ class IdCardTemplateResource extends Resource
     public static function table(Table $table): Table
     {
         return IdCardTemplatesTable::configure($table);
+    }
+
+    public static function getGloballySearchableAttributes(): array
+    {
+        return ['name', 'type'];
+    }
+
+    public static function getGlobalSearchEloquentQuery(): Builder
+    {
+        return parent::getGlobalSearchEloquentQuery()->withCount('idCards');
+    }
+
+    public static function getGlobalSearchResultDetails(Model $record): array
+    {
+        return [
+            'Type' => ucfirst($record->type),
+            'Active' => $record->is_active ? 'Yes' : 'No',
+            'Cards' => number_format((int) ($record->id_cards_count ?? 0)),
+        ];
+    }
+
+    public static function getGlobalSearchResultUrl(Model $record): string
+    {
+        return static::getUrl('edit', ['record' => $record]);
     }
 
     public static function getRelations(): array

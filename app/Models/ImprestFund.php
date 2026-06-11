@@ -18,6 +18,7 @@ class ImprestFund extends Model
     protected $fillable = [
         'custodian_id',
         'bank_account_id',
+        'zone_id',
         'location',
         'authorized_amount',
         'current_balance',
@@ -40,6 +41,11 @@ class ImprestFund extends Model
     public function bankAccount(): BelongsTo
     {
         return $this->belongsTo(BankAccount::class);
+    }
+
+    public function zone(): BelongsTo
+    {
+        return $this->belongsTo(Zone::class);
     }
 
     public function transactions(): HasMany

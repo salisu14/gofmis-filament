@@ -7,6 +7,16 @@
             <x-filament::button type="submit" icon="heroicon-m-arrow-path">
                 Generate Report
             </x-filament::button>
+
+            <x-filament::button
+                type="button"
+                color="success"
+                icon="heroicon-m-printer"
+                wire:click="downloadPdf"
+                class="ms-2"
+            >
+                Download FUR PDF
+            </x-filament::button>
         </div>
     </form>
 
@@ -28,7 +38,7 @@
             <div class="grid grid-cols-4 gap-4">
                 <div>
                     <p class="text-sm text-gray-500">Total Spent</p>
-                    <p class="text-2xl font-bold">${{ number_format($report['total_spent'], 2) }}</p>
+                    <p class="text-2xl font-bold">₦{{ number_format($report['total_spent'], 2) }}</p>
                 </div>
                 <div>
                     <p class="text-sm text-gray-500">Transactions</p>
@@ -36,11 +46,11 @@
                 </div>
                 <div>
                     <p class="text-sm text-gray-500">Authorized</p>
-                    <p class="text-2xl font-bold">${{ number_format($report['authorized_amount'], 2) }}</p>
+                    <p class="text-2xl font-bold">₦{{ number_format($report['authorized_amount'], 2) }}</p>
                 </div>
                 <div>
                     <p class="text-sm text-gray-500">Expected Balance</p>
-                    <p class="text-2xl font-bold">${{ number_format($report['expected_balance'], 2) }}</p>
+                    <p class="text-2xl font-bold">₦{{ number_format($report['expected_balance'], 2) }}</p>
                 </div>
             </div>
         </x-filament::section>

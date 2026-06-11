@@ -4,6 +4,7 @@
 namespace App\Jobs;
 
 use App\Models\IdCardPrintBatch;
+use App\Models\IdCardTemplate;
 use App\Models\Orphan;
 use App\Models\Widow;
 use App\Services\IdCardGenerationService;
@@ -25,7 +26,8 @@ class GenerateIdCardsJob implements ShouldQueue
 
     public function __construct(
         private IdCardPrintBatch $batch,
-        private Collection $beneficiaries
+        private Collection $beneficiaries,
+        private ?string $templateId = null,
     ) {}
 
     public function handle(
@@ -40,10 +42,11 @@ class GenerateIdCardsJob implements ShouldQueue
         try {
             $idCards = collect();
             $processed = 0;
+            $template = $this->templateId ? IdCardTemplate::find($this->templateId) : null;
 
             foreach ($this->beneficiaries as $beneficiary) {
                 try {
-                    $card = $generationService->generateCard($beneficiary);
+                    $card = $generationService->generateCard($beneficiary, $template);
                     $idCards->push($card);
                     $processed++;
 

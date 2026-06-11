@@ -52,7 +52,7 @@ class BulkPrintIdCards extends Page implements HasForms
         $this->form->fill([
             'type' => 'widow',
             'range_type' => 'all',
-            'template_id' => IdCardTemplate::where('is_active', true)->first()?->id,
+            'template_id' => IdCardTemplate::query()->active()->forType('widow')->latest('updated_at')->value('id'),
         ]);
     }
 
@@ -72,12 +72,21 @@ class BulkPrintIdCards extends Page implements HasForms
                             ])
                             ->required()
                             ->live()
-                            ->afterStateUpdated(fn () => $this->resetCount()),
+                            ->afterStateUpdated(function (?string $state) {
+                                $this->resetCount();
+                                $this->data['template_id'] = $state && $state !== 'mixed'
+                                    ? IdCardTemplate::query()->active()->forType($state)->latest('updated_at')->value('id')
+                                    : null;
+                            }),
 
                         Forms\Components\Select::make('template_id')
                             ->label('Card Template')
-                            ->options(IdCardTemplate::where('is_active', true)->pluck('name', 'id'))
-                            ->required(),
+                            ->options(fn (Get $get) => $get('type') && $get('type') !== 'mixed'
+                                ? IdCardTemplate::query()->active()->forType($get('type'))->pluck('name', 'id')
+                                : [])
+                            ->visible(fn (Get $get): bool => $get('type') !== 'mixed')
+                            ->required(fn (Get $get): bool => $get('type') !== 'mixed')
+                            ->helperText('Mixed batches use each beneficiary type’s latest active template.'),
                     ]),
 
                 Section::make('Range Selection')
@@ -346,6 +355,7 @@ class BulkPrintIdCards extends Page implements HasForms
                     'filters' => [
                         'zone_id' => $data['filters']['zone_id'] ?? null,
                         'gender' => $data['filters']['gender'] ?? null,
+                        'template_id' => $data['template_id'] ?? null,
                     ],
                     'range' => $this->getRangePayload($data),
                     'total_count' => $this->estimatedCount,
@@ -354,7 +364,11 @@ class BulkPrintIdCards extends Page implements HasForms
 
                 // Get beneficiaries and dispatch job
                 $beneficiaries = $this->buildBeneficiaryCollection($data);
-                GenerateIdCardsJob::dispatch($batch, $beneficiaries);
+                GenerateIdCardsJob::dispatch(
+                    $batch,
+                    $beneficiaries,
+                    $data['type'] === 'mixed' ? null : ($data['template_id'] ?? null)
+                );
 
                 $this->currentBatch = $batch;
 

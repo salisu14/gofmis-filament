@@ -31,8 +31,8 @@ class TransactionsTable
                     ->label('Type')
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
-                        'deposit', 'loan_repayment' => 'success',
-                        'withdrawal', 'loan_disbursement' => 'danger',
+                        'deposit', 'loan_repayment', 'imprest_expense_void' => 'success',
+                        'withdrawal', 'loan_disbursement', 'imprest_expense' => 'danger',
                         default => 'gray',
                     })
                     ->searchable(),
@@ -51,7 +51,21 @@ class TransactionsTable
                     ->label('Bank Account')
                     ->relationship('bankAccount', 'account_name')
                     ->searchable(),
-                SelectFilter::make('type')->label('Type'),
+                SelectFilter::make('type')
+                    ->label('Type')
+                    ->options([
+                        'deposit' => 'Deposit',
+                        'withdrawal' => 'Withdrawal',
+                        'transfer' => 'Transfer',
+                        'intervention' => 'Intervention',
+                        'imprest_funding' => 'Imprest Funding',
+                        'imprest_replenishment' => 'Imprest Replenishment',
+                        'imprest_expense' => 'Imprest Expense',
+                        'imprest_expense_void' => 'Imprest Expense Void',
+                        'education_fee_payment' => 'Education Fee Payment',
+                        'loan_disbursement' => 'Loan Disbursement',
+                        'loan_repayment' => 'Loan Repayment',
+                    ]),
             ])
             ->recordActions([
                 ViewAction::make(),

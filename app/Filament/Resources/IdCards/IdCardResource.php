@@ -15,6 +15,8 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 
 class IdCardResource extends Resource
 {
@@ -37,6 +39,38 @@ class IdCardResource extends Resource
     public static function table(Table $table): Table
     {
         return IdCardsTable::configure($table);
+    }
+
+    public static function getGloballySearchableAttributes(): array
+    {
+        return [
+            'card_number',
+            'template.name',
+        ];
+    }
+
+    public static function getGlobalSearchEloquentQuery(): Builder
+    {
+        return parent::getGlobalSearchEloquentQuery()->with(['cardable', 'template']);
+    }
+
+    public static function getGlobalSearchResultTitle(Model $record): string
+    {
+        return "{$record->card_number} - {$record->cardable?->full_name}";
+    }
+
+    public static function getGlobalSearchResultDetails(Model $record): array
+    {
+        return [
+            'Type' => class_basename($record->cardable_type),
+            'Status' => ucfirst($record->status),
+            'Template' => $record->template?->name ?? 'N/A',
+        ];
+    }
+
+    public static function getGlobalSearchResultUrl(Model $record): string
+    {
+        return static::getUrl('view', ['record' => $record]);
     }
 
     public static function getRelations(): array

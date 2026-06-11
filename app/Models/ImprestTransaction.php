@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class ImprestTransaction extends Model
@@ -21,6 +23,9 @@ class ImprestTransaction extends Model
         'date',
         'deceased_id',
         'name',
+        'expense_type',
+        'item_id',
+        'service_description',
         'item_service',
         'quantity',
         'unit_price',
@@ -53,10 +58,15 @@ class ImprestTransaction extends Model
             if (empty($transaction->voucher_no)) {
                 $transaction->voucher_no = self::generateVoucherNo();
             }
+            $transaction->syncLegacyDisplayFields();
             $transaction->total_price = $transaction->quantity * $transaction->unit_price;
         });
 
         static::updating(function ($transaction) {
+            if ($transaction->isDirty(['deceased_id', 'item_id', 'service_description', 'expense_type'])) {
+                $transaction->syncLegacyDisplayFields();
+            }
+
             if ($transaction->isDirty(['quantity', 'unit_price'])) {
                 $transaction->total_price = $transaction->quantity * $transaction->unit_price;
             }
@@ -78,6 +88,41 @@ class ImprestTransaction extends Model
     public function fund(): BelongsTo
     {
         return $this->belongsTo(ImprestFund::class, 'fund_id');
+    }
+
+    public function deceased(): BelongsTo
+    {
+        return $this->belongsTo(Deceased::class, 'deceased_id');
+    }
+
+    public function item(): BelongsTo
+    {
+        return $this->belongsTo(Item::class);
+    }
+
+    public function transaction(): MorphOne
+    {
+        return $this->morphOne(Transaction::class, 'transactionable')->latestOfMany();
+    }
+
+    public function transactions(): MorphMany
+    {
+        return $this->morphMany(Transaction::class, 'transactionable');
+    }
+
+    public function getBeneficiaryNameAttribute(): string
+    {
+        return $this->deceased?->full_name
+            ?? $this->name
+            ?? 'N/A';
+    }
+
+    public function getExpenseDescriptionAttribute(): string
+    {
+        return $this->item?->name
+            ?? $this->service_description
+            ?? $this->item_service
+            ?? 'N/A';
     }
 
     public function custodian(): BelongsTo
@@ -133,5 +178,19 @@ class ImprestTransaction extends Model
     public function getTotalPriceAttribute($value): float
     {
         return (float) ($value ?? $this->quantity * $this->unit_price);
+    }
+
+    public function syncLegacyDisplayFields(): void
+    {
+        if ($this->deceased_id) {
+            $this->name = Deceased::query()->whereKey($this->deceased_id)->value('full_name') ?? $this->name;
+        }
+
+        $this->item_service = match ($this->expense_type) {
+            'item' => $this->item_id
+                ? (Item::query()->whereKey($this->item_id)->value('name') ?? $this->item_service)
+                : $this->item_service,
+            default => $this->service_description ?: $this->item_service,
+        };
     }
 }

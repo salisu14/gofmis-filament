@@ -3,7 +3,9 @@
 namespace App\Filament\Imprest\Pages\Reports;
 
 use App\Models\ImprestFund;
+use App\Models\ImprestTransaction;
 use App\Services\Contracts\Imprest\ImprestReconciliationServiceInterface;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
@@ -25,8 +27,9 @@ class FundUtilizationReport extends Page implements HasForms, HasTable
     protected static string|null|\UnitEnum $navigationGroup = 'Reports';
     protected static ?string $navigationLabel = 'Fund Utilization';
     protected static ?int $navigationSort = 1;
-        public ?array $data = []; // Use default filament view
-protected string $view = 'filament.imprest.pages.reports.fund-utilization';
+    public ?array $data = [];
+
+    protected string $view = 'filament.imprest.pages.reports.fund-utilization';
 
     public function mount(): void
     {
@@ -79,8 +82,8 @@ protected string $view = 'filament.imprest.pages.reports.fund-utilization';
             ->columns([
                 TextColumn::make('date')->date(),
                 TextColumn::make('voucher_no')->searchable(),
-                TextColumn::make('name')->label('Deceased')->searchable(),
-                TextColumn::make('item_service')->limit(30),
+                TextColumn::make('beneficiary_name')->label('Deceased')->searchable(['name']),
+                TextColumn::make('expense_description')->label('Item / Service')->limit(30)->searchable(['item_service', 'service_description']),
                 TextColumn::make('category')->badge(),
                 TextColumn::make('total_price')->money('NGN')->alignment('right'),
             ])
@@ -101,7 +104,52 @@ protected string $view = 'filament.imprest.pages.reports.fund-utilization';
                 ->label('Generate Report')
                 ->icon('heroicon-m-arrow-path')
                 ->action('generateReport'),
+
+            Action::make('download_pdf')
+                ->label('Download FUR PDF')
+                ->icon('heroicon-m-printer')
+                ->color('success')
+                ->action('downloadPdf'),
         ];
+    }
+
+    public function downloadPdf()
+    {
+        $start = $this->data['start_date'] ?? now()->startOfMonth()->toDateString();
+        $end = $this->data['end_date'] ?? now()->endOfMonth()->toDateString();
+        $fundId = $this->data['fund_id'] ?? null;
+        $fund = $fundId ? ImprestFund::with(['custodian', 'bankAccount', 'zone'])->find($fundId) : null;
+
+        $transactions = $this->reportQuery($fundId, $start, $end)
+            ->with(['fund.custodian', 'fund.bankAccount', 'deceased', 'item', 'custodian', 'approver'])
+            ->orderBy('date')
+            ->get();
+
+        $summary = [
+            'total_spent' => (float) $transactions->sum('total_price'),
+            'transaction_count' => $transactions->count(),
+            'authorized_amount' => $fund ? (float) $fund->authorized_amount : (float) ImprestFund::sum('authorized_amount'),
+            'current_balance' => $fund ? (float) $fund->current_balance : (float) ImprestFund::sum('current_balance'),
+            'missing_receipts' => $transactions->where('receipt_attached', false)->count(),
+        ];
+
+        $pdf = Pdf::loadView('filament.imprest.reports.fund-utilization-pdf', [
+            'fund' => $fund,
+            'transactions' => $transactions,
+            'summary' => $summary,
+            'startDate' => $start,
+            'endDate' => $end,
+            'generatedBy' => auth()->user(),
+            'generatedAt' => now(),
+        ])->setPaper('a4', 'landscape');
+
+        $filename = 'FUR-'.($fund?->location ? str($fund->location)->slug() : 'all-funds').'-'.now()->format('Ymd-His').'.pdf';
+
+        return response()->streamDownload(
+            fn () => print($pdf->output()),
+            $filename,
+            ['Content-Type' => 'application/pdf']
+        );
     }
 
     protected function getSummaryData(): ?array
@@ -116,5 +164,13 @@ protected string $view = 'filament.imprest.pages.reports.fund-utilization';
             $this->data['start_date'],
             $this->data['end_date']
         );
+    }
+
+    private function reportQuery(?string $fundId, string $start, string $end): \Illuminate\Database\Eloquent\Builder
+    {
+        return ImprestTransaction::query()
+            ->when($fundId, fn($q) => $q->where('fund_id', $fundId))
+            ->whereBetween('date', [$start, $end])
+            ->where('status', 'active');
     }
 }

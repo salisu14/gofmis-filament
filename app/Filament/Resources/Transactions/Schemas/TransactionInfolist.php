@@ -37,8 +37,8 @@ class TransactionInfolist
                                     ->label('Type')
                                     ->badge()
                                     ->color(fn(string $state): string => match ($state) {
-                                        'deposit', 'loan_repayment' => 'success',
-                                        'withdrawal', 'loan_disbursement' => 'danger',
+                                        'deposit', 'loan_repayment', 'imprest_expense_void' => 'success',
+                                        'withdrawal', 'loan_disbursement', 'imprest_expense' => 'danger',
                                         'transfer' => 'info',
                                         default => 'gray',
                                     })

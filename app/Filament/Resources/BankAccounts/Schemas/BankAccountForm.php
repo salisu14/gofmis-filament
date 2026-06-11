@@ -9,6 +9,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
+use Illuminate\Database\Eloquent\Model;
 
 class BankAccountForm
 {
@@ -36,7 +37,10 @@ class BankAccountForm
 
                             Select::make('parent_bank_account_id')
                                 ->label('Parent Account (Consolidated Into)')
-                                ->options(BankAccount::whereNull('parent_bank_account_id')->pluck('account_name', 'id'))
+                                ->options(fn (?Model $record) => BankAccount::query()
+                                    ->whereNull('parent_bank_account_id')
+                                    ->when($record, fn ($query) => $query->whereKeyNot($record->getKey()))
+                                    ->pluck('account_name', 'id'))
                                 ->searchable()
                                 ->preload()
                                 ->helperText('Leave empty if this is a main/physical account. Select a parent to make this a virtual sub-account.'),

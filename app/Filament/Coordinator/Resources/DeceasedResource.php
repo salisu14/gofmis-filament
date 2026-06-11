@@ -52,7 +52,10 @@ class DeceasedResource extends Resource
 
     public static function canCreate(): bool
     {
-        return auth()->user()?->hasAnyRole(['coordinator', 'admin', 'super_admin']) ?? false;
+        $user = auth()->user();
+
+        return $user?->hasAnyRole(['admin', 'super_admin'])
+            || $user?->managesZone();
     }
 
     public static function canEdit($record): bool

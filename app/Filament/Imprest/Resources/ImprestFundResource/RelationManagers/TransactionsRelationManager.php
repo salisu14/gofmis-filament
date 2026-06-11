@@ -41,17 +41,24 @@ class TransactionsRelationManager extends RelationManager
                     ->date()
                     ->sortable(),
 
-                Tables\Columns\TextColumn::make('name')
+                Tables\Columns\TextColumn::make('beneficiary_name')
                     ->label('Deceased')
-                    ->searchable(),
+                    ->searchable(['name']),
 
-                Tables\Columns\TextColumn::make('item_service')
+                Tables\Columns\TextColumn::make('expense_description')
+                    ->label('Item / Service')
                     ->limit(25)
-                    ->searchable(),
+                    ->searchable(['item_service', 'service_description']),
 
                 Tables\Columns\TextColumn::make('total_price')
                     ->money('NGN')
                     ->alignment('right'),
+
+                Tables\Columns\TextColumn::make('transaction.reference')
+                    ->label('Finance Ref')
+                    ->placeholder('Pending')
+                    ->copyable()
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\IconColumn::make('receipt_attached')
                     ->boolean()
