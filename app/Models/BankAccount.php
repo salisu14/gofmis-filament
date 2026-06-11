@@ -131,4 +131,69 @@ class BankAccount extends Model
         $this->ledger_balance = (float) $this->ledger_balance + $amount;
         $this->save();
     }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Parent / Child Relationships
+    |--------------------------------------------------------------------------
+    */
+
+    public function parent(): BelongsTo
+    {
+        return $this->belongsTo(BankAccount::class, 'parent_bank_account_id');
+    }
+
+    public function children(): HasMany
+    {
+        return $this->hasMany(BankAccount::class, 'parent_bank_account_id');
+    }
+
+    public function isSubAccount(): bool
+    {
+        return !is_null($this->parent_bank_account_id);
+    }
+
+    public function isMainAccount(): bool
+    {
+        return is_null($this->parent_bank_account_id) && $this->children()->exists();
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Consolidated Balance Logic
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Get the real-world balance of this account.
+     * If it's a Main Account, it sums up its own balance + all children.
+     * If it's a Sub-Account, it just returns its own balance.
+     */
+    public function getConsolidatedBalanceAttribute(): float
+    {
+        if ($this->isMainAccount()) {
+            $childrenBalance = $this->children()->sum('ledger_balance');
+            return (float) ($this->ledger_balance + $childrenBalance);
+        }
+
+        return (float) $this->ledger_balance;
+    }
+
+    /**
+     * Get the consolidated available balance (ledger - reserved)
+     */
+    public function getConsolidatedAvailableBalanceAttribute(): float
+    {
+        if ($this->isMainAccount()) {
+            $childrenLedger = $this->children()->sum('ledger_balance');
+            $childrenReserved = $this->children()->sum('reserved_balance');
+
+            $totalLedger = (float) $this->ledger_balance + $childrenLedger;
+            $totalReserved = (float) $this->reserved_balance + $childrenReserved;
+
+            return $totalLedger - $totalReserved;
+        }
+
+        return (float) $this->ledger_balance - (float) $this->reserved_balance;
+    }
 }

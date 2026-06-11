@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\BankAccounts\Schemas;
 
+use App\Models\BankAccount;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -32,6 +33,13 @@ class BankAccountForm
                                 ->unique(ignoreRecord: true)
                                 ->maxLength(50)
                                 ->placeholder('e.g. 0123456789'),
+
+                            Select::make('parent_bank_account_id')
+                                ->label('Parent Account (Consolidated Into)')
+                                ->options(BankAccount::whereNull('parent_bank_account_id')->pluck('account_name', 'id'))
+                                ->searchable()
+                                ->preload()
+                                ->helperText('Leave empty if this is a main/physical account. Select a parent to make this a virtual sub-account.'),
                         ]),
 
                         Select::make('user_id')

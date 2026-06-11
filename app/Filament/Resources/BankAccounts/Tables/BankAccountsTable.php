@@ -28,6 +28,19 @@ class BankAccountsTable
                     ->fontFamily('mono')
                     ->copyable(),
 
+                TextColumn::make('ledger_balance')
+                    ->label('Own Balance')
+                    ->money('NGN')
+                    ->alignEnd(),
+
+                TextColumn::make('consolidated_balance')
+                    ->label('Consolidated Balance')
+                    ->money('NGN')
+                    ->alignEnd()
+                    ->weight('bold')
+                    ->visible(fn ($record) => $record?->isMainAccount())
+                    ->tooltip('Own balance + Sub-accounts balance'),
+
                 TextColumn::make('opening_balance')
                     ->label('Initial Deposit')
                     ->money('NGN')
