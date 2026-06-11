@@ -75,7 +75,7 @@ class EditProject extends EditRecord
                 ->icon('heroicon-m-pause')
                 ->color('danger')
                 ->visible(fn($record) => $record->status === ProjectStatus::IN_PROGRESS)
-                ->form([
+                ->schema([
                     \Filament\Forms\Components\Textarea::make('reason')
                         ->required()
                         ->label('Reason for hold'),

@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Projects\Tables;
 use App\Enums\ProjectStatus;
 use App\Enums\ProjectType;
 use App\Filament\Resources\ProjectExpenses\ProjectExpenseResource;
+use App\Services\ProjectService;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
@@ -13,6 +14,7 @@ use Filament\Actions\EditAction;
 use Filament\Actions\ForceDeleteBulkAction;
 use Filament\Actions\RestoreBulkAction;
 use Filament\Actions\ViewAction;
+use Filament\Notifications\Notification;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
@@ -85,6 +87,72 @@ class ProjectsTable
                         ->url(fn($record) => ProjectExpenseResource::getUrl('index', [
                             'tableFilters[project_id][value]' => $record->id,
                         ])),
+
+                    Action::make('approve')
+                        ->label('Approve')
+                        ->icon('heroicon-m-check')
+                        ->color('success')
+                        ->visible(fn($record) => $record->status === ProjectStatus::PLANNING)
+                        ->requiresConfirmation()
+                        ->action(function (ProjectService $service) {
+                            $service->approveProject($this->record);
+
+                            Notification::make()
+                                ->title('Project approved')
+                                ->body('Default milestones have been created.')
+                                ->success()
+                                ->send();
+
+                            $this->redirect($this->getResource()::getUrl('edit', ['record' => $this->record]));
+                        }),
+
+                    Action::make('start')
+                        ->label('Start Work')
+                        ->icon('heroicon-m-play')
+                        ->color('warning')
+                        ->visible(fn($record) => $record->status === ProjectStatus::APPROVED)
+                        ->requiresConfirmation()
+                        ->action(function (ProjectService $service) {
+                            $service->startProject($this->record);
+
+                            Notification::make()->title('Project started')->success()->send();
+
+                            $this->redirect($this->getResource()::getUrl('edit', ['record' => $this->record]));
+                        }),
+
+                    Action::make('complete')
+                        ->label('Mark Complete')
+                        ->icon('heroicon-m-flag')
+                        ->color('success')
+                        ->visible(fn($record) => $record->status === ProjectStatus::IN_PROGRESS)
+                        ->requiresConfirmation()
+                        ->action(function (ProjectService $service) {
+                            $service->completeProject($this->record);
+
+                            Notification::make()->title('Project completed')->success()->send();
+
+                            // ✅ FIXED
+                            $this->redirect($this->getResource()::getUrl('edit', ['record' => $this->record]));
+                        }),
+
+                    Action::make('hold')
+                        ->label('Place on Hold')
+                        ->icon('heroicon-m-pause')
+                        ->color('danger')
+                        ->visible(fn($record) => $record->status === ProjectStatus::IN_PROGRESS)
+                        ->schema([
+                            \Filament\Forms\Components\Textarea::make('reason')
+                                ->required()
+                                ->label('Reason for hold'),
+                        ])
+                        ->action(function (array $data, ProjectService $service) {
+                            $service->holdProject($this->record, $data['reason']);
+
+                            Notification::make()->title('Project placed on hold')->warning()->send();
+
+                            // ✅ FIXED
+                            $this->redirect($this->getResource()::getUrl('edit', ['record' => $this->record]));
+                        }),
                 ])
             ])
             ->toolbarActions([
