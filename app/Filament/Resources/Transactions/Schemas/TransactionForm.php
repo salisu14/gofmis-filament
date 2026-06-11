@@ -40,6 +40,7 @@ class TransactionForm
                                         'withdrawal' => 'Withdrawal',
                                         'intervention' => 'Intervention',
                                         'imprest' => 'Imprest',
+                                        'education_fee_payment' => 'Education Fee Payment',
                                         'loan_disbursement' => 'Loan Disbursement',
                                         'loan_repayment' => 'Loan Repayment',
                                     ])

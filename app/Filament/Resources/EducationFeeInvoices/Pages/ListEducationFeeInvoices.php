@@ -16,4 +16,11 @@ class ListEducationFeeInvoices extends ListRecords
             CreateAction::make(),
         ];
     }
+
+    protected function getHeaderWidgets(): array
+    {
+        return [
+            \App\Filament\Widgets\EducationOverviewStatsWidget::class,
+        ];
+    }
 }

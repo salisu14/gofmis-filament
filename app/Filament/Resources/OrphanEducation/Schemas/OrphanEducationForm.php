@@ -22,6 +22,12 @@ class OrphanEducationForm
                     ->description('Link the orphan to an educational institution and define their academic level.')
                     ->icon('heroicon-m-academic-cap')
                     ->schema([
+                        TextInput::make('reference')
+                            ->label('Education Ref')
+                            ->placeholder('Generated automatically')
+                            ->disabled()
+                            ->dehydrated(false),
+
                         Grid::make(2)->schema([
                             Select::make('orphan_id')
                                 ->label('Student')

@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Str;
 
 class OrphanEducation extends Model
 {
@@ -15,6 +16,7 @@ class OrphanEducation extends Model
     protected $table = 'orphan_educations';
 
     protected $fillable = [
+        'reference',
         'orphan_id',
         'institution_id',
         'orphan_class_id',
@@ -75,5 +77,28 @@ class OrphanEducation extends Model
     public function getBalanceAttribute(): float
     {
         return (float) $this->invoices->sum('amount') - $this->total_paid;
+    }
+
+    public function getLevelAttribute(): string
+    {
+        return $this->orphanClass?->name
+            ?? $this->class_level
+            ?? 'N/A';
+    }
+
+    protected static function booted(): void
+    {
+        static::creating(function (OrphanEducation $education): void {
+            $education->reference ??= static::generateReference();
+        });
+    }
+
+    public static function generateReference(): string
+    {
+        do {
+            $reference = 'EDU-ENR-'.now()->format('Ymd').'-'.Str::upper(Str::random(6));
+        } while (static::where('reference', $reference)->exists());
+
+        return $reference;
     }
 }

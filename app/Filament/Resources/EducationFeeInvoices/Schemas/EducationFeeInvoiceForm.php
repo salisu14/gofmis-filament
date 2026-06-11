@@ -6,6 +6,8 @@ use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 
 class EducationFeeInvoiceForm
@@ -16,6 +18,12 @@ class EducationFeeInvoiceForm
             ->components([
                 Section::make('Invoice Overview')
                     ->schema([
+                        TextInput::make('reference')
+                            ->label('Invoice Ref')
+                            ->placeholder('Generated automatically')
+                            ->disabled()
+                            ->dehydrated(false),
+
                         Select::make('orphan_education_id')
                             ->label('Education Record')
                             ->relationship('education', 'id')
@@ -23,7 +31,18 @@ class EducationFeeInvoiceForm
                             ->searchable()
                             ->preload()
                             ->required()
-                            ->disabledOn('edit'),
+                            ->disabledOn('edit')
+                            ->live()
+                            ->afterStateUpdated(function (Set $set, ?string $state) {
+                                if (! $state) {
+                                    return;
+                                }
+
+                                $education = \App\Models\OrphanEducation::find($state);
+                                if ($education && blank($education->school_fee) === false) {
+                                    $set('amount', $education->school_fee);
+                                }
+                            }),
 
                         TextInput::make('period')
                             ->label('Billing Period')
@@ -53,7 +72,10 @@ class EducationFeeInvoiceForm
                             ])
                             ->required()
                             ->native(false)
-                            ->default('pending'),
+                            ->default('pending')
+                            ->helperText('Payment status is recalculated automatically from payment history. Use Cancelled only to void an unpaid invoice.')
+                            ->disabled(fn (string $operation, Get $get): bool => $operation === 'create' || in_array($get('status'), ['partial', 'paid'], true))
+                            ->dehydrated(),
                     ])->columns(3),
             ]);
     }

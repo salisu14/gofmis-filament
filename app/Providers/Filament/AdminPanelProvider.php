@@ -333,6 +333,7 @@ class AdminPanelProvider extends PanelProvider
                 \App\Filament\Widgets\IdCardPrintQueueWidget::class,
                 \App\Filament\Widgets\LoanRepaymentWidget::class,
                 \App\Filament\Widgets\LoanBeneficiariesWidget::class,
+                \App\Filament\Widgets\EducationOverviewStatsWidget::class,
                 \App\Filament\Widgets\EducationInterventionWidget::class,
                 \App\Filament\Widgets\HealthcareInterventionWidget::class,
                 \App\Filament\Widgets\WelfareInterventionWidget::class,

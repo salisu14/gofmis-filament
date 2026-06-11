@@ -27,11 +27,17 @@ class OrphanEducationTable
                     ->sortable()
                     ->weight('bold'),
 
+                TextColumn::make('reference')
+                    ->label('Education Ref')
+                    ->searchable()
+                    ->copyable()
+                    ->toggleable(),
+
                 TextColumn::make('institution.name')
                     ->label('Institution')
                     ->searchable()
                     ->sortable()
-                    ->description(fn(OrphanEducation $record) => "Level: {$record->orphanClass->name}"),
+                    ->description(fn(OrphanEducation $record) => "Level: {$record->level}"),
 
                 TextColumn::make('total_paid')
                     ->label('Paid')

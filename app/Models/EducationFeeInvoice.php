@@ -7,12 +7,14 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Str;
 
 class EducationFeeInvoice extends Model
 {
     use HasUuids, SoftDeletes;
 
     protected $fillable = [
+        'reference',
         'orphan_education_id',
         'amount',
         'due_date',
@@ -47,5 +49,45 @@ class EducationFeeInvoice extends Model
     public function getBalanceAttribute(): float
     {
         return (float) $this->amount - (float) $this->payments()->sum('amount');
+    }
+
+    public function getPaidAmountAttribute(): float
+    {
+        return (float) $this->payments()->sum('amount');
+    }
+
+    public function refreshPaymentStatus(): void
+    {
+        if ($this->status === 'cancelled') {
+            return;
+        }
+
+        $paid = $this->paid_amount;
+        $amount = (float) $this->amount;
+
+        $this->forceFill([
+            'status' => match (true) {
+                $paid <= 0 => 'pending',
+                $paid >= $amount => 'paid',
+                default => 'partial',
+            },
+        ])->saveQuietly();
+    }
+
+    protected static function booted(): void
+    {
+        static::creating(function (EducationFeeInvoice $invoice): void {
+            $invoice->reference ??= static::generateReference();
+            $invoice->status ??= 'pending';
+        });
+    }
+
+    public static function generateReference(): string
+    {
+        do {
+            $reference = 'EDU-INV-'.now()->format('Ymd').'-'.Str::upper(Str::random(6));
+        } while (static::where('reference', $reference)->exists());
+
+        return $reference;
     }
 }

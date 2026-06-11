@@ -20,6 +20,11 @@ class OrphanEducationInfolist
                     ->icon('heroicon-m-academic-cap')
                     ->schema([
                         Grid::make(4)->schema([
+                            TextEntry::make('reference')
+                                ->label('Education Ref')
+                                ->copyable()
+                                ->fontFamily('mono'),
+
                             TextEntry::make('orphan.full_name')
                                 ->label('Student Name')
                                 ->weight('bold')

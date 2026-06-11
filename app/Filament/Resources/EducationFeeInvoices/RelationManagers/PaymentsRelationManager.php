@@ -2,6 +2,11 @@
 
 namespace App\Filament\Resources\EducationFeeInvoices\RelationManagers;
 
+use App\Exceptions\InsufficientBankBalanceException;
+use App\Models\BankAccount;
+use App\Models\EducationFeeInvoice;
+use App\Models\EducationFeePayment;
+use App\Models\Transaction;
 use App\Filament\Resources\EducationFeeInvoices\EducationFeeInvoiceResource;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
@@ -15,6 +20,8 @@ use Filament\Schemas\Schema;
 use Filament\Tables\Columns\Summarizers\Sum;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class PaymentsRelationManager extends RelationManager
 {
@@ -31,11 +38,28 @@ class PaymentsRelationManager extends RelationManager
             ->schema([
                 Section::make('Payment Details')
                     ->schema([
+                        TextInput::make('reference')
+                            ->label('Payment Ref')
+                            ->placeholder('Generated automatically')
+                            ->disabled()
+                            ->dehydrated(false),
+
+                        Select::make('bank_account_id')
+                            ->label('Paying Bank Account')
+                            ->relationship('bankAccount', 'account_name')
+                            ->searchable()
+                            ->preload()
+                            ->required()
+                            ->disabledOn('edit')
+                            ->helperText('The selected bank account is debited when this payment is recorded.'),
+
                         TextInput::make('amount')
                             ->numeric()
                             ->prefix('₦')
                             ->required()
-                            ->helperText('Enter the specific amount received for this transaction.'),
+                            ->maxValue(fn () => max(0, $this->getOwnerRecord()->balance))
+                            ->disabledOn('edit')
+                            ->helperText(fn () => 'Outstanding balance: ₦'.number_format(max(0, $this->getOwnerRecord()->balance), 2)),
 
                         DatePicker::make('payment_date')
                             ->default(now())
@@ -51,11 +75,6 @@ class PaymentsRelationManager extends RelationManager
                             ])
                             ->required()
                             ->native(false),
-
-                        TextInput::make('reference')
-                            ->label('Transaction Reference')
-                            ->placeholder('e.g. Teller No or Bank Ref')
-                            ->maxLength(255),
                     ])->columns(2),
             ]);
     }
@@ -72,6 +91,10 @@ class PaymentsRelationManager extends RelationManager
                     ->money('NGN')
                     ->summarize(Sum::make()->money('NGN')->label('Total Paid')),
 
+                TextColumn::make('bankAccount.account_name')
+                    ->label('Bank')
+                    ->toggleable(),
+
                 TextColumn::make('payment_method')
                     ->badge()
                     ->color('gray'),
@@ -79,7 +102,8 @@ class PaymentsRelationManager extends RelationManager
                 TextColumn::make('reference')
                     ->label('Ref')
                     ->searchable()
-                    ->placeholder('No Ref'),
+                    ->copyable()
+                    ->placeholder('Generated'),
             ])
             ->defaultSort('payment_date', 'desc')
             ->headerActions([
@@ -87,11 +111,65 @@ class PaymentsRelationManager extends RelationManager
                     ->label('Record Payment')
                     ->icon('heroicon-m-banknotes')
                     ->modalHeading('New Payment Entry')
-                    ->modalWidth('xl'),
+                    ->modalWidth('xl')
+                    ->visible(fn () => ! in_array($this->getOwnerRecord()->status, ['paid', 'cancelled'], true))
+                    ->using(function (array $data): EducationFeePayment {
+                        return DB::transaction(function () use ($data): EducationFeePayment {
+                            $invoice = EducationFeeInvoice::query()
+                                ->whereKey($this->getOwnerRecord()->getKey())
+                                ->lockForUpdate()
+                                ->firstOrFail();
+                            $amount = (float) $data['amount'];
+
+                            if ($invoice->status === 'cancelled') {
+                                throw ValidationException::withMessages([
+                                    'amount' => 'Payments cannot be recorded against a cancelled invoice.',
+                                ]);
+                            }
+
+                            if ($amount > (float) $invoice->balance) {
+                                throw ValidationException::withMessages([
+                                    'amount' => 'This payment is higher than the outstanding balance.',
+                                ]);
+                            }
+
+                            $bank = BankAccount::query()
+                                ->whereKey($data['bank_account_id'])
+                                ->lockForUpdate()
+                                ->firstOrFail();
+
+                            try {
+                                $bank->debit($amount);
+                            } catch (InsufficientBankBalanceException $exception) {
+                                throw ValidationException::withMessages([
+                                    'bank_account_id' => $exception->getMessage(),
+                                ]);
+                            }
+
+                            /** @var EducationFeePayment $payment */
+                            $payment = $invoice->payments()->create($data);
+
+                            Transaction::create([
+                                'bank_account_id' => $bank->id,
+                                'reference' => $payment->reference,
+                                'description' => "Education fee payment for {$invoice->education?->orphan?->full_name} ({$invoice->period})",
+                                'amount' => $payment->amount,
+                                'type' => 'education_fee_payment',
+                                'date' => $payment->payment_date,
+                                'is_system' => true,
+                                'transactionable_type' => EducationFeePayment::class,
+                                'transactionable_id' => $payment->id,
+                            ]);
+
+                            return $payment;
+                        });
+                    }),
             ])
             ->recordActions([
-                EditAction::make(),
-                DeleteAction::make(),
+                EditAction::make()
+                    ->visible(fn (EducationFeePayment $record) => ! $record->transaction()->exists()),
+                DeleteAction::make()
+                    ->visible(fn (EducationFeePayment $record) => ! $record->transaction()->exists()),
             ]);
     }
 }

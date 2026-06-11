@@ -23,6 +23,12 @@ class EducationFeeInvoicesTable
                     ->sortable()
                     ->weight('bold'),
 
+                TextColumn::make('reference')
+                    ->label('Invoice Ref')
+                    ->searchable()
+                    ->copyable()
+                    ->toggleable(),
+
                 TextColumn::make('period')
                     ->label('Period')
                     ->searchable(),
@@ -51,6 +57,7 @@ class EducationFeeInvoicesTable
                         'partial' => 'warning',
                         'pending' => 'danger',
                         'cancelled' => 'gray',
+                        default => 'gray',
                     }),
 
                 TextColumn::make('due_date')

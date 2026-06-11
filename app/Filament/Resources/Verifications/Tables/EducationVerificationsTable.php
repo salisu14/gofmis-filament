@@ -85,7 +85,7 @@ class EducationVerificationsTable
                     ->label('Verify')
                     ->icon('heroicon-m-check-badge')
                     ->color('primary')
-                    ->visible(fn($record) => $record->status === 'pending' && $record->verification_status === 'failed'),
+                    ->visible(fn($record) => in_array($record->status, ['pending', 'under_review'], true)),
 
                 ActionGroup::make([
                     Action::make('quick_approve')
