@@ -3,11 +3,14 @@
 namespace App\Filament\Resources\InterventionRequests\RelationManagers;
 
 use App\Filament\Resources\InterventionRequests\InterventionRequestResource;
+use App\Models\Item;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Forms\Components\Hidden;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Components\Grid;
@@ -29,15 +32,49 @@ class ItemsRelationManager extends RelationManager
     {
         return $schema
             ->schema([
-                Grid::make(2)->schema([
-                    TextInput::make('item_name')
-                        ->required()
-                        ->maxLength(255)
-                        ->placeholder('e.g. School Bag, Uniform, Food Basket'),
+                Select::make('item_id')
+                    ->label('Item')
+                    ->searchable()
+                    ->preload()
+                    ->required()
+                    // ✅ FIX: Build the options array grouped by Category natively
+                    ->options(
+                        Item::with('category')->get()
+                            ->groupBy(fn ($item) => $item->category?->name ?? 'Uncategorized')
+                            ->map(fn ($items) => $items->pluck('name', 'id'))
+                    )
+                    // Allow creating a new master Item on the fly
+                    ->createOptionForm([
+                        TextInput::make('name')->required()->maxLength(255),
+                        Select::make('category_id')
+                            ->label('Category')
+                            ->relationship('category', 'name')
+                            ->searchable()
+                            ->preload()
+                            ->required(),
+                        TextInput::make('description')->maxLength(255),
+                    ])
+                    ->createOptionModalHeading('Create New Master Item')
+                    // Auto-fill specification and snapshot the name
+                    ->reactive()
+                    ->afterStateUpdated(function ($state, callable $set) {
+                        if ($state) {
+                            $item = Item::find($state);
+                            $set('item_name', $item?->name); // Snapshot the name
+                            $set('specification', $item?->description);
+                        }
+                    }),
 
+                Hidden::make('item_name'), // Keeps the snapshot but hides it from the UI
+
+                Grid::make(2)->schema([
                     TextInput::make('orphan_class')
                         ->label('Size / Class Context')
                         ->placeholder('e.g. Large, Size 34, Grade 4'),
+
+                    TextInput::make('specification')
+                        ->label('Specific Details')
+                        ->placeholder('e.g. Blue color, Waterproof material'),
                 ]),
 
                 Grid::make(2)->schema([
@@ -51,13 +88,9 @@ class ItemsRelationManager extends RelationManager
                         ->label('Qty Fulfilled')
                         ->numeric()
                         ->default(0)
-                        ->helperText('This updates as interventions are recorded.'),
+                        ->disabled() // System updates this, not users
+                        ->dehydrated(false),
                 ]),
-
-                TextInput::make('specification')
-                    ->label('Specific Details')
-                    ->placeholder('e.g. Blue color, Waterproof material')
-                    ->columnSpanFull(),
             ]);
     }
 
@@ -72,9 +105,17 @@ class ItemsRelationManager extends RelationManager
                     ->sortable()
                     ->weight('bold'),
 
+                TextColumn::make('item.category.name')
+                    ->label('Category')
+                    ->badge()
+                    ->color('gray')
+                    ->sortable()
+                    ->toggleable(),
+
                 TextColumn::make('orphan_class')
                     ->label('Context')
-                    ->placeholder('N/A'),
+                    ->placeholder('N/A')
+                    ->toggleable(),
 
                 TextColumn::make('quantity_requested')
                     ->label('Requested')
@@ -83,7 +124,7 @@ class ItemsRelationManager extends RelationManager
                 TextColumn::make('quantity_fulfilled')
                     ->label('Fulfilled')
                     ->alignCenter()
-                    ->color(fn($record) => $record->is_fully_fulfilled ? 'success' : 'warning'),
+                    ->color(fn ($record) => $record->is_fully_fulfilled ? 'success' : 'warning'),
 
                 IconColumn::make('is_fully_fulfilled')
                     ->label('Done')

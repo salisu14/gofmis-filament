@@ -33,7 +33,8 @@ class InterventionRequestResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            RelationManagers\ItemsRelationManager::class,
+            RelationManagers\InterventionsRelationManager::class,
         ];
     }
 

@@ -13,6 +13,7 @@ class InterventionRequestItem extends Model
 
     protected $fillable = [
         'intervention_request_id',
+        'item_id',
         'item_name',
         'specification',
         'quantity_requested',
@@ -25,6 +26,15 @@ class InterventionRequestItem extends Model
         'quantity_fulfilled' => 'integer',
     ];
 
+    public function item(): BelongsTo
+    {
+        return $this->belongsTo(Item::class);
+    }
+
+    public function type(): BelongsTo
+    {
+        return $this->belongsTo(InterventionType::class, 'intervention_type_id');
+    }
     public function request(): BelongsTo
     {
         return $this->belongsTo(InterventionRequest::class);
@@ -40,5 +50,15 @@ class InterventionRequestItem extends Model
     public function getIsFullyFulfilledAttribute(): bool
     {
         return $this->quantity_fulfilled >= $this->quantity_requested;
+    }
+
+    // Add to booted() to auto-snapshot the name
+    protected static function booted(): void
+    {
+        static::creating(function ($model) {
+            if (!empty($model->item_id) && empty($model->item_name)) {
+                $model->item_name = $model->item?->name;
+            }
+        });
     }
 }

@@ -175,6 +175,7 @@ class InterventionRequest extends Model
                     'action' => "education_request_{$request->status}",
                     'model_type' => self::class,
                     'model_id' => $request->id,
+                    'description' => "Education request {$request->status} by " . auth()->user()->name,
                     'details' => [
                         'old_status' => $request->getOriginal('status'),
                         'new_status' => $request->status,

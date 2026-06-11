@@ -39,6 +39,7 @@ class EducationVerificationsTable
                 TextColumn::make('requested_amount')
                     ->label('Amount')
                     ->money('NGN')
+                    ->default(0.00)
                     ->sortable(),
 
                 TextColumn::make('status')
@@ -83,7 +84,8 @@ class EducationVerificationsTable
                 EditAction::make()
                     ->label('Verify')
                     ->icon('heroicon-m-check-badge')
-                    ->color('primary'),
+                    ->color('primary')
+                    ->visible(fn($record) => $record->status === 'pending' && $record->verification_status === 'failed'),
 
                 ActionGroup::make([
                     Action::make('quick_approve')

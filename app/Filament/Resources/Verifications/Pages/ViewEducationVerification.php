@@ -20,6 +20,7 @@ class ViewEducationVerification extends ViewRecord
         return [
             EditAction::make()
                 ->label('Edit Verification')
+                ->visible(fn($record) => in_array($record->status, ['pending', 'under_review']))
                 ->icon('heroicon-m-pencil-square'),
 
             Action::make('approve')

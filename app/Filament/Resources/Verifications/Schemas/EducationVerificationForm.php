@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Verifications\Schemas;
 
+use Carbon\Carbon;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Select;
@@ -44,7 +45,7 @@ class EducationVerificationForm
 
                         TextInput::make('request_date')
                             ->label('Submission Date')
-                            ->formatStateUsing(fn($state) => $state ? $state->format('d M, Y') : null)
+                            ->formatStateUsing(fn($state) => $state ? Carbon::parse($state)->format('d M, Y') : null) // ✅ FIX APPLIED HERE
                             ->disabled()
                             ->dehydrated(false),
                     ]),
