@@ -47,6 +47,13 @@ class DeceasedTable
                     ->sortable()
                     ->description(fn($record) => "Reg: {$record->reg_no}"),
 
+                TextColumn::make('age')
+                    ->label('Age')
+                    ->suffix(' years')
+                    ->numeric()
+                    ->toggleable()
+                    ->searchable(),
+
                 TextColumn::make('nin')
                     ->label('NIN')
                     ->toggleable()

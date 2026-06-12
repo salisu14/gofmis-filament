@@ -18,6 +18,7 @@ class DeceasedInfolist
                         TextEntry::make('full_name')
                             ->weight('bold')
                             ->size('lg'),
+                        TextEntry::make('age'),
                         TextEntry::make('reg_no')
                             ->label('Registration Number')
                             ->placeholder('Auto-generated')
