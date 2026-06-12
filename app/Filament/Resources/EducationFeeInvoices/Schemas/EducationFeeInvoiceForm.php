@@ -22,6 +22,7 @@ class EducationFeeInvoiceForm
                             ->label('Invoice Ref')
                             ->placeholder('Generated automatically')
                             ->disabled()
+                            ->visibleOn('edit') // Only show after creation, remove from create form entirely
                             ->dehydrated(false),
 
                         Select::make('orphan_education_id')
@@ -34,7 +35,7 @@ class EducationFeeInvoiceForm
                             ->disabledOn('edit')
                             ->live()
                             ->afterStateUpdated(function (Set $set, ?string $state) {
-                                if (! $state) {
+                                if (!$state) {
                                     return;
                                 }
 
@@ -74,7 +75,7 @@ class EducationFeeInvoiceForm
                             ->native(false)
                             ->default('pending')
                             ->helperText('Payment status is recalculated automatically from payment history. Use Cancelled only to void an unpaid invoice.')
-                            ->disabled(fn (string $operation, Get $get): bool => $operation === 'create' || in_array($get('status'), ['partial', 'paid'], true))
+                            ->disabled(fn(string $operation, Get $get): bool => $operation === 'create' || in_array($get('status'), ['partial', 'paid'], true))
                             ->dehydrated(),
                     ])->columns(3),
             ]);

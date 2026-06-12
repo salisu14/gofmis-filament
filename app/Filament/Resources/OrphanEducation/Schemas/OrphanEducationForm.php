@@ -26,6 +26,7 @@ class OrphanEducationForm
                             ->label('Education Ref')
                             ->placeholder('Generated automatically')
                             ->disabled()
+                            ->visibleOn('edit') // Only show after creation, remove from create form entirely
                             ->dehydrated(false),
 
                         Grid::make(2)->schema([

@@ -89,9 +89,19 @@ class OrphanEducation extends Model
     protected static function booted(): void
     {
         static::creating(function (OrphanEducation $education): void {
-            $education->reference ??= static::generateReference();
+            // Use empty() instead of ??= to catch both null and ""
+            if (empty($education->reference)) {
+                $education->reference = static::generateReference();
+            }
         });
     }
+
+//    protected static function booted(): void
+//    {
+//        static::creating(function (OrphanEducation $education): void {
+//            $education->reference ??= static::generateReference();
+//        });
+//    }
 
     public static function generateReference(): string
     {
