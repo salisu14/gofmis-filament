@@ -144,6 +144,7 @@ class Transaction extends Model
             'imprest_expense' => 'IMPE',
             'imprest_expense_void' => 'IMPV',
             'education_fee_payment' => 'EDUP',
+            'education_fee_payment_void' => 'EDUV',
             'intervention' => 'INTV',
             default => 'TXN',
         };

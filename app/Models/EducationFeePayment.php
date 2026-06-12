@@ -90,9 +90,15 @@ class EducationFeePayment extends Model
             return;
         }
 
-        if ($invoice->status === 'cancelled') {
+        if ($invoice->isFinalized() && ! $invoice->isPaid()) {
             throw ValidationException::withMessages([
-                'education_fee_invoice_id' => 'Payments cannot be recorded against a cancelled invoice.',
+                'education_fee_invoice_id' => 'Payments cannot be recorded against a voided invoice.',
+            ]);
+        }
+
+        if ($invoice->isPaid() && ! $this->exists) {
+            throw ValidationException::withMessages([
+                'education_fee_invoice_id' => 'Payments cannot be recorded against a fully paid invoice.',
             ]);
         }
 

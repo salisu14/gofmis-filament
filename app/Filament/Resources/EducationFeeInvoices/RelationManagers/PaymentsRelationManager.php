@@ -2,12 +2,10 @@
 
 namespace App\Filament\Resources\EducationFeeInvoices\RelationManagers;
 
-use App\Exceptions\InsufficientBankBalanceException;
 use App\Models\BankAccount;
-use App\Models\EducationFeeInvoice;
 use App\Models\EducationFeePayment;
-use App\Models\Transaction;
 use App\Filament\Resources\EducationFeeInvoices\EducationFeeInvoiceResource;
+use App\Services\EducationFeeInvoiceService;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
@@ -20,8 +18,6 @@ use Filament\Schemas\Schema;
 use Filament\Tables\Columns\Summarizers\Sum;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
 
 class PaymentsRelationManager extends RelationManager
 {
@@ -46,16 +42,14 @@ class PaymentsRelationManager extends RelationManager
 
                         Select::make('bank_account_id')
                             ->label('Paying Bank Account')
-                            ->relationship(
-                                name: 'bankAccount',
-                                titleAttribute: 'account_name',
-                                modifyQueryUsing: fn ($query) => $query->dedicatedTo(BankAccount::USAGE_EDUCATION)
-                            )
+                            ->options(fn (): array => $this->bankAccountOptions())
                             ->searchable()
                             ->preload()
                             ->required()
                             ->disabledOn('edit')
-                            ->helperText('The selected bank account is debited when this payment is recorded.'),
+                            ->helperText(fn (): string => $this->getOwnerRecord()->education?->orphan?->hasActiveSponsorship()
+                                ? 'This orphan has active sponsorship. Prefer a benevolent/sponsor education account when available.'
+                                : 'The selected education account is debited when this payment is recorded.'),
 
                         TextInput::make('amount')
                             ->numeric()
@@ -116,58 +110,10 @@ class PaymentsRelationManager extends RelationManager
                     ->icon('heroicon-m-banknotes')
                     ->modalHeading('New Payment Entry')
                     ->modalWidth('xl')
-                    ->visible(fn () => ! in_array($this->getOwnerRecord()->status, ['paid', 'cancelled'], true))
+                    ->visible(fn () => ! $this->getOwnerRecord()->isFinalized())
                     ->using(function (array $data): EducationFeePayment {
-                        return DB::transaction(function () use ($data): EducationFeePayment {
-                            $invoice = EducationFeeInvoice::query()
-                                ->whereKey($this->getOwnerRecord()->getKey())
-                                ->lockForUpdate()
-                                ->firstOrFail();
-                            $amount = (float) $data['amount'];
-
-                            if ($invoice->status === 'cancelled') {
-                                throw ValidationException::withMessages([
-                                    'amount' => 'Payments cannot be recorded against a cancelled invoice.',
-                                ]);
-                            }
-
-                            if ($amount > (float) $invoice->balance) {
-                                throw ValidationException::withMessages([
-                                    'amount' => 'This payment is higher than the outstanding balance.',
-                                ]);
-                            }
-
-                            $bank = BankAccount::query()
-                                ->whereKey($data['bank_account_id'])
-                                ->lockForUpdate()
-                                ->firstOrFail();
-                            $bank->ensureDedicatedTo(BankAccount::USAGE_EDUCATION, 'education fee payments');
-
-                            try {
-                                $bank->debit($amount);
-                            } catch (InsufficientBankBalanceException $exception) {
-                                throw ValidationException::withMessages([
-                                    'bank_account_id' => $exception->getMessage(),
-                                ]);
-                            }
-
-                            /** @var EducationFeePayment $payment */
-                            $payment = $invoice->payments()->create($data);
-
-                            Transaction::create([
-                                'bank_account_id' => $bank->id,
-                                'reference' => $payment->reference,
-                                'description' => "Education fee payment for {$invoice->education?->orphan?->full_name} ({$invoice->period})",
-                                'amount' => $payment->amount,
-                                'type' => 'education_fee_payment',
-                                'date' => $payment->payment_date,
-                                'is_system' => true,
-                                'transactionable_type' => EducationFeePayment::class,
-                                'transactionable_id' => $payment->id,
-                            ]);
-
-                            return $payment;
-                        });
+                        return app(EducationFeeInvoiceService::class)
+                            ->recordPayment($this->getOwnerRecord(), $data);
                     }),
             ])
             ->recordActions([
@@ -176,5 +122,23 @@ class PaymentsRelationManager extends RelationManager
                 DeleteAction::make()
                     ->visible(fn (EducationFeePayment $record) => ! $record->transaction()->exists()),
             ]);
+    }
+
+    private function bankAccountOptions(): array
+    {
+        $orphan = $this->getOwnerRecord()->education?->orphan;
+        $sponsored = (bool) $orphan?->hasActiveSponsorship();
+
+        return BankAccount::query()
+            ->dedicatedTo(EducationFeeInvoiceService::PAYING_ACCOUNT_USAGES)
+            ->orderByRaw('case when usage = ? then 0 else 1 end', [
+                $sponsored ? BankAccount::USAGE_EDUCATION_BENEVOLENT : BankAccount::USAGE_EDUCATION,
+            ])
+            ->orderBy('account_name')
+            ->get()
+            ->mapWithKeys(fn (BankAccount $account): array => [
+                $account->id => "{$account->account_name} ({$account->usage_label}) - ₦".number_format((float) $account->ledger_balance, 2),
+            ])
+            ->all();
     }
 }

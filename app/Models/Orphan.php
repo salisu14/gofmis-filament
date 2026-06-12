@@ -143,6 +143,26 @@ class Orphan extends Model
         return $this->hasMany(OrphanEducation::class);
     }
 
+    public function sponsorships(): HasMany
+    {
+        return $this->hasMany(Sponsorship::class);
+    }
+
+    public function activeSponsorships(): HasMany
+    {
+        return $this->sponsorships()
+            ->whereDate('start_date', '<=', now())
+            ->where(function ($query): void {
+                $query->whereNull('end_date')
+                    ->orWhereDate('end_date', '>=', now());
+            });
+    }
+
+    public function hasActiveSponsorship(): bool
+    {
+        return $this->activeSponsorships()->exists();
+    }
+
     public function vocationalSkills(): BelongsToMany
     {
         return $this->belongsToMany(

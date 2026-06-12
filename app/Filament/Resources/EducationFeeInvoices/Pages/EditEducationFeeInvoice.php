@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\EducationFeeInvoices\Pages;
 
 use App\Filament\Resources\EducationFeeInvoices\EducationFeeInvoiceResource;
+use App\Models\EducationFeeInvoice;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\ForceDeleteAction;
 use Filament\Actions\RestoreAction;
@@ -15,8 +16,10 @@ class EditEducationFeeInvoice extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
-            DeleteAction::make(),
-            ForceDeleteAction::make(),
+            DeleteAction::make()
+                ->visible(fn (EducationFeeInvoice $record): bool => ! $record->isFinalized() && ! $record->hasPayments()),
+            ForceDeleteAction::make()
+                ->visible(fn (EducationFeeInvoice $record): bool => $record->trashed()),
             RestoreAction::make(),
         ];
     }

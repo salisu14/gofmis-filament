@@ -2,11 +2,12 @@
 
 namespace App\Filament\Resources\EducationFeeInvoices\Schemas;
 
+use App\Models\EducationFeeInvoice;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Section;
-use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 
@@ -58,7 +59,12 @@ class EducationFeeInvoiceForm
                             ->numeric()
                             ->prefix('₦')
                             ->required()
-                            ->live(onBlur: true),
+                            ->live(onBlur: true)
+                            ->disabled(fn (?EducationFeeInvoice $record): bool => $record?->isFinalized() || $record?->hasPayments())
+                            ->dehydrated(fn (?EducationFeeInvoice $record): bool => ! ($record?->isFinalized() || $record?->hasPayments()))
+                            ->helperText(fn (?EducationFeeInvoice $record): ?string => ($record?->isFinalized() || $record?->hasPayments())
+                                ? 'Amount is locked once payments start or the invoice is finalized.'
+                                : null),
 
                         DatePicker::make('due_date')
                             ->required()
@@ -70,13 +76,21 @@ class EducationFeeInvoiceForm
                                 'partial' => 'Partially Paid',
                                 'paid' => 'Fully Paid',
                                 'cancelled' => 'Cancelled',
+                                'void' => 'Void',
                             ])
                             ->required()
                             ->native(false)
                             ->default('pending')
-                            ->helperText('Payment status is recalculated automatically from payment history. Use Cancelled only to void an unpaid invoice.')
-                            ->disabled(fn(string $operation, Get $get): bool => $operation === 'create' || in_array($get('status'), ['partial', 'paid'], true))
-                            ->dehydrated(),
+                            ->helperText('Payment status is recalculated from payment history. Use table actions to pay or void invoices.')
+                            ->disabled()
+                            ->dehydrated(false),
+
+                        Textarea::make('void_reason')
+                            ->label('Void reason')
+                            ->disabled()
+                            ->dehydrated(false)
+                            ->visible(fn (?EducationFeeInvoice $record): bool => (bool) $record?->isVoided())
+                            ->columnSpanFull(),
                     ])->columns(3),
             ]);
     }

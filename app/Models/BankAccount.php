@@ -20,6 +20,7 @@ class BankAccount extends Model
     public const USAGE_INTERVENTION = 'intervention';
     public const USAGE_IMPREST = 'imprest';
     public const USAGE_EDUCATION = 'education';
+    public const USAGE_EDUCATION_BENEVOLENT = 'education_benevolent';
     public const USAGE_OTHER = 'other';
 
     protected $keyType = 'string';
@@ -90,6 +91,7 @@ class BankAccount extends Model
             self::USAGE_INTERVENTION => 'Interventions',
             self::USAGE_IMPREST => 'Imprest',
             self::USAGE_EDUCATION => 'Education Fees',
+            self::USAGE_EDUCATION_BENEVOLENT => 'Education / Benevolent Sponsors',
             self::USAGE_OTHER => 'Other Dedicated Use',
         ];
     }
