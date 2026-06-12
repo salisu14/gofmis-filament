@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\FundStatus;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -32,6 +33,8 @@ class ImprestFund extends Model
         'current_balance' => 'decimal:2',
         'last_reconciled_at' => 'datetime',
     ];
+
+    public const OPEN_REPLENISHMENT_STATUSES = ['submitted', 'approved'];
 
     public function custodian(): BelongsTo
     {
@@ -75,12 +78,64 @@ class ImprestFund extends Model
 
     public function scopeActive($query)
     {
-        return $query->where('status', 'active');
+        return $query->where('status', FundStatus::ACTIVE->value);
     }
 
     public function isLowBalance(): bool
     {
         $threshold = $this->authorized_amount * 0.20;
         return $this->current_balance < $threshold;
+    }
+
+    public function isActive(): bool
+    {
+        return $this->status === FundStatus::ACTIVE->value;
+    }
+
+    public function isSuspended(): bool
+    {
+        return $this->status === FundStatus::SUSPENDED->value;
+    }
+
+    public function isClosed(): bool
+    {
+        return $this->status === FundStatus::CLOSED->value;
+    }
+
+    public function hasPendingTransactions(): bool
+    {
+        return $this->pendingTransactions()->exists();
+    }
+
+    public function hasOpenReplenishments(): bool
+    {
+        return $this->replenishments()
+            ->whereIn('status', self::OPEN_REPLENISHMENT_STATUSES)
+            ->exists();
+    }
+
+    public function canBeSuspended(): bool
+    {
+        return $this->isActive();
+    }
+
+    public function canBeReactivated(): bool
+    {
+        return $this->isSuspended();
+    }
+
+    public function canBeClosed(): bool
+    {
+        return ! $this->isClosed()
+            && ! $this->hasPendingTransactions()
+            && ! $this->hasOpenReplenishments();
+    }
+
+    public function statusBlockersForClosure(): array
+    {
+        return array_values(array_filter([
+            $this->hasPendingTransactions() ? 'pending transactions' : null,
+            $this->hasOpenReplenishments() ? 'submitted or approved replenishments' : null,
+        ]));
     }
 }

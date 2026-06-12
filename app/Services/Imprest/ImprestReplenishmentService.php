@@ -26,6 +26,12 @@ class ImprestReplenishmentService implements ImprestReplenishmentServiceInterfac
     public function createRequest(CreateReplenishmentDto $dto): ImprestReplenishment
     {
         return DB::transaction(function () use ($dto) {
+            $fund = $this->fundRepo->findById($dto->fundId);
+
+            if (! $fund || $fund->status !== 'active') {
+                throw new \RuntimeException('Only active funds can be replenished.');
+            }
+
             $amount = $this->calculateReplenishmentAmount(
                 $dto->fundId,
                 $dto->periodStart->toDateString(),
@@ -53,6 +59,13 @@ class ImprestReplenishmentService implements ImprestReplenishmentServiceInterfac
     public function approve(string $replenishmentId, string $approvedBy): ImprestReplenishment
     {
         return DB::transaction(function () use ($replenishmentId, $approvedBy) {
+            $existing = $this->replenishmentRepo->findById($replenishmentId);
+            $fund = $existing ? $this->fundRepo->findById($existing->fund_id) : null;
+
+            if (! $fund || $fund->status !== 'active') {
+                throw new \RuntimeException('Only active funds can have replenishments approved.');
+            }
+
             $replenishment = $this->replenishmentRepo->approve($replenishmentId, $approvedBy);
 
             event(new ReplenishmentApproved($replenishment));
@@ -67,6 +80,10 @@ class ImprestReplenishmentService implements ImprestReplenishmentServiceInterfac
             $replenishment = $this->replenishmentRepo->process($replenishmentId);
 
             $fund = $this->fundRepo->findById($replenishment->fund_id);
+            if (! $fund || $fund->status !== 'active') {
+                throw new \RuntimeException('Only active funds can have replenishments processed.');
+            }
+
             if (! $fund?->bank_account_id) {
                 throw new \RuntimeException('The imprest fund must be linked to a bank account before replenishment can be processed.');
             }

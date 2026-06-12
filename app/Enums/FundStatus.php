@@ -16,4 +16,13 @@ enum FundStatus: string
             self::CLOSED => 'Closed',
         };
     }
+
+    public function color(): string
+    {
+        return match ($this) {
+            self::ACTIVE => 'success',
+            self::SUSPENDED => 'warning',
+            self::CLOSED => 'danger',
+        };
+    }
 }

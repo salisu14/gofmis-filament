@@ -83,7 +83,11 @@ class ImprestTransactionResource extends Resource
                     ->columns(2)
                     ->schema([
                         Select::make('fund_id')
-                            ->relationship('fund', 'location')
+                            ->relationship(
+                                name: 'fund',
+                                titleAttribute: 'location',
+                                modifyQueryUsing: fn (Builder $query) => $query->where('status', 'active')
+                            )
                             ->required()
                             ->searchable()
                             ->preload()

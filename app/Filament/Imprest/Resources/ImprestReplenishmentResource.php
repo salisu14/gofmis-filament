@@ -13,6 +13,7 @@ use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Infolists\Components\TextEntry;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Section;
@@ -34,9 +35,15 @@ class ImprestReplenishmentResource extends Resource
     {
         $query = parent::getEloquentQuery()->with(['fund', 'requester', 'approver']);
 
-        if (!auth()->user()->hasRole('admin')) {
-            $query->whereHas('fund', fn($q) => $q->where('custodian_id', auth()->id())
-            );
+        $user = auth()->user();
+        $canManageAll = $user?->hasAnyRole(['admin', 'super_admin']) || $user?->hasPermissionTo('imprest.manage_all');
+
+        if (! $canManageAll) {
+            $query->where(function ($query) {
+                $query
+                    ->where('requested_by', auth()->id())
+                    ->orWhereHas('fund', fn ($fundQuery) => $fundQuery->where('custodian_id', auth()->id()));
+            });
         }
 
         return $query;
@@ -50,7 +57,11 @@ class ImprestReplenishmentResource extends Resource
                     ->columns(2)
                     ->schema([
                         Select::make('fund_id')
-                            ->relationship('fund', 'location')
+                            ->relationship(
+                                name: 'fund',
+                                titleAttribute: 'location',
+                                modifyQueryUsing: fn ($query) => $query->where('status', 'active')
+                            )
                             ->required()
                             ->searchable()
                             ->preload()
@@ -196,13 +207,21 @@ class ImprestReplenishmentResource extends Resource
                     ->visible(fn(ImprestReplenishment $record): bool => $record->status === 'submitted' && auth()->user()->can('approve', $record->fund)
                     )
                     ->action(function (ImprestReplenishment $record) {
-                        $service = app(ImprestReplenishmentServiceInterface::class);
-                        $service->approve($record->id, auth()->id());
+                        try {
+                            $service = app(ImprestReplenishmentServiceInterface::class);
+                            $service->approve($record->id, auth()->id());
 
-                        Notification::make()
-                            ->title('Replenishment Approved')
-                            ->success()
-                            ->send();
+                            Notification::make()
+                                ->title('Replenishment Approved')
+                                ->success()
+                                ->send();
+                        } catch (\Throwable $e) {
+                            Notification::make()
+                                ->title('Approval failed')
+                                ->body($e->getMessage())
+                                ->danger()
+                                ->send();
+                        }
                     }),
 
                 Action::make('process')
@@ -210,24 +229,103 @@ class ImprestReplenishmentResource extends Resource
                     ->color('primary')
                     ->requiresConfirmation()
                     ->modalHeading('Process Replenishment')
-                    ->modalDescription('This will restore the fund to its authorized amount.')
+                    ->modalDescription(fn (ImprestReplenishment $record): string => $record->fund?->bank_account_id
+                        ? 'This will restore the fund to its authorized amount.'
+                        : 'This fund is not linked to a bank account yet, so payment cannot be processed.')
                     ->visible(fn(ImprestReplenishment $record): bool => $record->status === 'approved' && auth()->user()->can('replenish', $record->fund)
                     )
+                    ->disabled(fn (ImprestReplenishment $record): bool => blank($record->fund?->bank_account_id))
                     ->action(function (ImprestReplenishment $record) {
-                        $service = app(ImprestReplenishmentServiceInterface::class);
-                        $service->process($record->id);
+                        try {
+                            $service = app(ImprestReplenishmentServiceInterface::class);
+                            $service->process($record->id);
 
-                        Notification::make()
-                            ->title('Replenishment Processed')
-                            ->success()
-                            ->body('Fund balance has been restored.')
-                            ->send();
+                            Notification::make()
+                                ->title('Replenishment Processed')
+                                ->success()
+                                ->body('Fund balance has been restored.')
+                                ->send();
+                        } catch (\Throwable $e) {
+                            Notification::make()
+                                ->title('Processing failed')
+                                ->body($e->getMessage())
+                                ->danger()
+                                ->send();
+                        }
                     }),
 
                 EditAction::make()
                     ->visible(fn(ImprestReplenishment $record): bool => $record->status === 'draft'),
             ])
             ->defaultSort('created_at', 'desc');
+    }
+
+    public static function infolist(Schema $schema): Schema
+    {
+        return $schema
+            ->schema([
+                Section::make('Replenishment')
+                    ->columns(3)
+                    ->schema([
+                        TextEntry::make('fund.location')
+                            ->label('Fund'),
+                        TextEntry::make('fund.status')
+                            ->label('Fund Status')
+                            ->badge()
+                            ->color(fn (?string $state): string => match ($state) {
+                                'active' => 'success',
+                                'suspended' => 'warning',
+                                'closed' => 'danger',
+                                default => 'gray',
+                            }),
+                        TextEntry::make('status')
+                            ->badge()
+                            ->color(fn (string $state): string => match ($state) {
+                                'draft' => 'gray',
+                                'submitted' => 'warning',
+                                'approved' => 'primary',
+                                'rejected' => 'danger',
+                                'processed' => 'success',
+                                default => 'gray',
+                            }),
+                        TextEntry::make('period_start')
+                            ->date(),
+                        TextEntry::make('period_end')
+                            ->date(),
+                        TextEntry::make('processed_at')
+                            ->dateTime()
+                            ->placeholder('Not processed'),
+                    ]),
+
+                Section::make('Financials')
+                    ->columns(4)
+                    ->schema([
+                        TextEntry::make('amount')
+                            ->money('NGN'),
+                        TextEntry::make('receipts_total')
+                            ->money('NGN'),
+                        TextEntry::make('variance')
+                            ->money('NGN')
+                            ->color(fn ($state): string => (float) $state === 0.0 ? 'success' : 'danger'),
+                        TextEntry::make('fund.bankAccount.account_name')
+                            ->label('Funding Bank')
+                            ->placeholder('No bank account linked'),
+                    ]),
+
+                Section::make('People & Notes')
+                    ->columns(2)
+                    ->schema([
+                        TextEntry::make('requester.name')
+                            ->label('Requested By')
+                            ->placeholder('N/A'),
+                        TextEntry::make('approver.name')
+                            ->label('Approved By')
+                            ->placeholder('Not approved'),
+                        TextEntry::make('notes')
+                            ->placeholder('No notes')
+                            ->columnSpanFull(),
+                    ]),
+            ]);
     }
 
     public static function getPages(): array

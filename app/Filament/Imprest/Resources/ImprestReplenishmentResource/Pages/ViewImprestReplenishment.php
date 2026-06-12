@@ -29,15 +29,23 @@ class ViewImprestReplenishment extends ViewRecord
                 ->visible(fn(): bool => $record->status === 'submitted' && auth()->user()->can('approve', $record->fund)
                 )
                 ->action(function () use ($record) {
-                    $service = app(ImprestReplenishmentServiceInterface::class);
-                    $service->approve($record->id, auth()->id());
+                    try {
+                        $service = app(ImprestReplenishmentServiceInterface::class);
+                        $service->approve($record->id, auth()->id());
 
-                    Notification::make()
-                        ->title('Approved')
-                        ->success()
-                        ->send();
+                        Notification::make()
+                            ->title('Approved')
+                            ->success()
+                            ->send();
 
-                    $this->redirect($this->getResource()::getUrl('view', ['record' => $record->fresh()]));
+                        $this->redirect($this->getResource()::getUrl('view', ['record' => $record->fresh()]));
+                    } catch (\Throwable $e) {
+                        Notification::make()
+                            ->title('Approval failed')
+                            ->body($e->getMessage())
+                            ->danger()
+                            ->send();
+                    }
                 }),
 
             Action::make('process')
@@ -46,20 +54,31 @@ class ViewImprestReplenishment extends ViewRecord
                 ->color('primary')
                 ->requiresConfirmation()
                 ->modalHeading('Process Replenishment')
-                ->modalDescription('Restore fund to authorized amount?')
+                ->modalDescription(fn (): string => $record->fund?->bank_account_id
+                    ? 'Restore fund to authorized amount?'
+                    : 'This fund is not linked to a bank account yet, so payment cannot be processed.')
                 ->visible(fn(): bool => $record->status === 'approved' && auth()->user()->can('replenish', $record->fund)
                 )
+                ->disabled(fn (): bool => blank($record->fund?->bank_account_id))
                 ->action(function () use ($record) {
-                    $service = app(ImprestReplenishmentServiceInterface::class);
-                    $service->process($record->id);
+                    try {
+                        $service = app(ImprestReplenishmentServiceInterface::class);
+                        $service->process($record->id);
 
-                    Notification::make()
-                        ->title('Processed')
-                        ->success()
-                        ->body('Fund balance restored.')
-                        ->send();
+                        Notification::make()
+                            ->title('Processed')
+                            ->success()
+                            ->body('Fund balance restored.')
+                            ->send();
 
-                    $this->redirect($this->getResource()::getUrl('view', ['record' => $record->fresh()]));
+                        $this->redirect($this->getResource()::getUrl('view', ['record' => $record->fresh()]));
+                    } catch (\Throwable $e) {
+                        Notification::make()
+                            ->title('Processing failed')
+                            ->body($e->getMessage())
+                            ->danger()
+                            ->send();
+                    }
                 }),
 
             Action::make('reject')
@@ -76,15 +95,23 @@ class ViewImprestReplenishment extends ViewRecord
                     auth()->user()->can('approve', $record->fund)
                 )
                 ->action(function (array $data) use ($record) {
-                    $repo = app(\App\Repositories\Contracts\Imprest\ImprestReplenishmentRepositoryInterface::class);
-                    $repo->reject($record->id, auth()->id(), $data['reason']);
+                    try {
+                        $repo = app(\App\Repositories\Contracts\Imprest\ImprestReplenishmentRepositoryInterface::class);
+                        $repo->reject($record->id, auth()->id(), $data['reason']);
 
-                    Notification::make()
-                        ->title('Rejected')
-                        ->danger()
-                        ->send();
+                        Notification::make()
+                            ->title('Rejected')
+                            ->danger()
+                            ->send();
 
-                    $this->redirect($this->getResource()::getUrl('view', ['record' => $record->fresh()]));
+                        $this->redirect($this->getResource()::getUrl('view', ['record' => $record->fresh()]));
+                    } catch (\Throwable $e) {
+                        Notification::make()
+                            ->title('Rejection failed')
+                            ->body($e->getMessage())
+                            ->danger()
+                            ->send();
+                    }
                 }),
         ];
     }

@@ -29,6 +29,10 @@ class ImprestReconciliationService implements ImprestReconciliationServiceInterf
                 throw new \RuntimeException('Fund not found');
             }
 
+            if ($fund->status !== 'active') {
+                throw new \RuntimeException('Only active funds can be reconciled.');
+            }
+
             $receiptsTotal = $this->transactionRepo->getTotalSpentInPeriod(
                 $dto->fundId,
                 $dto->reconciliationDate->copy()->startOfMonth()->toDateString(),

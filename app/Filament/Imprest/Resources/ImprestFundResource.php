@@ -2,6 +2,7 @@
 
 namespace App\Filament\Imprest\Resources;
 
+use App\Enums\FundStatus;
 use App\Filament\Imprest\Resources\ImprestFundResource\Pages\CreateImprestFund;
 use App\Filament\Imprest\Resources\ImprestFundResource\Pages\EditImprestFund;
 use App\Filament\Imprest\Resources\ImprestFundResource\Pages\ListImprestFunds;
@@ -11,13 +12,17 @@ use App\Filament\Imprest\Resources\ImprestFundResource\RelationManagers\Transact
 use App\Models\ImprestFund;
 use App\Models\BankAccount;
 use App\Models\Zone;
+use App\Services\Imprest\ImprestFundStatusService;
 use Filament\Actions\Action;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms;
+use Filament\Forms\Components\Textarea;
 use Filament\Infolists\Components\TextEntry;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Set;
@@ -126,14 +131,13 @@ class ImprestFundResource extends Resource
                             ->dehydrated(),
 
                         Forms\Components\Select::make('status')
-                            ->options([
-                                'active' => 'Active',
-                                'suspended' => 'Suspended',
-                                'closed' => 'Closed',
-                            ])
+                            ->options(self::statusOptions())
                             ->required()
                             ->native(false)
-                            ->default('active'),
+                            ->default('active')
+                            ->disabled()
+                            ->dehydrated(false)
+                            ->helperText('Use the status actions to suspend, reactivate, or close a fund with an audit note.'),
 
                         Forms\Components\Textarea::make('notes')
                             ->rows(3)
@@ -187,12 +191,8 @@ class ImprestFundResource extends Resource
 
                 Tables\Columns\TextColumn::make('status')
                     ->badge()
-                    ->color(fn(string $state): string => match ($state) {
-                        'active' => 'success',
-                        'suspended' => 'warning',
-                        'closed' => 'danger',
-                        default => 'gray',
-                    }),
+                    ->formatStateUsing(fn (string $state): string => FundStatus::tryFrom($state)?->label() ?? str($state)->title())
+                    ->color(fn(string $state): string => FundStatus::tryFrom($state)?->color() ?? 'gray'),
 
                 Tables\Columns\TextColumn::make('last_reconciled_at')
                     ->label('Last Reconciled')
@@ -208,11 +208,7 @@ class ImprestFundResource extends Resource
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
-                    ->options([
-                        'active' => 'Active',
-                        'suspended' => 'Suspended',
-                        'closed' => 'Closed',
-                    ])
+                    ->options(self::statusOptions())
                     ->native(false),
 
                 Tables\Filters\TernaryFilter::make('low_balance')
@@ -226,14 +222,18 @@ class ImprestFundResource extends Resource
                     ),
             ])
             ->recordActions([
-                ViewAction::make(),
-                EditAction::make(),
+               ActionGroup::make([
+                   ViewAction::make(),
+                   EditAction::make(),
 
-                Action::make('reconcile')
-                    ->icon('heroicon-m-scale')
-                    ->color('warning')
-                    ->url(fn(ImprestFund $record): string => ImprestReconciliationResource::getUrl('create', ['fund_id' => $record->id]))
-                    ->visible(fn(ImprestFund $record): bool => auth()->user()->can('reconcile', $record)),
+                   Action::make('reconcile')
+                       ->icon('heroicon-m-scale')
+                       ->color('warning')
+                       ->url(fn(ImprestFund $record): string => ImprestReconciliationResource::getUrl('create', ['fund_id' => $record->id]))
+                       ->visible(fn(ImprestFund $record): bool => $record->isActive() && auth()->user()->can('reconcile', $record)),
+
+                   ...self::statusActions(),
+               ])
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
@@ -265,12 +265,8 @@ class ImprestFundResource extends Resource
                             ->icon('heroicon-m-building-library'),
                         TextEntry::make('status')
                             ->badge()
-                            ->color(fn(string $state): string => match ($state) {
-                                'active' => 'success',
-                                'suspended' => 'warning',
-                                'closed' => 'danger',
-                                default => 'gray',
-                            }),
+                            ->formatStateUsing(fn (string $state): string => FundStatus::tryFrom($state)?->label() ?? str($state)->title())
+                            ->color(fn(string $state): string => FundStatus::tryFrom($state)?->color() ?? 'gray'),
                     ]),
 
                 Section::make('Financial Summary')
@@ -315,5 +311,102 @@ class ImprestFundResource extends Resource
             'view' => ViewImprestFund::route('/{record}'),
             'edit' => EditImprestFund::route('/{record}/edit'),
         ];
+    }
+
+    public static function statusActions(): array
+    {
+        return [
+            self::makeStatusAction(
+                name: 'suspend',
+                label: 'Suspend Fund',
+                icon: 'heroicon-m-pause-circle',
+                color: 'warning',
+                modalHeading: 'Suspend imprest fund',
+                modalDescription: 'Suspended funds cannot receive new transactions, replenishments, or reconciliations until reactivated.',
+                visible: fn (ImprestFund $record): bool => $record->canBeSuspended() && auth()->user()->can('manageStatus', $record),
+                handler: fn (ImprestFund $record, array $data) => app(ImprestFundStatusService::class)->suspend($record, auth()->user(), $data['reason']),
+                successTitle: 'Fund suspended',
+            ),
+
+            self::makeStatusAction(
+                name: 'reactivate',
+                label: 'Reactivate Fund',
+                icon: 'heroicon-m-play-circle',
+                color: 'success',
+                modalHeading: 'Reactivate imprest fund',
+                modalDescription: 'The fund will become available for new transactions and replenishments again.',
+                visible: fn (ImprestFund $record): bool => $record->canBeReactivated() && auth()->user()->can('manageStatus', $record),
+                handler: fn (ImprestFund $record, array $data) => app(ImprestFundStatusService::class)->reactivate($record, auth()->user(), $data['reason']),
+                successTitle: 'Fund reactivated',
+            ),
+
+            self::makeStatusAction(
+                name: 'close',
+                label: 'Close Fund',
+                icon: 'heroicon-m-lock-closed',
+                color: 'danger',
+                modalHeading: 'Close imprest fund',
+                modalDescription: fn (ImprestFund $record): string => $record->canBeClosed()
+                    ? 'Closed funds are archived from active operations. This action requires a closure note.'
+                    : 'This fund cannot be closed until pending transactions and open replenishments are cleared.',
+                visible: fn (ImprestFund $record): bool => ! $record->isClosed() && auth()->user()->can('manageStatus', $record),
+                disabled: fn (ImprestFund $record): bool => ! $record->canBeClosed(),
+                handler: fn (ImprestFund $record, array $data) => app(ImprestFundStatusService::class)->close($record, auth()->user(), $data['reason']),
+                successTitle: 'Fund closed',
+            ),
+        ];
+    }
+
+    private static function makeStatusAction(
+        string $name,
+        string $label,
+        string $icon,
+        string $color,
+        string $modalHeading,
+        string|\Closure $modalDescription,
+        \Closure $visible,
+        \Closure $handler,
+        string $successTitle,
+        ?\Closure $disabled = null,
+    ): Action {
+        return Action::make($name)
+            ->label($label)
+            ->icon($icon)
+            ->color($color)
+            ->requiresConfirmation()
+            ->modalHeading($modalHeading)
+            ->modalDescription($modalDescription)
+            ->form([
+                Textarea::make('reason')
+                    ->label('Reason / audit note')
+                    ->required()
+                    ->rows(3)
+                    ->maxLength(1000),
+            ])
+            ->visible($visible)
+            ->disabled($disabled ?? fn (): bool => false)
+            ->action(function (ImprestFund $record, array $data) use ($handler, $successTitle): void {
+                try {
+                    $handler($record, $data);
+
+                    Notification::make()
+                        ->title($successTitle)
+                        ->success()
+                        ->send();
+                } catch (\Throwable $e) {
+                    Notification::make()
+                        ->title('Status change failed')
+                        ->body($e->getMessage())
+                        ->danger()
+                        ->send();
+                }
+            });
+    }
+
+    private static function statusOptions(): array
+    {
+        return collect(FundStatus::cases())
+            ->mapWithKeys(fn (FundStatus $status): array => [$status->value => $status->label()])
+            ->all();
     }
 }

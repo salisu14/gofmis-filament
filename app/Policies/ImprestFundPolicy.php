@@ -32,6 +32,12 @@ class ImprestFundPolicy
             || $user->hasPermissionTo('imprest.manage_all');
     }
 
+    public function manageStatus(User $user, ImprestFund $fund): bool
+    {
+        return $user->hasPermissionTo('imprest.funds.edit')
+            || $user->hasPermissionTo('imprest.manage_all');
+    }
+
     public function reconcile(User $user, ImprestFund $fund): bool
     {
         return $user->hasPermissionTo('imprest.funds.reconcile')
@@ -42,5 +48,12 @@ class ImprestFundPolicy
     {
         return $user->hasPermissionTo('imprest.funds.replenish')
             || $user->hasPermissionTo('imprest.manage_all');
+    }
+
+    public function approve(User $user, ImprestFund $fund): bool
+    {
+        return ($user->hasPermissionTo('imprest.funds.replenish')
+                || $user->hasPermissionTo('imprest.manage_all'))
+            && $user->id !== $fund->custodian_id;
     }
 }

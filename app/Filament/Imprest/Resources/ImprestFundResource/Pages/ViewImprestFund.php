@@ -14,6 +14,10 @@ class ViewImprestFund extends ViewRecord
     {
         return [
             Actions\EditAction::make(),
+            Actions\ActionGroup::make(ImprestFundResource::statusActions())
+                ->label('Change Status')
+                ->icon('heroicon-m-adjustments-horizontal')
+                ->button(),
             Actions\Action::make('print_report')
                 ->label('Print Report')
                 ->icon('heroicon-m-printer')

@@ -38,7 +38,11 @@ class ImprestReconciliationResource extends Resource
                     ->columns(2)
                     ->schema([
                         Select::make('fund_id')
-                            ->relationship('fund', 'location')
+                            ->relationship(
+                                name: 'fund',
+                                titleAttribute: 'location',
+                                modifyQueryUsing: fn ($query) => $query->where('status', 'active')
+                            )
                             ->required()
                             ->searchable()
                             ->preload()
