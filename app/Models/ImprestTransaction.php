@@ -102,7 +102,7 @@ class ImprestTransaction extends Model
 
     public function transaction(): MorphOne
     {
-        return $this->morphOne(Transaction::class, 'transactionable')->latestOfMany();
+        return $this->morphOne(Transaction::class, 'transactionable')->latest('created_at');
     }
 
     public function transactions(): MorphMany

@@ -50,7 +50,11 @@ class InterventionsRelationManager extends RelationManager
 
                 Select::make('bank_account_id')
                     ->label('Funding Bank Account')
-                    ->relationship('bankAccount', 'account_name')
+                    ->relationship(
+                        name: 'bankAccount',
+                        titleAttribute: 'account_name',
+                        modifyQueryUsing: fn ($query) => $query->dedicatedTo(BankAccount::USAGE_INTERVENTION)
+                    )
                     ->getOptionLabelFromRecordUsing(fn (BankAccount $record) => "{$record->account_name} ({$record->account_number})")
                     ->searchable()
                     ->preload()
@@ -174,6 +178,7 @@ class InterventionsRelationManager extends RelationManager
                             return DB::transaction(function () use ($data): Intervention {
                                 // 1. Debit the Bank Account (This throws InsufficientBankBalanceException if funds are low)
                                 $bankAccount = BankAccount::lockForUpdate()->findOrFail($data['bank_account_id']);
+                                $bankAccount->ensureDedicatedTo(BankAccount::USAGE_INTERVENTION, 'interventions');
                                 $bankAccount->debit((float) $data['amount']);
 
                                 // 2. Extract Repeater Data before creating Intervention

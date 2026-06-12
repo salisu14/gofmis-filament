@@ -42,8 +42,7 @@ class IdCardPrintBatchInfolist
                             ->label('Processed'),
                         TextEntry::make('progressPercentage')
                             ->label('Completion %')
-                            ->formatStateUsing(fn(IdCardPrintBatch $record): string => $record->progressPercentage() . '%'
-                            ),
+                            ->state(fn (IdCardPrintBatch $record): string => $record->progressPercentage() . '%'),
                         TextEntry::make('started_at')
                             ->dateTime('F j, Y H:i:s')
                             ->placeholder('Not started'),

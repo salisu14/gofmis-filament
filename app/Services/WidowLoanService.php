@@ -68,6 +68,11 @@ class WidowLoanService
         }
 
         DB::transaction(function () use ($loan, $approvers, $bankAccount) {
+            $bankAccount->ensureDedicatedTo(
+                BankAccount::USAGE_WIDOW_LOAN_DISBURSEMENT,
+                'widow loan disbursements'
+            );
+
             // Reserve the funds in the bank account
             $bankAccount->reserve((float) $loan->principal_amount);
 
@@ -113,6 +118,11 @@ class WidowLoanService
         if (! $loan->bankAccount) {
             throw new \RuntimeException('A disbursement account must be assigned before approval.');
         }
+
+        $loan->bankAccount->ensureDedicatedTo(
+            BankAccount::USAGE_WIDOW_LOAN_DISBURSEMENT,
+            'widow loan disbursements'
+        );
 
         $available = $this->availableForLoanApproval($loan);
         $required = (float) $loan->principal_amount;
@@ -200,6 +210,11 @@ class WidowLoanService
         }
 
         DB::transaction(function () use ($loan, $bankAccount) {
+            $bankAccount->ensureDedicatedTo(
+                BankAccount::USAGE_WIDOW_LOAN_DISBURSEMENT,
+                'widow loan disbursements'
+            );
+
             // Debit the disbursing bank account (and unreserve the funds)
             $bankAccount->disburse((float) $loan->principal_amount);
 
@@ -288,6 +303,10 @@ class WidowLoanService
             }
 
             $bankAccount = BankAccount::findOrFail($bankAccountId);
+            $bankAccount->ensureDedicatedTo(
+                BankAccount::USAGE_WIDOW_LOAN_REPAYMENT,
+                'widow loan repayments'
+            );
 
             // Credit the receiving bank account with the repayment
             $bankAccount->credit((float) $data->amount);

@@ -3,11 +3,13 @@
 namespace App\Filament\Resources\IdCardPrintBatches\Tables;
 
 use App\Models\IdCardPrintBatch;
+use App\Services\IdCardPrintBatchService;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\ViewAction;
+use Filament\Notifications\Notification;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
@@ -42,8 +44,7 @@ class IdCardPrintBatchesTable
 
                 TextColumn::make('progress')
                     ->label('Progress')
-                    ->formatStateUsing(fn(IdCardPrintBatch $record): string => $record->progressPercentage() . '%'
-                    )
+                    ->state(fn (IdCardPrintBatch $record): string => $record->progressPercentage() . '%')
                     ->icon('heroicon-o-chart-bar'),
 
                 TextColumn::make('status')
@@ -91,22 +92,32 @@ class IdCardPrintBatchesTable
                     ->color('success')
                     ->visible(fn(IdCardPrintBatch $record): bool => $record->status === 'completed' && $record->pdf_path !== null
                     )
-                    ->url(fn(IdCardPrintBatch $record): string => route('filament.admin.resources.id-card-print-batches.download', ['record' => $record])
+                    ->url(fn(IdCardPrintBatch $record): string => route('id-card-print-batches.download', ['record' => $record])
                     )
                     ->openUrlInNewTab(),
 
-                Action::make('retry')
-                    ->label('Retry')
+                Action::make('process_now')
+                    ->label('Process Now')
                     ->icon('heroicon-o-arrow-path')
                     ->color('warning')
                     ->requiresConfirmation()
-                    ->visible(fn(IdCardPrintBatch $record): bool => $record->status === 'failed')
+                    ->visible(fn(IdCardPrintBatch $record): bool => in_array($record->status, ['pending', 'processing', 'failed'], true))
                     ->action(function (IdCardPrintBatch $record) {
-                        $record->update([
-                            'status' => 'pending',
-                            'processed_count' => 0,
-                        ]);
-                        // Re-dispatch job logic here
+                        try {
+                            app(IdCardPrintBatchService::class)->process($record);
+
+                            Notification::make()
+                                ->title('Print batch generated')
+                                ->body('The printable PDF is ready for download.')
+                                ->success()
+                                ->send();
+                        } catch (\Throwable $exception) {
+                            Notification::make()
+                                ->title('Batch processing failed')
+                                ->body($exception->getMessage())
+                                ->danger()
+                                ->send();
+                        }
                     }),
 
                 DeleteAction::make()

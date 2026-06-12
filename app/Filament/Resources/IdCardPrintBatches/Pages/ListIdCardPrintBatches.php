@@ -3,7 +3,8 @@
 namespace App\Filament\Resources\IdCardPrintBatches\Pages;
 
 use App\Filament\Resources\IdCardPrintBatches\IdCardPrintBatchResource;
-use Filament\Actions\CreateAction;
+use App\Filament\Resources\IdCards\IdCardResource;
+use Filament\Actions\Action;
 use Filament\Resources\Pages\ListRecords;
 
 class ListIdCardPrintBatches extends ListRecords
@@ -13,7 +14,11 @@ class ListIdCardPrintBatches extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            CreateAction::make(),
+            Action::make('bulk_generator')
+                ->label('Bulk Generate ID Cards')
+                ->icon('heroicon-o-printer')
+                ->color('primary')
+                ->url(fn (): string => IdCardResource::getUrl('bulk-print')),
         ];
     }
 }

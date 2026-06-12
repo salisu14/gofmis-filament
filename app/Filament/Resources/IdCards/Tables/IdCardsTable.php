@@ -3,8 +3,10 @@
 namespace App\Filament\Resources\IdCards\Tables;
 
 use App\Models\IdCard;
+use App\Models\IdCardPrintBatch;
 use App\Models\Orphan;
 use App\Models\Widow;
+use App\Services\IdCardPDFService;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkAction;
@@ -13,6 +15,7 @@ use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\Textarea;
+use Filament\Notifications\Notification;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
@@ -157,10 +160,73 @@ class IdCardsTable
                         ->icon('heroicon-o-printer')
                         ->color('primary')
                         ->action(function (\Illuminate\Database\Eloquent\Collection $records) {
-                            $ids = $records->pluck('id')->toArray();
-                            return redirect()->route('filament.admin.resources.id-cards.bulk-print', [
-                                'ids' => implode(',', $ids)
+                            if ($records->isEmpty()) {
+                                Notification::make()
+                                    ->title('No cards selected')
+                                    ->warning()
+                                    ->send();
+
+                                return null;
+                            }
+
+                            $type = $records
+                                ->pluck('cardable_type')
+                                ->unique()
+                                ->count() === 1
+                                    ? ($records->first()->cardable_type === Widow::class ? 'widow' : 'orphan')
+                                    : 'mixed';
+
+                            /** @var IdCardPrintBatch $batch */
+                            $batch = IdCardPrintBatch::create([
+                                'batch_name' => 'Selected ID Cards - '.now()->format('Y-m-d H:i'),
+                                'type' => $type,
+                                'filters' => [
+                                    'source' => 'selected_id_cards',
+                                    'card_ids' => $records->pluck('id')->values()->all(),
+                                ],
+                                'range' => null,
+                                'total_count' => $records->count(),
+                                'processed_count' => 0,
+                                'status' => 'processing',
+                                'started_at' => now(),
+                                'created_by' => auth()->id(),
                             ]);
+
+                            $records->loadMissing(['cardable.deceased.zone.coordinator', 'template']);
+
+                            try {
+                                $pdfPath = app(IdCardPDFService::class)->generateBulk($records->values(), $batch);
+
+                                $batch->update([
+                                    'pdf_path' => $pdfPath,
+                                    'processed_count' => $records->count(),
+                                    'status' => 'completed',
+                                    'completed_at' => now(),
+                                ]);
+
+                                $records->each->markAsPrinted();
+
+                                Notification::make()
+                                    ->title('Print batch ready')
+                                    ->body("Generated {$records->count()} ID cards for printing.")
+                                    ->success()
+                                    ->send();
+
+                                return redirect()->route('id-card-print-batches.download', ['record' => $batch]);
+                            } catch (\Throwable $exception) {
+                                $batch->update([
+                                    'status' => 'failed',
+                                    'completed_at' => now(),
+                                ]);
+
+                                Notification::make()
+                                    ->title('Unable to generate print batch')
+                                    ->body($exception->getMessage())
+                                    ->danger()
+                                    ->send();
+
+                                return null;
+                            }
                         }),
 
                     BulkAction::make('activate')

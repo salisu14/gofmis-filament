@@ -58,6 +58,7 @@ class RepaymentsRelationManager extends RelationManager
                     ->label('Receiving Bank Account')
                     ->options(
                         BankAccount::query()
+                            ->dedicatedTo(BankAccount::USAGE_WIDOW_LOAN_REPAYMENT)
                             ->orderBy('account_name')
                             ->get()
                             ->mapWithKeys(fn(BankAccount $bank) => [

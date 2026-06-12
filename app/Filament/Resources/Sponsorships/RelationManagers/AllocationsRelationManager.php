@@ -11,8 +11,8 @@ use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\TextInput;
-use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
@@ -62,8 +62,8 @@ class AllocationsRelationManager extends RelationManager
                             ->prefix('₦')
                             ->minValue(1),
 
-                        TextEntry::make('info')
-                            ->state('Funds will be applied to the selected enrollment record.')
+                        Placeholder::make('info')
+                            ->content('Funds will be applied to the selected enrollment record.')
                             ->columnSpanFull()
                             ->extraAttributes(['class' => 'text-sm text-gray-500 italic']),
                     ]),

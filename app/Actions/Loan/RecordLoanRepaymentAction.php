@@ -52,7 +52,9 @@ class RecordLoanRepaymentAction
             ]);
 
             // 6. Update Bank through an auditable transaction.
-            $bank = BankAccount::first();
+            $bank = BankAccount::query()
+                ->dedicatedTo(BankAccount::USAGE_WIDOW_LOAN_REPAYMENT)
+                ->first();
             if ($bank) {
                 Transaction::create([
                     'bank_account_id' => $bank->id,
@@ -61,7 +63,7 @@ class RecordLoanRepaymentAction
                     'type' => 'loan_repayment',
                     'amount' => $data->amount,
                     'description' => "Repayment for loan {$loan->id}",
-                    'is_system' => false,
+                    'is_system' => true,
                 ]);
             }
 

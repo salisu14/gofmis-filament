@@ -8,6 +8,7 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Illuminate\Database\Eloquent\Model;
 
@@ -43,7 +44,25 @@ class BankAccountForm
                                     ->pluck('account_name', 'id'))
                                 ->searchable()
                                 ->preload()
-                                ->helperText('Leave empty if this is a main/physical account. Select a parent to make this a virtual sub-account.'),
+                                ->live()
+                                ->afterStateUpdated(function (?string $state, Set $set): void {
+                                    if (blank($state)) {
+                                        $set('usage', BankAccount::USAGE_GENERAL);
+                                    } else {
+                                        $set('opening_balance', 0);
+                                    }
+                                })
+                                ->helperText('Leave empty for a parent/operating account. Select a parent to make this a dedicated child account.'),
+
+                            Select::make('usage')
+                                ->label('Account Usage')
+                                ->options(BankAccount::usageOptions())
+                                ->default(BankAccount::USAGE_GENERAL)
+                                ->required()
+                                ->native(false)
+                                ->disabled(fn (callable $get): bool => blank($get('parent_bank_account_id')))
+                                ->dehydrated()
+                                ->helperText('Child accounts are reserved for a specific workflow. Parent accounts always remain general.'),
                         ]),
 
                         Select::make('user_id')
@@ -67,6 +86,8 @@ class BankAccountForm
                                 ->default(0)
                                 ->required()
                                 ->disabledOn('edit')
+                                ->disabled(fn (callable $get, string $operation): bool => $operation === 'edit' || filled($get('parent_bank_account_id')))
+                                ->dehydrated()
                                 ->helperText('The starting balance when registered.'),
 
                             TextInput::make('ledger_balance')

@@ -72,6 +72,7 @@ class ImprestReplenishmentService implements ImprestReplenishmentServiceInterfac
             }
 
             $bankAccount = BankAccount::lockForUpdate()->findOrFail($fund->bank_account_id);
+            $bankAccount->ensureDedicatedTo(BankAccount::USAGE_IMPREST, 'imprest funds');
             $bankAccount->debit((float) $replenishment->amount);
 
             $this->fundRepo->updateBalance(

@@ -23,9 +23,10 @@ class IdCardGenerationService
      */
     public function generateCard(
         Widow|Orphan $beneficiary,
-        ?IdCardTemplate $template = null
+        ?IdCardTemplate $template = null,
+        bool $queuePdf = true,
     ): IdCard {
-        return DB::transaction(function () use ($beneficiary, $template) {
+        return DB::transaction(function () use ($beneficiary, $template, $queuePdf) {
             $type = $beneficiary instanceof Widow ? 'widow' : 'orphan';
 
             $template ??= IdCardTemplate::defaultForType($type);
@@ -52,8 +53,9 @@ class IdCardGenerationService
             $qrPath = $this->qrService->generateForCard($idCard);
             $idCard->update(['qr_code_path' => $qrPath]);
 
-            // Pre-generate PDF in background
-            GenerateIdCardPdfJob::dispatch($idCard);
+            if ($queuePdf) {
+                GenerateIdCardPdfJob::dispatch($idCard);
+            }
 
             return $idCard->fresh();
         });

@@ -27,7 +27,6 @@ use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
-use Illuminate\Support\Facades\DB;
 
 class BulkPrintIdCards extends Page implements HasForms
 {
@@ -243,6 +242,14 @@ class BulkPrintIdCards extends Page implements HasForms
         $this->isCalculating = false;
     }
 
+    private function calculateCurrentCount(array $data): int
+    {
+        return $data['type'] === 'mixed'
+            ? $this->applyFilters(Widow::query(), $data)->count()
+                + $this->applyFilters(Orphan::query(), $data)->count()
+            : $this->buildQuery()->count();
+    }
+
     private function buildQuery()
     {
         $data = $this->form->getState();
@@ -326,16 +333,21 @@ class BulkPrintIdCards extends Page implements HasForms
                 ->color('primary')
                 ->requiresConfirmation()
                 ->modalHeading('Confirm Bulk Print')
-                ->modalDescription(fn (): string => "This will generate {$this->estimatedCount} ID cards. Continue?")
+                ->modalDescription(fn (): string => $this->estimatedCount > 0
+                    ? "This will generate {$this->estimatedCount} ID cards. Continue?"
+                    : 'This will calculate eligible beneficiaries, generate the ID cards, and create a printable PDF. Continue?')
                 ->modalSubmitActionLabel('Yes, Generate')
-                ->action(fn () => $this->createBatch())
-                ->disabled(fn (): bool => $this->estimatedCount === 0),
+                ->action(fn () => $this->createBatch()),
         ];
     }
 
     public function createBatch(): void
     {
         $data = $this->form->getState();
+
+        if ($this->estimatedCount === 0) {
+            $this->estimatedCount = $this->calculateCurrentCount($data);
+        }
 
         if ($this->estimatedCount === 0) {
             Notification::make()
@@ -348,36 +360,46 @@ class BulkPrintIdCards extends Page implements HasForms
         }
 
         try {
-            DB::transaction(function () use ($data) {
-                $batch = IdCardPrintBatch::create([
-                    'batch_name' => $data['batch_name'],
-                    'type' => $data['type'],
-                    'filters' => [
-                        'zone_id' => $data['filters']['zone_id'] ?? null,
-                        'gender' => $data['filters']['gender'] ?? null,
-                        'template_id' => $data['template_id'] ?? null,
-                    ],
-                    'range' => $this->getRangePayload($data),
-                    'total_count' => $this->estimatedCount,
-                    'created_by' => auth()->id(),
-                ]);
+            $beneficiaries = $this->buildBeneficiaryCollection($data);
 
-                // Get beneficiaries and dispatch job
-                $beneficiaries = $this->buildBeneficiaryCollection($data);
-                GenerateIdCardsJob::dispatch(
-                    $batch,
-                    $beneficiaries,
-                    $data['type'] === 'mixed' ? null : ($data['template_id'] ?? null)
-                );
-
-                $this->currentBatch = $batch;
-
+            if ($beneficiaries->isEmpty()) {
                 Notification::make()
-                    ->title('Batch Created Successfully')
-                    ->body("Batch '{$batch->batch_name}' is now processing {$batch->total_count} cards.")
-                    ->success()
+                    ->title('No beneficiaries found')
+                    ->body('Please adjust your filters and try again.')
+                    ->warning()
                     ->send();
-            });
+
+                return;
+            }
+
+            $batch = IdCardPrintBatch::create([
+                'batch_name' => $data['batch_name'],
+                'type' => $data['type'],
+                'filters' => [
+                    'zone_id' => $data['filters']['zone_id'] ?? null,
+                    'gender' => $data['filters']['gender'] ?? null,
+                    'exclude_printed' => $data['filters']['exclude_printed'] ?? true,
+                    'template_id' => $data['template_id'] ?? null,
+                ],
+                'range' => $this->getRangePayload($data),
+                'total_count' => $beneficiaries->count(),
+                'created_by' => auth()->id(),
+            ]);
+
+            GenerateIdCardsJob::dispatchSync(
+                $batch,
+                $beneficiaries,
+                $data['type'] === 'mixed' ? null : ($data['template_id'] ?? null)
+            );
+
+            $this->currentBatch = $batch->fresh();
+            $this->estimatedCount = $beneficiaries->count();
+
+            Notification::make()
+                ->title('Print Batch Ready')
+                ->body("Batch '{$batch->batch_name}' generated {$this->currentBatch->processed_count} printable cards.")
+                ->success()
+                ->send();
         } catch (\Exception $e) {
             Notification::make()
                 ->title('Failed to Create Batch')

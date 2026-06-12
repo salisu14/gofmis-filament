@@ -24,6 +24,11 @@ class CreateWidowLoanAction
             throw new Exception('Bank account not configured.');
         }
 
+        $bank->ensureDedicatedTo(
+            BankAccount::USAGE_WIDOW_LOAN_DISBURSEMENT,
+            'widow loan disbursements'
+        );
+
         // 2. Check Balance
         if (!$bank->hasSufficientFunds($data->principalAmount)) {
             throw new InsufficientBankBalanceException('Insufficient funds in the selected bank account.');

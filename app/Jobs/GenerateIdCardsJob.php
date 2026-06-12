@@ -46,7 +46,9 @@ class GenerateIdCardsJob implements ShouldQueue
 
             foreach ($this->beneficiaries as $beneficiary) {
                 try {
-                    $card = $generationService->generateCard($beneficiary, $template);
+                    $card = $this->reusableCardFor($beneficiary, $template)
+                        ?? $generationService->generateCard($beneficiary, $template, queuePdf: false);
+
                     $idCards->push($card);
                     $processed++;
 
@@ -63,17 +65,18 @@ class GenerateIdCardsJob implements ShouldQueue
             }
 
             // Generate bulk PDF
-            if ($idCards->isNotEmpty()) {
-                $pdfPath = $pdfService->generateBulk($idCards, $this->batch);
-                $this->batch->update([
-                    'pdf_path' => $pdfPath,
-                    'processed_count' => $processed,
-                ]);
+            if ($idCards->isEmpty()) {
+                throw new \RuntimeException('No ID cards could be generated for this batch.');
             }
+
+            $idCards->loadMissing(['cardable.deceased.zone.coordinator', 'template']);
+            $pdfPath = $pdfService->generateBulk($idCards, $this->batch);
+            $idCards->each->markAsPrinted();
 
             $this->batch->update([
                 'status' => 'completed',
                 'completed_at' => now(),
+                'pdf_path' => $pdfPath,
                 'processed_count' => $processed,
             ]);
 
@@ -90,5 +93,14 @@ class GenerateIdCardsJob implements ShouldQueue
 
             throw $e;
         }
+    }
+
+    private function reusableCardFor(Widow|Orphan $beneficiary, ?IdCardTemplate $template)
+    {
+        return $beneficiary->idCards()
+            ->when($template, fn ($query) => $query->where('template_id', $template->id))
+            ->whereIn('status', ['draft', 'active'])
+            ->latest('created_at')
+            ->first();
     }
 }

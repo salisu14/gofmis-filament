@@ -25,7 +25,11 @@ class TransactionForm
                             ->schema([
                                 Select::make('bank_account_id')
                                     ->label('Bank Account')
-                                    ->relationship('bankAccount', 'account_name')
+                                    ->relationship(
+                                        name: 'bankAccount',
+                                        titleAttribute: 'account_name',
+                                        modifyQueryUsing: fn ($query) => $query->whereNull('parent_bank_account_id')
+                                    )
                                     ->searchable()
                                     ->preload()
                                     ->required()

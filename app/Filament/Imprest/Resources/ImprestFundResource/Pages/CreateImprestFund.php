@@ -30,6 +30,7 @@ class CreateImprestFund extends CreateRecord
             $data['current_balance'] = $data['authorized_amount'];
 
             $bankAccount = BankAccount::lockForUpdate()->findOrFail($data['bank_account_id']);
+            $bankAccount->ensureDedicatedTo(BankAccount::USAGE_IMPREST, 'imprest funds');
             $bankAccount->debit((float) $data['authorized_amount']);
 
             $fund = ImprestFund::create($data);

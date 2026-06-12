@@ -13,6 +13,7 @@ use App\Models\ImprestTransaction;
 use App\Models\Item;
 use App\Services\Contracts\Imprest\ImprestTransactionServiceInterface;
 use Filament\Actions\Action;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -64,7 +65,7 @@ class ImprestTransactionResource extends Resource
         $user = auth()->user();
         $canManageAll = $user?->hasAnyRole(['admin', 'super_admin']) || $user?->hasPermissionTo('imprest.manage_all');
 
-        if (! $canManageAll) {
+        if (!$canManageAll) {
             $query->where(function ($q) {
                 $q->where('custodian_id', auth()->id())
                     ->orWhereHas('fund', fn($fq) => $fq->where('custodian_id', auth()->id()));
@@ -106,7 +107,7 @@ class ImprestTransactionResource extends Resource
                             ->searchable()
                             ->preload()
                             ->native(false)
-                            ->getOptionLabelFromRecordUsing(fn (Deceased $record): string => "{$record->full_name} ({$record->reg_no})")
+                            ->getOptionLabelFromRecordUsing(fn(Deceased $record): string => "{$record->full_name} ({$record->reg_no})")
                             ->prefixIcon('heroicon-m-identification'),
 
                         Hidden::make('name'),
@@ -129,21 +130,21 @@ class ImprestTransactionResource extends Resource
                         Select::make('item_id')
                             ->label('Item')
                             ->relationship('item', 'name')
-                            ->getOptionLabelFromRecordUsing(fn (Item $record): string => $record->category?->name
+                            ->getOptionLabelFromRecordUsing(fn(Item $record): string => $record->category?->name
                                 ? "{$record->name} ({$record->category->name})"
                                 : $record->name)
                             ->searchable()
                             ->preload()
                             ->native(false)
-                            ->required(fn (Get $get): bool => $get('expense_type') === 'item')
-                            ->visible(fn (Get $get): bool => $get('expense_type') === 'item'),
+                            ->required(fn(Get $get): bool => $get('expense_type') === 'item')
+                            ->visible(fn(Get $get): bool => $get('expense_type') === 'item'),
 
                         TextInput::make('service_description')
                             ->label('Service Description')
-                            ->required(fn (Get $get): bool => $get('expense_type') === 'service')
+                            ->required(fn(Get $get): bool => $get('expense_type') === 'service')
                             ->maxLength(255)
                             ->placeholder('Description of service rendered')
-                            ->visible(fn (Get $get): bool => $get('expense_type') === 'service'),
+                            ->visible(fn(Get $get): bool => $get('expense_type') === 'service'),
 
                         Hidden::make('item_service'),
 
@@ -219,9 +220,9 @@ class ImprestTransactionResource extends Resource
                             ->placeholder('Auto-generated on save')
                             ->helperText('Voucher number will be assigned automatically'),
 
-                        Placeholder::make('status_display')
+                        TextEntry::make('status_display')
                             ->label('Status')
-                            ->content('Pending Approval'),
+                            ->state('Pending Approval'),
                     ])
                     ->hiddenOn('edit')
                     ->visibleOn('create'),
@@ -359,66 +360,68 @@ class ImprestTransactionResource extends Resource
                     ->falseLabel('Missing'),
             ])
             ->recordActions([
-                ViewAction::make(),
+                ActionGroup::make([
+                    ViewAction::make(),
 
-                Action::make('approve')
-                    ->icon('heroicon-m-check-circle')
-                    ->color('success')
-                    ->requiresConfirmation()
-                    ->modalHeading('Approve Transaction')
-                    ->modalDescription('This will deduct the amount from the fund balance.')
-                    ->modalSubmitActionLabel('Approve')
-                    ->visible(fn(ImprestTransaction $record): bool => $record->status === 'pending' && auth()->user()->can('approve', $record)
-                    )
-                    ->action(function (ImprestTransaction $record) {
-                        $service = app(ImprestTransactionServiceInterface::class);
-                        $service->approve(new \App\Data\Imprest\ApproveTransactionDto(
-                            transactionId: $record->id,
-                            approvedBy: auth()->id(),
-                        ));
+                    Action::make('approve')
+                        ->icon('heroicon-m-check-circle')
+                        ->color('success')
+                        ->requiresConfirmation()
+                        ->modalHeading('Approve Transaction')
+                        ->modalDescription('This will deduct the amount from the fund balance.')
+                        ->modalSubmitActionLabel('Approve')
+                        ->visible(fn(ImprestTransaction $record): bool => $record->status === 'pending' && auth()->user()->can('approve', $record)
+                        )
+                        ->action(function (ImprestTransaction $record) {
+                            $service = app(ImprestTransactionServiceInterface::class);
+                            $service->approve(new \App\Data\Imprest\ApproveTransactionDto(
+                                transactionId: $record->id,
+                                approvedBy: auth()->id(),
+                            ));
 
-                        Notification::make()
-                            ->title('Transaction Approved')
-                            ->success()
-                            ->body("Voucher {$record->voucher_no} has been approved.")
-                            ->send();
-                    })
-                    ->after(function () {
-                        // Refresh the table to show updated status
-                    }),
+                            Notification::make()
+                                ->title('Transaction Approved')
+                                ->success()
+                                ->body("Voucher {$record->voucher_no} has been approved.")
+                                ->send();
+                        })
+                        ->after(function () {
+                            // Refresh the table to show updated status
+                        }),
 
-                Action::make('void')
-                    ->icon('heroicon-m-x-circle')
-                    ->color('danger')
-                    ->schema([
-                        Textarea::make('reason')
-                            ->required()
-                            ->minLength(10)
-                            ->placeholder('Provide detailed reason for voiding this transaction'),
-                    ])
-                    ->requiresConfirmation()
-                    ->modalHeading('Void Transaction')
-                    ->modalDescription('This action cannot be undone. The fund balance will be restored if already deducted.')
-                    ->visible(fn(ImprestTransaction $record): bool => $record->isVoidable() && auth()->user()->can('void', $record)
-                    )
-                    ->action(function (ImprestTransaction $record, array $data) {
-                        $service = app(ImprestTransactionServiceInterface::class);
-                        $service->void(new \App\Data\Imprest\VoidTransactionDto(
-                            transactionId: $record->id,
-                            voidedBy: auth()->id(),
-                            reason: $data['reason'],
-                        ));
+                    Action::make('void')
+                        ->icon('heroicon-m-x-circle')
+                        ->color('danger')
+                        ->schema([
+                            Textarea::make('reason')
+                                ->required()
+                                ->minLength(10)
+                                ->placeholder('Provide detailed reason for voiding this transaction'),
+                        ])
+                        ->requiresConfirmation()
+                        ->modalHeading('Void Transaction')
+                        ->modalDescription('This action cannot be undone. The fund balance will be restored if already deducted.')
+                        ->visible(fn(ImprestTransaction $record): bool => $record->isVoidable() && auth()->user()->can('void', $record)
+                        )
+                        ->action(function (ImprestTransaction $record, array $data) {
+                            $service = app(ImprestTransactionServiceInterface::class);
+                            $service->void(new \App\Data\Imprest\VoidTransactionDto(
+                                transactionId: $record->id,
+                                voidedBy: auth()->id(),
+                                reason: $data['reason'],
+                            ));
 
-                        Notification::make()
-                            ->title('Transaction Voided')
-                            ->danger()
-                            ->body("Voucher {$record->voucher_no} has been voided.")
-                            ->send();
-                    }),
+                            Notification::make()
+                                ->title('Transaction Voided')
+                                ->danger()
+                                ->body("Voucher {$record->voucher_no} has been voided.")
+                                ->send();
+                        }),
 
-                EditAction::make()
-                    ->visible(fn(ImprestTransaction $record): bool => $record->status === 'pending'
-                    ),
+                    EditAction::make()
+                        ->visible(fn(ImprestTransaction $record): bool => $record->status === 'pending'
+                        ),
+                ])
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
@@ -472,7 +475,7 @@ class ImprestTransactionResource extends Resource
                     ->schema([
                         TextEntry::make('expense_type')
                             ->badge()
-                            ->formatStateUsing(fn (?string $state): string => ucfirst($state ?? 'service')),
+                            ->formatStateUsing(fn(?string $state): string => ucfirst($state ?? 'service')),
                         TextEntry::make('expense_description')
                             ->label('Item / Service'),
                         TextEntry::make('category')->badge(),

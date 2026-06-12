@@ -4,6 +4,7 @@ namespace App\Filament\Resources\WidowLoans\Schemas;
 
 use App\Enums\LoanRepaymentFrequency;
 use App\Enums\WidowLoanStatus;
+use App\Models\BankAccount;
 use App\Models\Widow;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\FileUpload;
@@ -48,8 +49,12 @@ class WidowLoanForm
 
                             Select::make('bank_account_id')
                                 ->label('Foundation Disbursing Account')
-                                ->helperText('The foundation\'s internal bank account to be debited.')
-                                ->relationship('bankAccount', 'account_name')
+                                ->helperText('Use a child account dedicated to widow loan disbursements.')
+                                ->relationship(
+                                    name: 'bankAccount',
+                                    titleAttribute: 'account_name',
+                                    modifyQueryUsing: fn ($query) => $query->dedicatedTo(BankAccount::USAGE_WIDOW_LOAN_DISBURSEMENT)
+                                )
                                 ->getOptionLabelFromRecordUsing(fn ($record) => "{$record->account_name} ({$record->account_number})")
                                 ->searchable()
                                 ->preload()
@@ -66,8 +71,12 @@ class WidowLoanForm
 
                             Select::make('repayment_bank_id')
                                 ->label('Foundation Repayment Account')
-                                ->helperText('The foundation account where repayments will be credited.')
-                                ->relationship('repaymentBank', 'account_name')
+                                ->helperText('Use a child account dedicated to widow loan repayments.')
+                                ->relationship(
+                                    name: 'repaymentBank',
+                                    titleAttribute: 'account_name',
+                                    modifyQueryUsing: fn ($query) => $query->dedicatedTo(BankAccount::USAGE_WIDOW_LOAN_REPAYMENT)
+                                )
                                 ->getOptionLabelFromRecordUsing(fn ($record) => "{$record->account_name} ({$record->account_number})")
                                 ->searchable()
                                 ->preload()

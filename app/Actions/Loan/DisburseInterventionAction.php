@@ -25,6 +25,7 @@ class DisburseInterventionAction
             $bankAccount = null;
             if ($data->bankAccountId && $data->amount) {
                 $bankAccount = BankAccount::lockForUpdate()->findOrFail($data->bankAccountId);
+                $bankAccount->ensureDedicatedTo(BankAccount::USAGE_INTERVENTION, 'interventions');
                 $bankAccount->debit((float) $data->amount);
             }
 

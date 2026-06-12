@@ -165,6 +165,12 @@ class Transaction extends Model
             return;
         }
 
+        if (! $this->is_system && ! $bankAccount->canPerformManualBankMovement()) {
+            throw ValidationException::withMessages([
+                'bank_account_id' => 'Manual bank transactions can only be posted against parent accounts.',
+            ]);
+        }
+
         // 1. Handle Source Account
         $this->isCreditType()
             ? $bankAccount->credit((float) $this->amount)

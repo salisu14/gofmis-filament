@@ -9,6 +9,7 @@ use App\Filament\Imprest\Resources\ImprestFundResource\Pages\ViewImprestFund;
 use App\Filament\Imprest\Resources\ImprestFundResource\RelationManagers\ReconciliationsRelationManager;
 use App\Filament\Imprest\Resources\ImprestFundResource\RelationManagers\TransactionsRelationManager;
 use App\Models\ImprestFund;
+use App\Models\BankAccount;
 use App\Models\Zone;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
@@ -72,7 +73,11 @@ class ImprestFundResource extends Resource
 
                         Forms\Components\Select::make('bank_account_id')
                             ->label('Funding Bank Account')
-                            ->relationship('bankAccount', 'account_name')
+                            ->relationship(
+                                name: 'bankAccount',
+                                titleAttribute: 'account_name',
+                                modifyQueryUsing: fn ($query) => $query->dedicatedTo(BankAccount::USAGE_IMPREST)
+                            )
                             ->getOptionLabelFromRecordUsing(fn ($record) => "{$record->account_name} ({$record->account_number})")
                             ->searchable()
                             ->preload()

@@ -18,6 +18,7 @@ class CreateBankAccountAction
             'reserved_balance' => 0,
             'user_id' => $data->userId,
             'parent_bank_account_id' => $data->parentBankAccountId,
+            'usage' => $data->parentBankAccountId ? $data->usage : BankAccount::USAGE_GENERAL,
         ]);
     }
 }

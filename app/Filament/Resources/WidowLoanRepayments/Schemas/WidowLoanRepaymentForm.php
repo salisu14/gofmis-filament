@@ -4,6 +4,7 @@ namespace App\Filament\Resources\WidowLoanRepayments\Schemas;
 
 use App\Models\WidowLoan;
 use App\Enums\WidowLoanStatus;
+use App\Models\BankAccount;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -87,7 +88,11 @@ class WidowLoanRepaymentForm
 
                                 Select::make('bank_account_id')
                                     ->label('Receiving Bank Account')
-                                    ->relationship('bankAccount', 'account_name')
+                                    ->relationship(
+                                        name: 'bankAccount',
+                                        titleAttribute: 'account_name',
+                                        modifyQueryUsing: fn ($query) => $query->dedicatedTo(BankAccount::USAGE_WIDOW_LOAN_REPAYMENT)
+                                    )
                                     ->searchable()
                                     ->preload()
                                     ->required(),

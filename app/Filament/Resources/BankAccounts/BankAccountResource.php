@@ -59,6 +59,7 @@ class BankAccountResource extends Resource
             'Manager' => $record->user?->name ?? 'N/A',
             'Available' => '₦'.number_format((float) $record->ledger_balance - (float) $record->reserved_balance, 2),
             'Parent' => $record->parent?->account_name ?? 'Main account',
+            'Usage' => $record->usage_label,
         ];
     }
 

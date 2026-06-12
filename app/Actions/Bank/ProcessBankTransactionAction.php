@@ -6,6 +6,7 @@ use App\Data\Bank\CreateBankTransactionData;
 use App\Models\BankAccount;
 use App\Models\Transaction;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class ProcessBankTransactionAction
 {
@@ -16,6 +17,12 @@ class ProcessBankTransactionAction
     {
         return DB::transaction(function () use ($data) {
             $bank = BankAccount::findOrFail($data->bankAccountId);
+
+            if (! $bank->canPerformManualBankMovement()) {
+                throw ValidationException::withMessages([
+                    'bank_account_id' => 'Manual deposits and withdrawals can only be performed on parent accounts.',
+                ]);
+            }
 
             $type = match ($data->type) {
                 'DEBIT' => 'withdrawal',

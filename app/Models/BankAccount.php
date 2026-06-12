@@ -4,13 +4,23 @@ namespace App\Models;
 
 use App\Exceptions\InsufficientBankBalanceException;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Validation\ValidationException;
 
 class BankAccount extends Model
 {
     use HasUuids;
+
+    public const USAGE_GENERAL = 'general';
+    public const USAGE_WIDOW_LOAN_DISBURSEMENT = 'widow_loan_disbursement';
+    public const USAGE_WIDOW_LOAN_REPAYMENT = 'widow_loan_repayment';
+    public const USAGE_INTERVENTION = 'intervention';
+    public const USAGE_IMPREST = 'imprest';
+    public const USAGE_EDUCATION = 'education';
+    public const USAGE_OTHER = 'other';
 
     protected $keyType = 'string';
     public $incrementing = false;
@@ -29,6 +39,7 @@ class BankAccount extends Model
         'reserved_balance', // Funds tied up in "Pending" Approval Flows
         'user_id',
         'parent_bank_account_id',
+        'usage',
     ];
 
     protected $casts = [
@@ -40,11 +51,59 @@ class BankAccount extends Model
     protected static function booted(): void
     {
         static::creating(function ($account) {
+            if (is_null($account->parent_bank_account_id)) {
+                $account->usage = self::USAGE_GENERAL;
+            }
+
+            if (! is_null($account->parent_bank_account_id)) {
+                $account->opening_balance = 0;
+                $account->ledger_balance = 0;
+            }
+
             // Initialize ledger balance with opening balance if it's a new account
             if (is_null($account->ledger_balance)) {
                 $account->ledger_balance = $account->opening_balance ?? 0;
             }
         });
+
+        static::saving(function ($account) {
+            if (is_null($account->parent_bank_account_id)) {
+                $account->usage = self::USAGE_GENERAL;
+
+                return;
+            }
+
+            if (($account->usage ?: self::USAGE_GENERAL) === self::USAGE_GENERAL) {
+                throw ValidationException::withMessages([
+                    'usage' => 'Child accounts must be assigned a dedicated usage.',
+                ]);
+            }
+        });
+    }
+
+    public static function usageOptions(): array
+    {
+        return [
+            self::USAGE_GENERAL => 'General / Parent Operating Account',
+            self::USAGE_WIDOW_LOAN_DISBURSEMENT => 'Widow Loan Disbursement',
+            self::USAGE_WIDOW_LOAN_REPAYMENT => 'Widow Loan Repayment',
+            self::USAGE_INTERVENTION => 'Interventions',
+            self::USAGE_IMPREST => 'Imprest',
+            self::USAGE_EDUCATION => 'Education Fees',
+            self::USAGE_OTHER => 'Other Dedicated Use',
+        ];
+    }
+
+    public function getUsageLabelAttribute(): string
+    {
+        return self::usageOptions()[$this->usage] ?? str($this->usage)->headline()->toString();
+    }
+
+    public function scopeDedicatedTo(Builder $query, string|array $usage): Builder
+    {
+        return $query
+            ->whereNotNull('parent_bank_account_id')
+            ->whereIn('usage', (array) $usage);
     }
 
     /*
@@ -177,6 +236,27 @@ class BankAccount extends Model
     public function isMainAccount(): bool
     {
         return is_null($this->parent_bank_account_id) && $this->children()->exists();
+    }
+
+    public function canPerformManualBankMovement(): bool
+    {
+        return ! $this->isSubAccount();
+    }
+
+    public function isDedicatedTo(string|array $usage): bool
+    {
+        return $this->isSubAccount() && in_array($this->usage, (array) $usage, true);
+    }
+
+    public function ensureDedicatedTo(string|array $usage, string $workflowName = 'this workflow'): void
+    {
+        if ($this->isDedicatedTo($usage)) {
+            return;
+        }
+
+        throw ValidationException::withMessages([
+            'bank_account_id' => "Please select a child bank account dedicated to {$workflowName}.",
+        ]);
     }
 
     /*

@@ -44,6 +44,7 @@ class IdCardPrintQueueWidget extends BaseWidget
 
                 TextColumn::make('progress_percentage')
                     ->label('Progress %')
+                    ->state(fn (IdCardPrintBatch $record): int => $record->progressPercentage())
                     ->badge()
                     ->color(fn($state) => match (true) {
                         $state < 30 => 'danger',

@@ -37,6 +37,18 @@ class BankAccountsTable
                     ->fontFamily('mono')
                     ->copyable(),
 
+                TextColumn::make('parent.account_name')
+                    ->label('Parent')
+                    ->placeholder('Parent account')
+                    ->toggleable(),
+
+                TextColumn::make('usage')
+                    ->label('Usage')
+                    ->formatStateUsing(fn (?string $state): string => BankAccount::usageOptions()[$state] ?? str($state)->headline()->toString())
+                    ->badge()
+                    ->color(fn (BankAccount $record): string => $record->isSubAccount() ? 'info' : 'success')
+                    ->sortable(),
+
                 TextColumn::make('ledger_balance')
                     ->label('Own Balance')
                     ->money('NGN')
@@ -93,6 +105,10 @@ class BankAccountsTable
                 SelectFilter::make('user_id')
                     ->label('Filter by Manager')
                     ->relationship('user', 'name'),
+
+                SelectFilter::make('usage')
+                    ->label('Usage')
+                    ->options(BankAccount::usageOptions()),
             ])
             ->recordActions([
                 ActionGroup::make([
@@ -102,6 +118,7 @@ class BankAccountsTable
                         ->label('Record Deposit')
                         ->icon('heroicon-m-arrow-down-circle')
                         ->color('success')
+                        ->visible(fn (BankAccount $record): bool => $record->canPerformManualBankMovement())
                         ->modalHeading('Record External Deposit')
                         ->schema([
                             TextInput::make('amount')
@@ -130,14 +147,21 @@ class BankAccountsTable
                         ->label('Transfer Funds')
                         ->icon('heroicon-m-arrow-right-circle')
                         ->color('info')
+                        ->visible(fn (BankAccount $record): bool => $record->canPerformManualBankMovement())
                         ->modalHeading('Transfer Funds Between Accounts')
                         ->modalDescription(fn(BankAccount $record) => "Source Account: {$record->account_name} (Balance: ₦" . number_format($record->ledger_balance, 2) . ")")
                         ->requiresConfirmation()
                         ->schema(fn(BankAccount $record) => [ // ✅ Inject the $record into the form
                             Select::make('destination_bank_account_id')
                                 ->label('Destination Account')
-                                // ✅ FIX: Standard Eloquent query excluding the current record
-                                ->options(BankAccount::where('id', '!=', $record->id)->pluck('account_name', 'id'))
+                                ->options(fn () => BankAccount::query()
+                                    ->whereKeyNot($record->id)
+                                    ->orderBy('account_name')
+                                    ->get()
+                                    ->mapWithKeys(fn (BankAccount $account) => [
+                                        $account->id => "{$account->account_name} ({$account->account_number}) - {$account->usage_label}",
+                                    ])
+                                    ->toArray())
                                 ->searchable()
                                 ->preload()
                                 ->required(),
@@ -181,7 +205,7 @@ class BankAccountsTable
                                     'type' => 'transfer',
                                     'amount' => $data['amount'],
                                     'date' => $data['date'],
-                                'reference' => $data['reference'],
+                                    'reference' => $data['reference'],
                                     'description' => $data['description'],
                                     'is_system' => false, // Manual transfer
                                 ]);
@@ -205,6 +229,7 @@ class BankAccountsTable
                         ->label('Record Withdrawal')
                         ->icon('heroicon-m-arrow-up-circle')
                         ->color('danger')
+                        ->visible(fn (BankAccount $record): bool => $record->canPerformManualBankMovement())
                         ->modalHeading(fn(BankAccount $record) => "Record Withdrawal from {$record->account_name} (Balance: ₦" . number_format($record->ledger_balance, 2) . ")")
                         ->requiresConfirmation()
                         ->schema([

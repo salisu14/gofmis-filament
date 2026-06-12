@@ -2,6 +2,7 @@
 
 namespace App\Data\Bank;
 
+use App\Models\BankAccount;
 use Spatie\LaravelData\Data;
 
 class CreateBankAccountData extends Data
@@ -12,5 +13,6 @@ class CreateBankAccountData extends Data
         public string $userId,
         public ?string $accountNumber = null,
         public ?string $parentBankAccountId = null,
+        public string $usage = BankAccount::USAGE_GENERAL,
     ) {}
 }

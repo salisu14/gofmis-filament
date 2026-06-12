@@ -5,6 +5,7 @@ namespace App\Filament\Resources\IdCardPrintBatches;
 use App\Filament\Resources\IdCardPrintBatches\Pages\CreateIdCardPrintBatch;
 use App\Filament\Resources\IdCardPrintBatches\Pages\EditIdCardPrintBatch;
 use App\Filament\Resources\IdCardPrintBatches\Pages\ListIdCardPrintBatches;
+use App\Filament\Resources\IdCardPrintBatches\Pages\ViewIdCardPrintBatch;
 use App\Filament\Resources\IdCardPrintBatches\Schemas\IdCardPrintBatchForm;
 use App\Filament\Resources\IdCardPrintBatches\Schemas\IdCardPrintBatchInfolist;
 use App\Filament\Resources\IdCardPrintBatches\Tables\IdCardPrintBatchesTable;
@@ -56,6 +57,7 @@ class IdCardPrintBatchResource extends Resource
         return [
             'index' => ListIdCardPrintBatches::route('/'),
             'create' => CreateIdCardPrintBatch::route('/create'),
+            'view' => ViewIdCardPrintBatch::route('/{record}'),
             'edit' => EditIdCardPrintBatch::route('/{record}/edit'),
         ];
     }

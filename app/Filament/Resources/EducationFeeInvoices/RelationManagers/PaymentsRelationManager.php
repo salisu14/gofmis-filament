@@ -46,7 +46,11 @@ class PaymentsRelationManager extends RelationManager
 
                         Select::make('bank_account_id')
                             ->label('Paying Bank Account')
-                            ->relationship('bankAccount', 'account_name')
+                            ->relationship(
+                                name: 'bankAccount',
+                                titleAttribute: 'account_name',
+                                modifyQueryUsing: fn ($query) => $query->dedicatedTo(BankAccount::USAGE_EDUCATION)
+                            )
                             ->searchable()
                             ->preload()
                             ->required()
@@ -137,6 +141,7 @@ class PaymentsRelationManager extends RelationManager
                                 ->whereKey($data['bank_account_id'])
                                 ->lockForUpdate()
                                 ->firstOrFail();
+                            $bank->ensureDedicatedTo(BankAccount::USAGE_EDUCATION, 'education fee payments');
 
                             try {
                                 $bank->debit($amount);
