@@ -40,7 +40,8 @@ class GenerateIdCardsJob implements ShouldQueue
         ]);
 
         try {
-            $idCards = collect();
+//            $idCards = collect();
+            $idCards = new \Illuminate\Database\Eloquent\Collection();
             $processed = 0;
             $template = $this->templateId ? IdCardTemplate::find($this->templateId) : null;
 

@@ -9,6 +9,7 @@ use Filament\Forms\Components\KeyValue;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
+use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
@@ -87,9 +88,9 @@ class IdCardPrintBatchForm
                                 ->default(0)
                                 ->required(),
 
-                            Placeholder::make('progress_percentage')
+                            TextEntry::make('progress_percentage')
                                 ->label('Job Progress')
-                                ->content(fn($record) => $record ? $record->progressPercentage() . '%' : '0%'),
+                                ->state(fn($record) => $record ? $record->progressPercentage() . '%' : '0%'),
                         ]),
 
                         FileUpload::make('pdf_path')
