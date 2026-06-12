@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\WidowLoan;
 use App\Models\WidowLoanRepayment;
+use App\Services\Company\CompanyInformationService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -40,6 +41,7 @@ class WidowLoanRepaymentController extends Controller
             'record' => $repayment,
             'widow'  => $repayment->widowLoan->widow,
             'balance' => $balance,
+            'company' => app(CompanyInformationService::class)->reportHeader(),
         ]);
 
         // 5. Set paper size
@@ -64,6 +66,7 @@ class WidowLoanRepaymentController extends Controller
 
         $pdf = Pdf::loadView('filament.components.loan-statement', [
             'loan' => $loan,
+            'company' => app(CompanyInformationService::class)->reportHeader(),
         ]);
 
         $pdf->setPaper('A4', 'portrait');

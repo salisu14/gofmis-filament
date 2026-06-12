@@ -61,9 +61,11 @@
                         </div>
                         <div class="flex items-center justify-center">
                             <div style="transform: scale(1); transform-origin: top left;">
+                                @php($documentCompany = app(\App\Services\Company\CompanyInformationService::class)->reportHeader())
                                 @include('id-cards.card-content', [
                                     'foundation_logo' => $foundation_logo ?? null,
-                                    'foundation_name' => $foundation_name ?? 'Garko Orphans Foundation',
+                                    'foundation_name' => $foundation_name ?? $documentCompany['name'],
+                                    'foundation_address' => $foundation_address ?? $documentCompany['address'],
                                     'card_type' => $card_type ?? 'ID CARD',
                                     'card_number' => $card_number ?? ($record->card_number ?? 'N/A'),
                                     'photo_url' => $photo_url ?? null,

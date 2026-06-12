@@ -13,10 +13,10 @@
         
         /* Partial Styles */
         .card-container { width: 85.60mm; height: 53.7mm; position: relative; padding: 3mm; border: none; overflow: hidden; }
-        .header { border-bottom: 0.2mm solid {{ $accentColor ?? '#1E90FF' }}; padding-bottom: 1mm; margin-bottom: 1.5mm; height: 13.5mm; }
-        .logo-container { float: left; width: 12mm; height: 10mm; margin-right: 2mm; }
-        .logo { width: 12mm; height: 10mm; object-fit: contain; }
-        .foundation-info { float: left; width: 65mm; }
+        .header { border-bottom: 0.2mm solid {{ $accentColor ?? '#1E90FF' }}; padding-bottom: 1mm; margin-bottom: 1.2mm; height: 15.5mm; }
+        .logo-container { float: left; width: 14mm; height: 14mm; margin-right: 2mm; background: #fff; text-align: center; }
+        .logo { width: 14mm; height: 14mm; object-fit: contain; display: block; }
+        .foundation-info { float: left; width: 62mm; }
         .foundation-name { font-size: 7.5pt; font-weight: bold; color: {{ $accentColor ?? '#1E90FF' }}; text-transform: uppercase; margin-bottom: 0.2mm; }
         .card-type { font-size: 5pt; color: #666; letter-spacing: 0.5px; margin-top: 0.5mm; }
         .clear { clear: both; }

@@ -2,7 +2,6 @@
 
 namespace App\Filament\Resources\CompanyInformation;
 
-use App\Filament\Resources\CompanyInformation\Pages\CreateCompanyInformation;
 use App\Filament\Resources\CompanyInformation\Pages\EditCompanyInformation;
 use App\Filament\Resources\CompanyInformation\Pages\ListCompanyInformation;
 use App\Filament\Resources\CompanyInformation\Pages\ViewCompanyInformation;
@@ -67,7 +66,6 @@ class CompanyInformationResource extends Resource
     {
         return [
             'index' => ListCompanyInformation::route('/'),
-            'create' => CreateCompanyInformation::route('/create'),
             'view' => ViewCompanyInformation::route('/{record}'),
             'edit' => EditCompanyInformation::route('/{record}/edit'),
         ];

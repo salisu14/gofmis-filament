@@ -18,6 +18,9 @@ class CompanyInformationInfolist
                         TextEntry::make('company_name')
                             ->label('Foundation Name')
                             ->weight('bold'),
+                        TextEntry::make('trading_name')
+                            ->label('Trading / Document Name')
+                            ->placeholder('Uses foundation name'),
                         TextEntry::make('registration_no')
                             ->label('NGO Registration No.')
                             ->copyable()
@@ -26,7 +29,7 @@ class CompanyInformationInfolist
                             ->label('TIN')
                             ->copyable()
                             ->placeholder('-'),
-                    ])->columns(3),
+                    ])->columns(4),
 
                 Section::make('Address & Contact')
                     ->schema([

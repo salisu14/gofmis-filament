@@ -6,10 +6,10 @@
         .card-container { width: 85.60mm; height: 53.7mm; border: none; position: relative; padding: 3mm; overflow: hidden; }
         .card-background-image { position: absolute; inset: 0; width: 85.60mm; height: 53.98mm; object-fit: cover; opacity: 0.22; z-index: 0; }
         .card-content { position: relative; z-index: 1; }
-        .header { border-bottom: 0.2mm solid {{ $accent_color }}; padding-bottom: 1mm; margin-bottom: 1.5mm; height: {{ $header_height_mm ?? 13.5 }}mm; }
-        .logo-container { float: left; width: 12mm; height: 10mm; margin-right: 2mm; }
-        .logo { width: 12mm; height: 10mm; object-fit: contain; }
-        .foundation-info { float: left; width: 65mm; }
+        .header { border-bottom: 0.2mm solid {{ $accent_color }}; padding-bottom: 1mm; margin-bottom: 1.2mm; height: {{ max((float) ($header_height_mm ?? 13.5), 15.5) }}mm; }
+        .logo-container { float: left; width: 14mm; height: 14mm; margin-right: 2mm; background: #fff; text-align: center; }
+        .logo { width: 14mm; height: 14mm; object-fit: contain; display: block; }
+        .foundation-info { float: left; width: 62mm; }
         .foundation-name { font-size: 7.5pt; font-weight: bold; color: {{ $accent_color }}; text-transform: uppercase; margin-bottom: 0.2mm; }
         .card-type { font-size: 5pt; color: #666; letter-spacing: 0.5px; margin-top: 0.5mm; }
         .clear { clear: both; }

@@ -7,6 +7,7 @@ use enshrined\svgSanitize\Sanitizer;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -43,6 +44,10 @@ class CompanyInformationService
 
     public function get(): CompanyInformation
     {
+        if (! Schema::hasTable('company_information')) {
+            return $this->fallbackCompanyInformation();
+        }
+
         return CompanyInformation::instance();
     }
 
@@ -187,5 +192,14 @@ class CompanyInformationService
                 ]);
             }
         }
+    }
+
+    private function fallbackCompanyInformation(): CompanyInformation
+    {
+        return new CompanyInformation([
+            'company_name' => CompanyInformation::DEFAULT_COMPANY_NAME,
+            'address_line_1' => CompanyInformation::DEFAULT_ADDRESS_LINE_1,
+            'country_code' => CompanyInformation::DEFAULT_COUNTRY_CODE,
+        ]);
     }
 }

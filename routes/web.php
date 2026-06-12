@@ -22,11 +22,7 @@ if (app()->environment('local')) {
     Route::get('/dev/id-cards/{card}/preview-debug', function (\App\Models\IdCard $card) {
         $beneficiary = $card->cardable;
         $isWidow = $card->cardable_type === \App\Models\Widow::class;
-
-        $logoPath = storage_path('app/public/logos/gof_logo.jpeg');
-        if (!file_exists($logoPath)) {
-            $logoPath = public_path('images/garko-logo.png');
-        }
+        $company = app(\App\Services\Company\CompanyInformationService::class)->reportHeader();
 
         $photo = null;
         if ($beneficiary) {
@@ -36,8 +32,9 @@ if (app()->environment('local')) {
         }
 
         return view('id-cards.card-content', [
-            'foundation_logo' => file_exists($logoPath) ? $logoPath : null,
-            'foundation_name' => 'Garko Orphans Foundation',
+            'foundation_logo' => $company['logo_url'] ?? null,
+            'foundation_name' => $company['name'],
+            'foundation_address' => $company['address'],
             'card_type' => $isWidow ? 'WIDOW ID CARD' : 'ORPHAN ID CARD',
             'card_number' => $card->card_number,
             'photo_url' => $photo,

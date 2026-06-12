@@ -7,6 +7,7 @@ namespace App\Services;
 use App\Models\IdCard;
 use App\Models\IdCardPrintBatch;
 use App\Models\Widow;
+use App\Services\Company\CompanyInformationService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
@@ -74,7 +75,7 @@ class IdCardPDFService
         $pdf = Pdf::loadView('id-cards.bulk-template', [
             'pages' => $pages,
             'batch' => $batch,
-            'foundationName' => 'Garko Orphans Foundation',
+            'foundationName' => $this->companyHeader()['name'],
             'accentColor' => '#1E90FF',
         ])
             ->setPaper('a4', 'portrait')
@@ -127,10 +128,8 @@ class IdCardPDFService
             $gender = 'Female';
         }
 
-        $logoPath = storage_path('app/public/logos/gof_logo.jpeg');
-        if (! file_exists($logoPath)) {
-            $logoPath = public_path('images/garko-logo.png');
-        }
+        $company = $this->companyHeader();
+        $logoPath = $company['logo_abs_path'] ?? null;
 
         $fallbackAvatar = file_exists(public_path('images/default-avatar.png'))
             ? public_path('images/default-avatar.png')
@@ -145,8 +144,8 @@ class IdCardPDFService
         return [
             'foundation_logo' => $forBrowser
                 ? $this->browserImageSource($logoPath)
-                : (file_exists($logoPath) ? $logoPath : null),
-            'foundation_name' => 'Garko Orphans Foundation',
+                : ($logoPath && file_exists($logoPath) ? $logoPath : null),
+            'foundation_name' => $company['name'],
             'card_type' => $isWidow ? 'WIDOW ID CARD' : 'ORPHAN ID CARD',
             'card_number' => $idCard->card_number,
             'photo_url' => $forBrowser
@@ -165,7 +164,7 @@ class IdCardPDFService
 //            'zone' => $beneficiary->zone?->name ?? 'N/A',
 //            'coordinator_name' => $beneficiary->zone?->coordinator_name ?? 'N/A',
 //            'coordinator_phone' => $beneficiary->zone?->coordinator_phone ?? 'N/A',
-            'foundation_address' => 'Shop No.1, Garko Juma\'at Mosque, Garko Local Government, Kano',
+            'foundation_address' => $company['address'],
             'issue_date' => $idCard->issued_at?->format('M d, Y') ?? now()->format('M d, Y'),
             'expiry_date' => $idCard->expires_at?->format('M d, Y'),
             'qr_code' => $forBrowser
@@ -181,6 +180,11 @@ class IdCardPDFService
             'header_height_mm' => (float) $layout['header_height_mm'],
             'background_image' => $backgroundImage,
         ];
+    }
+
+    private function companyHeader(): array
+    {
+        return app(CompanyInformationService::class)->reportHeader();
     }
 
     private function publicDiskImagePath(mixed $value, ?string $fallback = null): ?string

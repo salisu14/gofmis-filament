@@ -21,21 +21,34 @@ class CompanyInformationForm
                         Grid::make(2)
                             ->schema([
                                 FileUpload::make('logo_path')
+                                    ->label('Logo')
                                     ->disk('public')
                                     ->directory('company/logos')
+                                    ->image()
+                                    ->maxSize(2048)
+                                    ->visibility('public')
+                                    ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'])
+                                    ->downloadable()
+                                    ->openable()
+                                    ->helperText('Used on printable documents. Max 2MB. JPG, PNG, WebP, or SVG.')
                                     ->saveUploadedFileUsing(function (UploadedFile $file): string {
                                         return app(CompanyInformationService::class)->storeLogo($file);
                                     }),
 
                                 FileUpload::make('favicon_path')
                                     ->label('Favicon')
+                                    ->disk('public')
                                     ->image()
                                     ->directory('company/favicons')
                                     ->maxSize(512)
                                     ->visibility('public')
                                     ->acceptedFileTypes(['image/x-icon', 'image/png', 'image/svg+xml', 'image/vnd.microsoft.icon'])
                                     ->downloadable()
-                                    ->helperText('Max 512KB. ICO, PNG, or SVG.'),
+                                    ->openable()
+                                    ->helperText('Max 512KB. ICO, PNG, or SVG.')
+                                    ->saveUploadedFileUsing(function (UploadedFile $file): string {
+                                        return app(CompanyInformationService::class)->storeFavicon($file);
+                                    }),
                             ]),
                     ]),
 

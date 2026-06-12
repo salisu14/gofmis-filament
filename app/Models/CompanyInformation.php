@@ -16,10 +16,12 @@ class CompanyInformation extends Model
     const SINGLETON_ID = 1;
 
     const DEFAULT_COMPANY_NAME = 'Garko Orphans Foundation';
+    const DEFAULT_ADDRESS_LINE_1 = 'Shop No.1, Garko Juma\'at Mosque, Garko Local Government, Kano';
     const DEFAULT_COUNTRY_CODE = 'NGA';
 
     protected $fillable = [
         'company_name',
+        'trading_name',
         'registration_no',
         'tax_registration_no',
         'address_line_1',
@@ -60,6 +62,7 @@ class CompanyInformation extends Model
             [
                 'id' => self::SINGLETON_ID,
                 'company_name' => self::DEFAULT_COMPANY_NAME,
+                'address_line_1' => self::DEFAULT_ADDRESS_LINE_1,
                 'country_code' => self::DEFAULT_COUNTRY_CODE,
             ]
         );
@@ -102,9 +105,15 @@ class CompanyInformation extends Model
         return array_filter([
             $instance->address_line_1,
             $instance->address_line_2,
-            trim("{$instance->city}, {$instance->state_province} {$instance->postal_code}"),
-            $instance->country?->label(),
-        ]);
+            trim(implode(', ', array_filter([
+                $instance->city,
+                trim(implode(' ', array_filter([
+                    $instance->state_province,
+                    $instance->postal_code,
+                ]))),
+            ]))),
+            self::countryName($instance->country_code),
+        ], fn ($line) => filled($line));
     }
 
     public static function logoUrl(): ?string
@@ -134,6 +143,11 @@ class CompanyInformation extends Model
         return $this->trading_name ?: $this->company_name;
     }
 
+    public function getFullAddressAttribute(): string
+    {
+        return implode(', ', static::addressLines());
+    }
+
     // ─── Utilities ─────────────────────────────────────────────────
 
     private function resolveStorageUrl(?string $path): ?string
@@ -144,6 +158,15 @@ class CompanyInformation extends Model
 
         return Str::startsWith($path, ['http://', 'https://'])
             ? $path
-            : Storage::url($path);
+            : Storage::disk('public')->url($path);
+    }
+
+    private static function countryName(?string $countryCode): ?string
+    {
+        return match (strtoupper((string) $countryCode)) {
+            '', 'NGA' => null,
+            'NG' => 'Nigeria',
+            default => strtoupper((string) $countryCode),
+        };
     }
 }

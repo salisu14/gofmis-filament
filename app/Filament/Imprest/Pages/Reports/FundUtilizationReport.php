@@ -4,6 +4,7 @@ namespace App\Filament\Imprest\Pages\Reports;
 
 use App\Models\ImprestFund;
 use App\Models\ImprestTransaction;
+use App\Services\Company\CompanyInformationService;
 use App\Services\Contracts\Imprest\ImprestReconciliationServiceInterface;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Filament\Actions\Action;
@@ -141,6 +142,7 @@ class FundUtilizationReport extends Page implements HasForms, HasTable
             'endDate' => $end,
             'generatedBy' => auth()->user(),
             'generatedAt' => now(),
+            'company' => app(CompanyInformationService::class)->reportHeader(),
         ])->setPaper('a4', 'landscape');
 
         $filename = 'FUR-'.($fund?->location ? str($fund->location)->slug() : 'all-funds').'-'.now()->format('Ymd-His').'.pdf';

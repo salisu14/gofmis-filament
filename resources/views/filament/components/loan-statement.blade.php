@@ -11,6 +11,8 @@
             padding: 20px;
         }
         .header-table { width: 100%; border-bottom: 2px solid #d1d5db; padding-bottom: 15px; margin-bottom: 20px; }
+        .brand-logo { width: 42px; max-height: 42px; object-fit: contain; margin-right: 10px; vertical-align: middle; }
+        .brand-copy { display: inline-block; vertical-align: middle; }
         .title { font-size: 20px; font-weight: bold; text-transform: uppercase; letter-spacing: -0.5px; color: #4f46e5; margin: 0; }
         .subtitle { font-size: 11px; color: #6b7280; font-style: italic; margin-top: 5px; }
         .text-right { text-align: right; }
@@ -46,13 +48,22 @@
     </style>
 </head>
 <body>
+@php($company = $company ?? app(\App\Services\Company\CompanyInformationService::class)->reportHeader())
 
 <!-- Header -->
 <table class="header-table">
     <tr>
         <td>
-            <h1 class="title">Cumulative Repayment Statement</h1>
-            <p class="subtitle">Garko Orphans Foundation — Complete Payment History</p>
+            @if($company['logo_data_uri'] ?? null)
+                <img src="{{ $company['logo_data_uri'] }}" class="brand-logo" alt="">
+            @endif
+            <div class="brand-copy">
+                <h1 class="title">Cumulative Repayment Statement</h1>
+                <p class="subtitle">{{ $company['name'] }} — Complete Payment History</p>
+                @if($company['address'] ?? null)
+                    <p class="text-2xs" style="color: #9ca3af; margin-top: 2px;">{{ $company['address'] }}</p>
+                @endif
+            </div>
         </td>
         <td class="text-right">
             <p class="text-sm" style="font-weight: 600;">
