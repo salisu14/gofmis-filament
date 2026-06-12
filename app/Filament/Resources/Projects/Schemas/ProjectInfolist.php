@@ -2,8 +2,6 @@
 
 namespace App\Filament\Resources\Projects\Schemas;
 
-use App\Models\Project;
-use App\Services\ProjectService;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
@@ -12,8 +10,6 @@ class ProjectInfolist
 {
     public static function configure(Schema $schema): Schema
     {
-//        $budget = app(ProjectService::class)->checkBudget($this->record);
-
         return $schema
             ->schema([
                 Section::make('Project Information')
@@ -23,7 +19,15 @@ class ProjectInfolist
                             ->weight('bold'),
                         TextEntry::make('type')
                             ->badge()
-                            ->formatStateUsing(fn($state) => $state->label()),
+                            ->formatStateUsing(function ($state) {
+                                // If it's already an Enum instance, just call the label method
+                                if ($state instanceof \App\Enums\ProjectType) {
+                                    return $state->label();
+                                }
+
+                                // If it's a string/int (from Livewire updates), convert it first
+                                return \App\Enums\ProjectType::tryFrom($state)?->label() ?? $state;
+                            }),
                         TextEntry::make('status')
                             ->badge()
                             ->color(fn($state) => $state->color()),
