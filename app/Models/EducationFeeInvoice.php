@@ -63,15 +63,18 @@ class EducationFeeInvoice extends Model
         }
 
         $paid = $this->paid_amount;
-        $amount = (float)$this->amount;
+        $amount = (float) $this->amount;
 
-        $this->forceFill([
-            'status' => match (true) {
-                $paid <= 0 => 'pending',
-                $paid >= $amount => 'paid',
-                default => 'partial',
-            },
-        ])->saveQuietly();
+        $newStatus = match (true) {
+            $paid <= 0 => 'pending',
+            $paid >= $amount => 'paid',
+            default => 'partial',
+        };
+
+        // Only save if the status actually changed to avoid infinite loops or unnecessary saves
+        if ($this->status !== $newStatus) {
+            $this->forceFill(['status' => $newStatus])->saveQuietly();
+        }
     }
 
     protected static function booted(): void
