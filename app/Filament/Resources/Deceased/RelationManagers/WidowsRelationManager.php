@@ -2,6 +2,10 @@
 
 namespace App\Filament\Resources\Deceased\RelationManagers;
 
+use App\Enums\IllnessCategory;
+use App\Models\Illness;
+use App\Models\Medication;
+use App\Models\Prescription;
 use App\Models\Widow;
 use App\Services\RegistrationNumberService;
 use Filament\Actions\Action;
@@ -20,12 +24,14 @@ use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Notifications\Notification;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\Schema as DatabaseSchema;
 
 class WidowsRelationManager extends RelationManager
 {
@@ -181,30 +187,72 @@ class WidowsRelationManager extends RelationManager
 
                         return array_merge($data, $generated);
                     })
-                    ->hidden(fn (RelationManager $livewire) => $livewire->getRelationship()->count() >= 4),
+                    ->hidden(fn(RelationManager $livewire) => $livewire->getRelationship()->count() >= 4),
             ])
             ->recordActions([
                 // NEW: MEDICAL RECORDS ACTION
                 Action::make('manageMedical')
-                    ->label('Medical Records')
+                    ->label('Medical')
                     ->icon('heroicon-m-beaker')
                     ->color('success')
-                    ->modalHeading(fn (Widow $record) => "Prescriptions for {$record->full_name}")
+                    ->modalHeading(fn(Widow $record) => "Medical History: {$record->full_name}")
                     ->modalWidth('5xl')
-                    ->modalSubmitActionLabel('Save Records')
+                    ->modalSubmitActionLabel('Save Updates')
+                    ->fillForm(fn(Widow $record): array => [
+                        'prescriptions' => $record->prescriptions()
+                            ->with(['illnessModel', 'medications'])
+                            ->latest('prescription_date')
+                            ->get()
+                            ->map(fn(Prescription $prescription): array => [
+                                'id' => $prescription->id,
+                                'doctor_name' => $prescription->doctor_name,
+                                'illness_id' => $prescription->illness_id,
+                                'prescription_date' => $prescription->prescription_date?->toDateString(),
+                                'lab_test_cost' => $prescription->lab_test_cost,
+                                'drug_cost' => $prescription->drug_cost,
+                                'medications' => $prescription->medications->pluck('id')->all(),
+                                'note' => $prescription->note,
+                                'user_id' => $prescription->user_id ?? auth()->id(),
+                            ])
+                            ->values()
+                            ->all(),
+                    ])
                     ->schema([
                         Repeater::make('prescriptions')
-                            ->relationship('prescriptions')
+                            ->defaultItems(0)
                             ->schema([
+                                Hidden::make('id'),
                                 Grid::make(3)->schema([
                                     TextInput::make('doctor_name')
-                                        ->required(),
-                                    TextInput::make('illness')
+                                        ->required()
+                                        ->placeholder('Attending Doctor'),
+
+                                    Select::make('illness_id')
                                         ->label('Diagnosis')
-                                        ->required(),
+                                        ->options(fn(): array => Illness::query()
+                                            ->orderBy('name')
+                                            ->pluck('name', 'id')
+                                            ->all())
+                                        ->searchable()
+                                        ->preload()
+                                        ->required()
+                                        ->createOptionForm([
+                                            TextInput::make('name')
+                                                ->required()
+                                                ->unique(Illness::class, 'name'),
+                                            Select::make('category')
+                                                ->options(IllnessCategory::class)
+                                                ->enum(IllnessCategory::class)
+                                                ->required()
+                                                ->native(false),
+                                            Textarea::make('description')->rows(2),
+                                        ])
+                                        ->createOptionUsing(fn(array $data): string => Illness::create($data)->getKey()),
+
                                     DatePicker::make('prescription_date')
                                         ->default(now())
-                                        ->required(),
+                                        ->required()
+                                        ->native(false),
                                 ]),
                                 Grid::make(2)->schema([
                                     TextInput::make('lab_test_cost')
@@ -218,27 +266,98 @@ class WidowsRelationManager extends RelationManager
                                 ]),
                                 Select::make('medications')
                                     ->multiple()
-                                    ->relationship('medications', 'name')
+                                    ->options(fn(): array => Medication::query()
+                                        ->orderBy('name')
+                                        ->pluck('name', 'id')
+                                        ->all())
                                     ->preload()
                                     ->searchable()
-                                    ->hint('Select prescribed drugs from pharmacy master list.'),
+                                    ->hint('Search by drug name.'),
                                 Textarea::make('note')
+                                    ->label('Prescription Note')
                                     ->rows(2)
-                                    ->placeholder('Dosage instructions or clinical notes...')
+                                    ->placeholder('Dosage details or observations...')
                                     ->columnSpanFull(),
-
-                                // Hidden field to track who is issuing
                                 Hidden::make('user_id')
                                     ->default(auth()->id()),
                             ])
-                            ->itemLabel(fn (array $state): ?string => $state['illness'] ?? null)
+                            ->itemLabel(function (array $state): ?string {
+                                $illnessName = ($state['illness_id'] ?? null)
+                                    ? Illness::find($state['illness_id'])?->name
+                                    : 'New Diagnosis';
+
+                                $date = isset($state['prescription_date'])
+                                    ? ' (' . date('d/m/Y', strtotime($state['prescription_date'])) . ')'
+                                    : '';
+
+                                return $illnessName . $date;
+                            })
                             ->collapsible()
                             ->collapsed()
-                            ->cloneable()
-                            ->addActionLabel('New Prescription'),
+                            ->addActionLabel('New Medical Record'),
                     ])
-                    ->action(function (Widow $record): void {
-                        $record->touch(); // Refreshes timestamps to trigger UI update
+                    ->action(function (Widow $record, array $data): void {
+                        $submittedRows = collect($data['prescriptions'] ?? [])
+                            ->filter(fn(array $row): bool => filled($row['doctor_name'] ?? null)
+                                || filled($row['illness_id'] ?? null)
+                                || filled($row['note'] ?? null));
+
+                        $existingIds = $record->prescriptions()->pluck('id')->all();
+                        $keptIds = [];
+
+                        foreach ($submittedRows as $row) {
+                            $illness = filled($row['illness_id'] ?? null)
+                                ? Illness::find($row['illness_id'])
+                                : null;
+
+                            $prescription = filled($row['id'] ?? null)
+                                ? $record->prescriptions()->whereKey($row['id'])->first()
+                                : new Prescription();
+
+                            if (!$prescription) {
+                                continue;
+                            }
+
+                            $attributes = [
+                                'doctor_name' => $row['doctor_name'] ?? null,
+                                'illness_id' => $row['illness_id'] ?? null,
+                                'prescription_date' => $row['prescription_date'] ?? now()->toDateString(),
+                                'lab_test_cost' => $row['lab_test_cost'] ?? 0,
+                                'drug_cost' => $row['drug_cost'] ?? 0,
+                                'note' => $row['note'] ?? null,
+                                'user_id' => $row['user_id'] ?? auth()->id(),
+                            ];
+
+                            if (DatabaseSchema::hasColumn('prescriptions', 'illness')) {
+                                $attributes['illness'] = $illness?->name ?? 'Unspecified diagnosis';
+                            }
+
+                            $prescription->fill($attributes);
+
+                            if (!$prescription->exists) {
+                                $prescription->prescribable()->associate($record);
+                            }
+
+                            $prescription->save();
+                            $prescription->medications()->sync($row['medications'] ?? []);
+
+                            $keptIds[] = $prescription->id;
+                        }
+
+                        $idsToDelete = array_diff($existingIds, $keptIds);
+                        if ($idsToDelete !== []) {
+                            $record->prescriptions()->whereKey($idsToDelete)->get()->each(function (Prescription $prescription): void {
+                                $prescription->medications()->detach();
+                                $prescription->delete();
+                            });
+                        }
+
+                        $record->touch();
+
+                        Notification::make()
+                            ->title('Medical records updated')
+                            ->success()
+                            ->send();
                     }),
 
                 ViewAction::make(),
