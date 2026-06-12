@@ -48,12 +48,12 @@ class EducationFeeInvoice extends Model
      */
     public function getBalanceAttribute(): float
     {
-        return (float)$this->amount - (float)$this->payments()->sum('amount');
+        return (float)$this->amount - (float)$this->payments->sum('amount');
     }
 
     public function getPaidAmountAttribute(): float
     {
-        return (float)$this->payments()->sum('amount');
+        return (float)$this->payments->sum('amount');
     }
 
     public function refreshPaymentStatus(): void
