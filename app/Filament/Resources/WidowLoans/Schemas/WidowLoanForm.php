@@ -72,12 +72,15 @@ class WidowLoanForm
                             Select::make('repayment_bank_id')
                                 ->label('Foundation Repayment Account')
                                 ->helperText('Use a child account dedicated to widow loan repayments.')
-                                ->relationship(
-                                    name: 'repaymentBank',
-                                    titleAttribute: 'account_name',
-                                    modifyQueryUsing: fn ($query) => $query->dedicatedTo(BankAccount::USAGE_WIDOW_LOAN_REPAYMENT)
+                                ->options(fn () => BankAccount::query()
+                                    ->dedicatedTo(BankAccount::USAGE_WIDOW_LOAN_REPAYMENT)
+                                    ->orderBy('account_name')
+                                    ->pluck('account_name', 'id')
+                                    ->toArray()
                                 )
-                                ->getOptionLabelFromRecordUsing(fn ($record) => "{$record->account_name} ({$record->account_number})")
+                                ->getOptionLabelUsing(
+                                    fn ($value) => BankAccount::find($value)?->display_name
+                                )
                                 ->searchable()
                                 ->preload()
                                 ->nullable(),

@@ -93,17 +93,13 @@ class WidowLoanRepaymentForm
                                         ->orderBy('account_name')
                                         ->get()
                                         ->mapWithKeys(fn (BankAccount $account) => [
-                                            $account->id => "{$account->account_name} - ₦" . number_format((float) $account->ledger_balance, 2),
+                                            $account->id => "{$account->account_name} - {$account->account_number}",
                                         ])
                                         ->toArray()
                                     )
-                                    ->getOptionLabelUsing(function ($value): ?string {
-                                        $account = BankAccount::find($value);
-
-                                        return $account
-                                            ? "{$account->account_name} - {$account->account_number}"
-                                            : null;
-                                    })
+                                    ->getOptionLabelUsing(
+                                        fn ($value) => BankAccount::find($value)?->display_name
+                                    )
                                     ->searchable()
                                     ->preload()
                                     ->required(),

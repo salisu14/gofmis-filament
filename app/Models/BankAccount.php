@@ -96,6 +96,11 @@ class BankAccount extends Model
         ];
     }
 
+    public function getDisplayNameAttribute(): string
+    {
+        return "{$this->account_name} - {$this->account_number}";
+    }
+
     public function getUsageLabelAttribute(): string
     {
         return self::usageOptions()[$this->usage] ?? str($this->usage)->headline()->toString();

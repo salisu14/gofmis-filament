@@ -20,6 +20,7 @@ class WidowLoanService
      *
      * We do NOT generate the repayment schedule here. The schedule is anchored
      * to the actual disbursement date, so it is generated inside disburseLoan().
+     * @throws \Throwable
      */
     public function createLoan(CreateWidowLoanData $data): WidowLoan
     {
@@ -138,6 +139,10 @@ class WidowLoanService
         }
     }
 
+    /**
+     * @throws \Throwable
+     * @throws InsufficientBankBalanceException
+     */
     public function adjustPendingLoanAmount(WidowLoan $loan, float $newAmount, string $note, ?string $adjustedBy = null): void
     {
         if (! $loan->isAwaitingApproval()) {
@@ -277,6 +282,7 @@ class WidowLoanService
      *  3. Create a WidowLoanRepayment record.
      *  4. Create a Transaction record (no hardcoded journal lines).
      *  5. Call refreshBalance() once to recalculate totals and sync schedule flags.
+     * @throws \Throwable
      */
     public function recordRepayment(RecordWidowLoanRepaymentData $data): WidowLoanRepayment
     {
