@@ -169,7 +169,7 @@ class AdminPanelProvider extends PanelProvider
                                     ->isActiveWhen(fn () => request()->is('admin/welfare-packages*')),
 
                                 NavigationItem::make('Items')
-                                    ->icon('heroicon-o-building-storefront')
+                                    ->icon('heroicon-o-queue-list')
                                     ->url('/admin/items')
                                     ->isActiveWhen(fn () => request()->is('admin/items*')),
                             ])
@@ -183,7 +183,7 @@ class AdminPanelProvider extends PanelProvider
                             ->items([
 
                                 NavigationItem::make('ID Cards')
-                                    ->icon('heroicon-o-credit-card')
+                                    ->icon('heroicon-o-identification')
                                     ->url('/admin/id-cards')
                                     ->isActiveWhen(fn () => request()->is('admin/id-cards*')),
 
