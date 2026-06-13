@@ -62,7 +62,7 @@ class IdCardInfolist
                     ->schema([
                         ImageEntry::make('qr_code_path')
                             ->disk('public')
-                            ->height(200)
+                            ->imageHeight(200)
                             ->extraAttributes(['class' => 'rounded-lg border']),
 
                         TextEntry::make('qr_url')
