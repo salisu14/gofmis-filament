@@ -88,11 +88,22 @@ class WidowLoanRepaymentForm
 
                                 Select::make('bank_account_id')
                                     ->label('Receiving Bank Account')
-                                    ->relationship(
-                                        name: 'bankAccount',
-                                        titleAttribute: 'account_name',
-                                        modifyQueryUsing: fn ($query) => $query->dedicatedTo(BankAccount::USAGE_WIDOW_LOAN_REPAYMENT)
+                                    ->options(fn () => BankAccount::query()
+                                        ->dedicatedTo(BankAccount::USAGE_WIDOW_LOAN_REPAYMENT)
+                                        ->orderBy('account_name')
+                                        ->get()
+                                        ->mapWithKeys(fn (BankAccount $account) => [
+                                            $account->id => "{$account->account_name} - ₦" . number_format((float) $account->ledger_balance, 2),
+                                        ])
+                                        ->toArray()
                                     )
+                                    ->getOptionLabelUsing(function ($value): ?string {
+                                        $account = BankAccount::find($value);
+
+                                        return $account
+                                            ? "{$account->account_name} - {$account->account_number}"
+                                            : null;
+                                    })
                                     ->searchable()
                                     ->preload()
                                     ->required(),
