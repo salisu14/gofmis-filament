@@ -11,6 +11,10 @@ interface ImprestReconciliationServiceInterface
 
     public function acknowledge(string $reconciliationId, string $custodianId): ImprestReconciliation;
 
+    public function complete(string $reconciliationId): ImprestReconciliation;
+
+    public function flag(string $reconciliationId, string $reason): ImprestReconciliation;
+
     public function getReconciliationReport(string $fundId, string $start, string $end): array;
 
     public function checkVarianceThreshold(float $variance, float $authorizedAmount): string;

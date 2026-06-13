@@ -69,6 +69,52 @@ class ImprestReconciliation extends Model
         return abs($this->actual_variance) < 0.01;
     }
 
+    public function getAccountableTotalAttribute(): float
+    {
+        return (float) $this->cash_on_hand
+            + (float) $this->receipts_total
+            - $this->processed_replenishments_total;
+    }
+
+    public function getExpectedCashOnHandAttribute(): float
+    {
+        return max(
+            0,
+            (float) $this->expected_balance
+            - (float) $this->receipts_total
+            + $this->processed_replenishments_total
+        );
+    }
+
+    public function getProcessedReplenishmentsTotalAttribute(): float
+    {
+        if (! $this->fund_id || ! $this->reconciliation_date) {
+            return 0.0;
+        }
+
+        $start = $this->reconciliation_date->copy()->startOfMonth()->toDateString();
+        $end = $this->reconciliation_date->toDateString();
+
+        return (float) ImprestReplenishment::query()
+            ->where('fund_id', $this->fund_id)
+            ->where('status', 'processed')
+            ->whereDate('period_start', '<=', $end)
+            ->whereDate('period_end', '>=', $start)
+            ->whereDate('processed_at', '<=', $end)
+            ->sum('amount');
+    }
+
+    public function getVarianceLabelAttribute(): string
+    {
+        $variance = (float) $this->actual_variance;
+
+        return match (true) {
+            abs($variance) < 0.01 => 'Balanced',
+            $variance > 0 => 'Surplus',
+            default => 'Shortage',
+        };
+    }
+
     public function varianceSeverity(): string
     {
         $authorized = $this->fund?->authorized_amount ?? 1;

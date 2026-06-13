@@ -11,8 +11,11 @@ class ImprestReconciliationRepository implements ImprestReconciliationRepository
 {
     public function create(ReconcileFundDto $dto): ImprestReconciliation
     {
-        $expectedBalance = $dto->cashOnHand + $dto->receiptsTotal;
-        $variance = $expectedBalance - $this->getAuthorizedAmount($dto->fundId);
+        $expectedBalance = $this->getAuthorizedAmount($dto->fundId);
+        $accountableTotal = $dto->cashOnHand
+            + $dto->receiptsTotal
+            - $this->getProcessedReplenishmentsTotal($dto->fundId, $dto->reconciliationDate);
+        $variance = $accountableTotal - $expectedBalance;
 
         return ImprestReconciliation::create([
             'fund_id' => $dto->fundId,
@@ -68,5 +71,19 @@ class ImprestReconciliationRepository implements ImprestReconciliationRepository
     private function getAuthorizedAmount(string $fundId): float
     {
         return (float) \App\Models\ImprestFund::findOrFail($fundId)->authorized_amount;
+    }
+
+    private function getProcessedReplenishmentsTotal(string $fundId, \Carbon\Carbon $reconciliationDate): float
+    {
+        $start = $reconciliationDate->copy()->startOfMonth()->toDateString();
+        $end = $reconciliationDate->toDateString();
+
+        return (float) \App\Models\ImprestReplenishment::query()
+            ->where('fund_id', $fundId)
+            ->where('status', 'processed')
+            ->whereDate('period_start', '<=', $end)
+            ->whereDate('period_end', '>=', $start)
+            ->whereDate('processed_at', '<=', $end)
+            ->sum('amount');
     }
 }

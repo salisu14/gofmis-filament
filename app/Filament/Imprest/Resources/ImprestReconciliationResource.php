@@ -5,7 +5,10 @@ namespace App\Filament\Imprest\Resources;
 use App\Filament\Imprest\Resources\ImprestReconciliationResource\Pages;
 use App\Models\ImprestFund;
 use App\Models\ImprestReconciliation;
+use App\Models\ImprestReplenishment;
+use App\Models\ImprestTransaction;
 use App\Services\Contracts\Imprest\ImprestReconciliationServiceInterface;
+use Carbon\Carbon;
 use Filament\Actions\Action;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DatePicker;
@@ -55,23 +58,49 @@ class ImprestReconciliationResource extends Resource
 
                                 $fund = ImprestFund::find($fundId);
                                 if ($fund) {
-                                    // Calculate expected receipts total from active transactions
-                                    $receiptsTotal = \App\Models\ImprestTransaction::where('fund_id', $fundId)
-                                        ->where('status', 'active')
-                                        ->sum('total_price');
+                                    $receiptsTotal = self::calculateReceiptsTotal($fundId, $get('reconciliation_date'));
+                                    $replenishmentsTotal = self::calculateProcessedReplenishmentsTotal($fundId, $get('reconciliation_date'));
 
                                     $set('expected_balance', $fund->authorized_amount);
                                     $set('receipts_total', $receiptsTotal);
+                                    $set('processed_replenishments_total', $replenishmentsTotal);
                                     $set('cash_on_hand', $fund->current_balance);
+                                    $set('actual_variance', self::calculateVariance(
+                                        (float) $fund->current_balance,
+                                        (float) $receiptsTotal,
+                                        (float) $replenishmentsTotal,
+                                        (float) $fund->authorized_amount
+                                    ));
                                 }
                             }),
 
                         DatePicker::make('reconciliation_date')
                             ->required()
                             ->default(now())
-                            ->native(false),
+                            ->native(false)
+                            ->live()
+                            ->afterStateUpdated(function (Get $get, Set $set): void {
+                                $fundId = $get('fund_id');
+
+                                if (! $fundId) {
+                                    return;
+                                }
+
+                                $receiptsTotal = self::calculateReceiptsTotal($fundId, $get('reconciliation_date'));
+                                $replenishmentsTotal = self::calculateProcessedReplenishmentsTotal($fundId, $get('reconciliation_date'));
+
+                                $set('receipts_total', $receiptsTotal);
+                                $set('processed_replenishments_total', $replenishmentsTotal);
+                                $set('actual_variance', self::calculateVariance(
+                                    (float) ($get('cash_on_hand') ?? 0),
+                                    (float) $receiptsTotal,
+                                    (float) $replenishmentsTotal,
+                                    (float) ($get('expected_balance') ?? 0)
+                                ));
+                            }),
 
                         TextInput::make('cash_on_hand')
+                            ->label('Actual Cash Counted')
                             ->required()
                             ->numeric()
                             ->prefix('₦')
@@ -80,31 +109,44 @@ class ImprestReconciliationResource extends Resource
                             ->afterStateUpdated(function (Get $get, Set $set) {
                                 $cash = floatval($get('cash_on_hand') ?? 0);
                                 $receipts = floatval($get('receipts_total') ?? 0);
+                                $replenishments = floatval($get('processed_replenishments_total') ?? 0);
                                 $expected = floatval($get('expected_balance') ?? 0);
-                                $set('actual_variance', round(($cash + $receipts) - $expected, 2));
+                                $set('actual_variance', self::calculateVariance($cash, $receipts, $replenishments, $expected));
                             }),
 
                         TextInput::make('receipts_total')
-                            ->required()
-                            ->numeric()
-                            ->prefix('₦')
-                            ->disabled()
-                            ->dehydrated(),
-
-                        TextInput::make('expected_balance')
+                            ->label('Approved Expense Receipts')
                             ->required()
                             ->numeric()
                             ->prefix('₦')
                             ->disabled()
                             ->dehydrated()
-                            ->helperText('Authorized amount from fund setup'),
+                            ->helperText('Month-to-date approved imprest expenses up to the reconciliation date.'),
 
-                        TextInput::make('actual_variance')
+                        TextInput::make('processed_replenishments_total')
+                            ->label('Processed Replenishments')
                             ->numeric()
                             ->prefix('₦')
                             ->disabled()
-                            ->dehydrated(),
-//                            ->color(fn (float $state): string => abs($state) < 0.01 ? 'success' : 'danger'),
+                            ->dehydrated(false)
+                            ->helperText('Replenishment already restored to the fund for this period. This offsets receipts in the reconciliation equation.'),
+
+                        TextInput::make('expected_balance')
+                            ->label('Authorized Imprest Amount')
+                            ->required()
+                            ->numeric()
+                            ->prefix('₦')
+                            ->disabled()
+                            ->dehydrated()
+                            ->helperText('The imprest amount allocated to this fund.'),
+
+                        TextInput::make('actual_variance')
+                            ->label('Variance')
+                            ->numeric()
+                            ->prefix('₦')
+                            ->disabled()
+                            ->dehydrated()
+                            ->helperText('Variance = (actual cash + total spent - processed replenishments) - authorized imprest amount.'),
 
                         Select::make('custodian_id')
                             ->relationship('custodian', 'name')
@@ -150,19 +192,23 @@ class ImprestReconciliationResource extends Resource
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('cash_on_hand')
+                    ->label('Cash')
                     ->money('NGN')
                     ->alignment('right'),
 
                 Tables\Columns\TextColumn::make('receipts_total')
+                    ->label('Receipts')
                     ->money('NGN')
                     ->alignment('right'),
 
                 Tables\Columns\TextColumn::make('expected_balance')
+                    ->label('Authorized')
                     ->money('NGN')
                     ->alignment('right')
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('actual_variance')
+                    ->label('Variance')
                     ->money('NGN')
                     ->alignment('right')
                     ->color(fn(ImprestReconciliation $record): string => $record->isBalanced() ? 'success' : 'danger')
@@ -242,7 +288,8 @@ class ImprestReconciliationResource extends Resource
                         auth()->user()->can('reconcile', $record->fund)
                     )
                     ->action(function (ImprestReconciliation $record) {
-                        $record->update(['status' => 'completed']);
+                        $service = app(ImprestReconciliationServiceInterface::class);
+                        $service->complete($record->id);
 
                         Notification::make()
                             ->title('Reconciliation Completed')
@@ -269,18 +316,35 @@ class ImprestReconciliationResource extends Resource
                     ]),
 
                 Section::make('Balance Verification')
-                    ->columns(4)
+                    ->description('A reconciliation balances when actual cash counted + total spent - processed replenishments equals the authorized imprest amount.')
+                    ->columns(3)
                     ->schema([
                         TextEntry::make('cash_on_hand')
+                            ->label('Actual Cash Counted')
                             ->money('NGN')
                             ->icon('heroicon-m-banknotes'),
                         TextEntry::make('receipts_total')
+                            ->label('Total Spent / Approved Receipts')
                             ->money('NGN')
                             ->icon('heroicon-m-receipt-percent'),
+                        TextEntry::make('processed_replenishments_total')
+                            ->label('Processed Replenishments')
+                            ->money('NGN')
+                            ->state(fn (ImprestReconciliation $record): float => $record->processed_replenishments_total),
                         TextEntry::make('expected_balance')
+                            ->label('Authorized Imprest Amount')
                             ->money('NGN')
                             ->icon('heroicon-m-scale'),
+                        TextEntry::make('expected_cash_on_hand')
+                            ->label('Expected Cash on Hand')
+                            ->money('NGN')
+                            ->state(fn (ImprestReconciliation $record): float => $record->expected_cash_on_hand),
+                        TextEntry::make('accountable_total')
+                            ->label('Accountable Total')
+                            ->money('NGN')
+                            ->state(fn (ImprestReconciliation $record): float => $record->accountable_total),
                         TextEntry::make('actual_variance')
+                            ->label(fn (ImprestReconciliation $record): string => 'Variance ('.$record->variance_label.')')
                             ->money('NGN')
                             ->color(fn(ImprestReconciliation $record): string => $record->isBalanced() ? 'success' : 'danger')
                             ->weight('font-bold'),
@@ -322,5 +386,39 @@ class ImprestReconciliationResource extends Resource
             'view' => Pages\ViewImprestReconciliation::route('/{record}'),
             'edit' => Pages\EditImprestReconciliation::route('/{record}/edit'),
         ];
+    }
+
+    private static function calculateReceiptsTotal(string $fundId, mixed $reconciliationDate): float
+    {
+        $date = $reconciliationDate ? Carbon::parse($reconciliationDate) : now();
+
+        return (float) ImprestTransaction::query()
+            ->where('fund_id', $fundId)
+            ->where('status', 'active')
+            ->whereBetween('date', [
+                $date->copy()->startOfMonth()->toDateString(),
+                $date->toDateString(),
+            ])
+            ->sum('total_price');
+    }
+
+    private static function calculateProcessedReplenishmentsTotal(string $fundId, mixed $reconciliationDate): float
+    {
+        $date = $reconciliationDate ? Carbon::parse($reconciliationDate) : now();
+        $start = $date->copy()->startOfMonth()->toDateString();
+        $end = $date->toDateString();
+
+        return (float) ImprestReplenishment::query()
+            ->where('fund_id', $fundId)
+            ->where('status', 'processed')
+            ->whereDate('period_start', '<=', $end)
+            ->whereDate('period_end', '>=', $start)
+            ->whereDate('processed_at', '<=', $end)
+            ->sum('amount');
+    }
+
+    private static function calculateVariance(float $cashOnHand, float $receiptsTotal, float $processedReplenishments, float $expectedBalance): float
+    {
+        return round(($cashOnHand + $receiptsTotal - $processedReplenishments) - $expectedBalance, 2);
     }
 }

@@ -6,6 +6,7 @@ use App\Data\Imprest\ReconcileFundDto;
 use App\Events\Imprest\ReconciliationCompleted;
 use App\Events\Imprest\ReconciliationFlagged;
 use App\Models\ImprestReconciliation;
+use App\Models\ImprestReplenishment;
 use App\Repositories\Contracts\Imprest\ImprestFundRepositoryInterface;
 use App\Repositories\Contracts\Imprest\ImprestReconciliationRepositoryInterface;
 use App\Repositories\Contracts\Imprest\ImprestTransactionRepositoryInterface;
@@ -81,19 +82,38 @@ class ImprestReconciliationService implements ImprestReconciliationServiceInterf
         return $reconciliation->fresh();
     }
 
+    public function complete(string $reconciliationId): ImprestReconciliation
+    {
+        return $this->reconciliationRepo->complete($reconciliationId);
+    }
+
+    public function flag(string $reconciliationId, string $reason): ImprestReconciliation
+    {
+        return $this->reconciliationRepo->flag($reconciliationId, $reason);
+    }
+
     public function getReconciliationReport(string $fundId, string $start, string $end): array
     {
         $transactions = $this->transactionRepo->getInDateRange($fundId, $start, $end);
         $fund = $this->fundRepo->findById($fundId);
+        $processedReplenishments = (float) ImprestReplenishment::query()
+            ->where('fund_id', $fundId)
+            ->where('status', 'processed')
+            ->whereDate('period_start', '<=', $end)
+            ->whereDate('period_end', '>=', $start)
+            ->whereDate('processed_at', '<=', $end)
+            ->sum('amount');
+        $totalSpent = (float) $transactions->sum('total_price');
 
         return [
             'fund' => $fund->toArray(),
             'period' => ['start' => $start, 'end' => $end],
             'transactions' => $transactions->toArray(),
-            'total_spent' => $transactions->sum('total_price'),
+            'total_spent' => $totalSpent,
+            'processed_replenishments' => $processedReplenishments,
             'transaction_count' => $transactions->count(),
             'authorized_amount' => $fund->authorized_amount,
-            'expected_balance' => $fund->authorized_amount - $transactions->sum('total_price'),
+            'expected_balance' => $fund->authorized_amount - $totalSpent + $processedReplenishments,
         ];
     }
 

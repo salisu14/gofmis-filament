@@ -50,7 +50,8 @@ class ViewImprestReconciliation extends ViewRecord
                     auth()->user()->can('reconcile', $record->fund)
                 )
                 ->action(function () use ($record) {
-                    $record->update(['status' => 'completed']);
+                    $service = app(ImprestReconciliationServiceInterface::class);
+                    $service->complete($record->id);
 
                     Notification::make()
                         ->title('Completed')
