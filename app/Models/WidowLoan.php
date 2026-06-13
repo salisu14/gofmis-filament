@@ -81,6 +81,7 @@ class WidowLoan extends Model
         'fully_repaid',
         'loan_agreement_url',
         'reject_reason',
+        'date_issued',
     ];
 
     protected $casts = [

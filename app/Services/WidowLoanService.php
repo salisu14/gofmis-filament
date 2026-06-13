@@ -225,6 +225,7 @@ class WidowLoanService
 
             $disbursedAt = now();
 
+
             // Update loan status
             $loan->update([
                 'status' => WidowLoanStatus::DISBURSED,
@@ -268,6 +269,7 @@ class WidowLoanService
         // Only set the timestamp — status stays DISBURSED
         $loan->update([
             'collected_at' => now(),
+            'date_issued' => now(),
             'collected_by' => $collectedBy ?? auth()->id(),
             'collector_name' => $collectorName,
         ]);
