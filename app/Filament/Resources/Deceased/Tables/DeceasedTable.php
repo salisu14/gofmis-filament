@@ -145,6 +145,53 @@ class DeceasedTable
                             ->when($data['age_to'], fn($q) => $q->where('age', '<=', $data['age_to']));
                     }),
 
+                // Filter deceased who have/don't have interventions for their orphans
+                TernaryFilter::make('has_intervention')
+                    ->label('Has Intervention')
+                    ->placeholder('Any')
+                    ->trueLabel('With Interventions')
+                    ->falseLabel('Without Interventions')
+                    ->queries(
+                        true: fn($query) => $query->whereHas('orphans.interventions'),
+                        false: fn($query) => $query->whereDoesntHave('orphans.interventions'),
+                        blank: fn($query) => $query,
+                    ),
+
+                // Filter deceased by specific intervention statuses (adjust options to match your actual statuses)
+                SelectFilter::make('intervention_status')
+                    ->label('Intervention Status')
+                    ->options([
+                        'pending' => 'Pending',
+                        'approved' => 'Approved',
+                        'disbursed' => 'Disbursed',
+                        'rejected' => 'Rejected',
+                    ])
+                    ->query(function ($query, array $data) {
+                        return $query->when($data['value'], fn($q, $status) => $q->whereHas('orphans.interventions', fn($q) => $q->where('status', $status))
+                        );
+                    }),
+
+                // Filter deceased by specific welfare programs (uses native belongsToMany)
+                // Filter by specific Welfare Package
+                SelectFilter::make('welfare_packages')
+                    ->label('Welfare Package')
+                    ->relationship('welfarePackages', 'name') // Uses the new belongsToMany relationship
+                    ->searchable()
+                    ->preload()
+                    ->multiple(),
+
+                // Filter deceased who have/have not received any welfare package
+                TernaryFilter::make('has_welfare_package')
+                    ->label('Has Welfare Package')
+                    ->placeholder('Any')
+                    ->trueLabel('With Welfare Package')
+                    ->falseLabel('Without Welfare Package')
+                    ->queries(
+                        true: fn($query) => $query->whereHas('welfarePackages'),
+                        false: fn($query) => $query->whereDoesntHave('welfarePackages'),
+                        blank: fn($query) => $query,
+                    ),
+
                 TernaryFilter::make('has_death_cert')
                     ->label('Death Certificate'),
             ])->deferFilters(false)

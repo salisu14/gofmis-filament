@@ -90,7 +90,16 @@ class Deceased extends Model
 
     public function welfares(): BelongsToMany
     {
-        return $this->belongsToMany(Welfare::class, 'welfare_deceased')
+        return $this->belongsToMany(Welfare::class, 'deceased_welfare')
+            ->using(DeceasedWelfare::class) // <-- ADD THIS
+            ->withPivot('collection_status')
+            ->withTimestamps();
+    }
+
+    public function welfarePackages(): BelongsToMany
+    {
+        // Links Deceased to WelfarePackage through the welfare_beneficiaries pivot table
+        return $this->belongsToMany(WelfarePackage::class, 'welfare_beneficiaries', 'deceased_id', 'welfare_package_id')
             ->withPivot('collection_status')
             ->withTimestamps();
     }
