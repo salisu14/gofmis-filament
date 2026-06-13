@@ -9,6 +9,7 @@ use App\Filament\Imprest\Resources\ImprestTransactionResource\Pages\EditImprestT
 use App\Filament\Imprest\Resources\ImprestTransactionResource\Pages\ListImprestTransactions;
 use App\Filament\Imprest\Resources\ImprestTransactionResource\Pages\ViewImprestTransaction;
 use App\Models\Deceased;
+use App\Models\ImprestFund;
 use App\Models\ImprestTransaction;
 use App\Models\Item;
 use App\Services\Contracts\Imprest\ImprestTransactionServiceInterface;
@@ -107,14 +108,24 @@ class ImprestTransactionResource extends Resource
                         Select::make('deceased_id')
                             ->label('Deceased / Beneficiary Family')
                             ->relationship('deceased', 'full_name')
-                            ->required()
+                            ->helperText('Optional. Use only when this expense belongs to a registered deceased family.')
                             ->searchable()
                             ->preload()
                             ->native(false)
+                            ->live()
+                            ->afterStateUpdated(function (Set $set, ?string $state): void {
+                                $set('name', $state ? Deceased::query()->whereKey($state)->value('full_name') : null);
+                            })
                             ->getOptionLabelFromRecordUsing(fn(Deceased $record): string => "{$record->full_name} ({$record->reg_no})")
                             ->prefixIcon('heroicon-m-identification'),
 
-                        Hidden::make('name'),
+                        TextInput::make('name')
+                            ->label('Payee / Beneficiary Name')
+                            ->required(fn(Get $get): bool => blank($get('deceased_id')))
+                            ->maxLength(255)
+                            ->placeholder('Enter payee, vendor, or general beneficiary name')
+                            ->helperText('Required when the transaction is not tied to a deceased family.')
+                            ->visible(fn(Get $get): bool => blank($get('deceased_id'))),
 
                         Select::make('expense_type')
                             ->label('Expense Type')
@@ -189,7 +200,9 @@ class ImprestTransactionResource extends Resource
                             ->numeric()
                             ->prefix('₦')
                             ->minValue(0)
+                            ->maxValue(fn(Get $get): ?float => self::availableUnitPriceLimit($get))
                             ->step(0.01)
+                            ->helperText(fn(Get $get): string => self::fundLimitHelperText($get))
                             ->live()
                             ->afterStateUpdated(function (Get $get, Set $set) {
                                 $qty = floatval($get('quantity') ?? 0);
@@ -260,7 +273,7 @@ class ImprestTransactionResource extends Resource
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('beneficiary_name')
-                    ->label('Deceased')
+                    ->label('Beneficiary / Payee')
                     ->searchable(['name'])
                     ->limit(20),
 
@@ -464,12 +477,13 @@ class ImprestTransactionResource extends Resource
                             }),
                     ]),
 
-                Section::make('Deceased Information')
+                Section::make('Beneficiary / Payee Information')
                     ->columns(2)
                     ->schema([
                         TextEntry::make('deceased.reg_no')
                             ->label('Reg No')
-                            ->icon('heroicon-m-identification'),
+                            ->icon('heroicon-m-identification')
+                            ->placeholder('Not linked to deceased family'),
                         TextEntry::make('beneficiary_name')
                             ->label('Name'),
                     ]),
@@ -538,7 +552,7 @@ class ImprestTransactionResource extends Resource
     public static function getGlobalSearchResultDetails(Model $record): array
     {
         return [
-            'Deceased' => $record->beneficiary_name,
+            'Beneficiary / Payee' => $record->beneficiary_name,
             'Item / Service' => $record->expense_description,
             'Amount' => '₦' . number_format($record->total_price, 2),
             'Status' => $record->status,
@@ -558,5 +572,37 @@ class ImprestTransactionResource extends Resource
             'view' => ViewImprestTransaction::route('/{record}'),
             'edit' => EditImprestTransaction::route('/{record}/edit'),
         ];
+    }
+
+    private static function availableUnitPriceLimit(Get $get): ?float
+    {
+        $fund = self::selectedFund($get);
+
+        if (! $fund) {
+            return null;
+        }
+
+        $quantity = max((float) ($get('quantity') ?? 1), 0.01);
+
+        return max(0, (float) $fund->current_balance / $quantity);
+    }
+
+    private static function fundLimitHelperText(Get $get): string
+    {
+        $fund = self::selectedFund($get);
+
+        if (! $fund) {
+            return 'Select an active fund to validate against its available balance.';
+        }
+
+        return 'Available fund balance: ₦'.number_format((float) $fund->current_balance, 2)
+            .' of ₦'.number_format((float) $fund->authorized_amount, 2).' allocated.';
+    }
+
+    private static function selectedFund(Get $get): ?ImprestFund
+    {
+        $fundId = $get('fund_id');
+
+        return $fundId ? ImprestFund::query()->find($fundId) : null;
     }
 }

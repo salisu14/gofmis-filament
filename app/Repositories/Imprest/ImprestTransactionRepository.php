@@ -79,17 +79,28 @@ class ImprestTransactionRepository implements ImprestTransactionRepositoryInterf
                 throw new \RuntimeException('Transaction cannot be approved');
             }
 
+            $fund = $transaction->fund()->lockForUpdate()->firstOrFail();
+            $amount = (float) $transaction->total_price;
+
+            if ($amount > (float) $fund->current_balance || $amount > (float) $fund->authorized_amount) {
+                throw new \RuntimeException(
+                    'Transaction exceeds the available fund balance. Available: ₦'
+                    .number_format((float) $fund->current_balance, 2)
+                    .', Required: ₦'.number_format($amount, 2)
+                );
+            }
+
             $transaction->update([
                 'status' => 'active',
                 'approved_by' => $approvedBy,
                 'approved_at' => now(),
             ]);
 
-            $transaction->fund()->decrement('current_balance', $transaction->total_price);
+            $fund->decrement('current_balance', $amount);
 
-            if ($transaction->fund?->bank_account_id) {
+            if ($fund->bank_account_id) {
                 Transaction::create([
-                    'bank_account_id' => $transaction->fund->bank_account_id,
+                    'bank_account_id' => $fund->bank_account_id,
                     'transactionable_type' => ImprestTransaction::class,
                     'transactionable_id' => $transaction->id,
                     'reference' => $transaction->voucher_no,

@@ -11,7 +11,7 @@ readonly class CreateTransactionDto
     public function __construct(
         public string $fundId,
         public Carbon $date,
-        public string $deceasedId,
+        public ?string $deceasedId,
         public ?string $name,
         public string $expenseType,
         public ?string $itemId,

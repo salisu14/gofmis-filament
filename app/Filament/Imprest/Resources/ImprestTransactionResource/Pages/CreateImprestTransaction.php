@@ -21,7 +21,7 @@ class CreateImprestTransaction extends CreateRecord
         $dto = new CreateTransactionDto(
             fundId: $data['fund_id'],
             date: \Carbon\Carbon::parse($data['date']),
-            deceasedId: $data['deceased_id'],
+            deceasedId: $data['deceased_id'] ?? null,
             name: $data['name'] ?? null,
             expenseType: $data['expense_type'] ?? 'service',
             itemId: $data['item_id'] ?? null,

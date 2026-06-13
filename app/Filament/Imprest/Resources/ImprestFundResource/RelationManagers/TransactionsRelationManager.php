@@ -42,7 +42,7 @@ class TransactionsRelationManager extends RelationManager
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('beneficiary_name')
-                    ->label('Deceased')
+                    ->label('Beneficiary / Payee')
                     ->searchable(['name']),
 
                 Tables\Columns\TextColumn::make('expense_description')

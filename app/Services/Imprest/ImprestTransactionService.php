@@ -15,13 +15,13 @@ use App\Repositories\Contracts\Imprest\ImprestFundRepositoryInterface;
 use App\Repositories\Contracts\Imprest\ImprestTransactionRepositoryInterface;
 use App\Services\Contracts\Imprest\ImprestTransactionServiceInterface;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 readonly class ImprestTransactionService implements ImprestTransactionServiceInterface
 {
     public function __construct(
         private ImprestTransactionRepositoryInterface $transactionRepo,
         private ImprestFundRepositoryInterface        $fundRepo,
-        private float                                 $spendingLimit = 100.00,
     ) {}
 
     /**
@@ -46,8 +46,14 @@ readonly class ImprestTransactionService implements ImprestTransactionServiceInt
 
             $totalPrice = $dto->quantity * $dto->unitPrice;
 
+            if (blank($dto->deceasedId) && blank($dto->name)) {
+                throw ValidationException::withMessages([
+                    'name' => 'Enter a payee or beneficiary name when the transaction is not linked to a deceased family.',
+                ]);
+            }
+
             if (!$this->validateSpendingLimit($dto->fundId, $totalPrice)) {
-                throw new \RuntimeException('Transaction exceeds spending limit. Use AP process instead.');
+                throw new \RuntimeException('Transaction exceeds the available fund balance.');
             }
 
             if ($fund->current_balance < $totalPrice) {
@@ -131,6 +137,15 @@ readonly class ImprestTransactionService implements ImprestTransactionServiceInt
 
     public function validateSpendingLimit(string $fundId, float $amount): bool
     {
-        return $amount <= $this->spendingLimit;
+        if ($amount <= 0) {
+            return false;
+        }
+
+        $fund = $this->fundRepo->findById($fundId);
+
+        return $fund
+            && $fund->status === 'active'
+            && $amount <= (float) $fund->current_balance
+            && $amount <= (float) $fund->authorized_amount;
     }
 }
