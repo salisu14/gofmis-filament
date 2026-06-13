@@ -108,7 +108,8 @@ class IdCardsTable
                         ->label('Preview PDF')
                         ->icon('heroicon-o-eye')
                         ->color('info')
-                        ->url(fn(IdCard $record): string => route('filament.admin.resources.id-cards.preview', ['record' => $record])),
+                        ->url(fn(IdCard $record): string => route('id-cards.preview', ['card' => $record]))
+                        ->openUrlInNewTab(), // Recommended so the user doesn't leave the admin panel
 
                     Action::make('download')
                         ->label('Download PDF')
@@ -139,7 +140,7 @@ class IdCardsTable
                         ->modalHeading('Revoke ID Card')
                         ->modalDescription('This will permanently invalidate this ID card.')
                         ->modalSubmitActionLabel('Yes, Revoke')
-                        ->form([
+                        ->schema([
                             Textarea::make('reason')
                                 ->label('Revocation Reason')
                                 ->required()
@@ -149,6 +150,33 @@ class IdCardsTable
                             $record->revoke($data['reason']);
                         })
                         ->visible(fn(IdCard $record) => $record->status === 'active'),
+
+                    Action::make('reactivate')
+                        ->label('Reactivate Card')
+                        ->icon('heroicon-o-arrow-path')
+                        ->color('success')
+                        ->requiresConfirmation()
+                        ->modalHeading('Reactivate ID Card')
+                        ->modalDescription('This will restore the ID card back to an active state.')
+                        ->modalSubmitActionLabel('Yes, Reactivate')
+                        ->schema([
+                            Textarea::make('reason')
+                                ->label('Reason for Reactivation')
+                                ->required()
+                                ->minLength(10),
+                        ])
+                        ->action(function (IdCard $record, array $data) {
+                            $record->update([
+                                'status' => 'active',
+                                'revocation_reason' => null,
+                            ]);
+
+                            Notification::make()
+                                ->title('Card Reactivated')
+                                ->success()
+                                ->send();
+                        })
+                        ->visible(fn(IdCard $record) => $record->status === 'revoked'),
                 ])
             ])
             ->toolbarActions([

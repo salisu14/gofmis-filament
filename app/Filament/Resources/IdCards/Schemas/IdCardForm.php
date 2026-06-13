@@ -69,6 +69,7 @@ class IdCardForm
                                 'expired' => 'Expired',
                             ])
                             ->required()
+                            ->visibleOn('create')
                             ->default('draft'),
                     ]),
             ]);
