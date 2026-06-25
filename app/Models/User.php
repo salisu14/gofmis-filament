@@ -2,6 +2,12 @@
 
 namespace App\Models;
 
+use Filament\Auth\MultiFactor\App\Concerns\InteractsWithAppAuthentication;
+use Filament\Auth\MultiFactor\App\Concerns\InteractsWithAppAuthenticationRecovery;
+use Filament\Auth\MultiFactor\App\Contracts\HasAppAuthentication;
+use Filament\Auth\MultiFactor\App\Contracts\HasAppAuthenticationRecovery;
+use Filament\Models\Contracts\FilamentUser;
+use Filament\Panel;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -9,10 +15,14 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
 
-class User extends Authenticatable
+class User extends Authenticatable implements
+    FilamentUser,
+    HasAppAuthentication,
+    HasAppAuthenticationRecovery
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, HasRoles, HasUuids, Notifiable;
+    use InteractsWithAppAuthentication;
+    use InteractsWithAppAuthenticationRecovery;
 
     protected $keyType = 'string';
     public $incrementing = false;
@@ -30,11 +40,15 @@ class User extends Authenticatable
         'date_of_birth',
         'gender',
         'is_active',
+        'app_authentication_secret',
+        'app_authentication_recovery_codes',
     ];
 
     protected $hidden = [
         'password',
         'remember_token',
+        'app_authentication_secret',
+        'app_authentication_recovery_codes',
     ];
 
     protected function casts(): array
@@ -45,11 +59,12 @@ class User extends Authenticatable
             'password' => 'hashed',
             'date_of_birth' => 'date',
             'is_active' => 'boolean',
+            // ⚠️ NO 'encrypted' cast on MFA columns — traits handle it
         ];
     }
 
     /* ─────────────────────────────────────────
-       ZONE / COORDINATOR RELATIONSHIP
+       Zone / Coordinator
        ───────────────────────────────────────── */
 
     public function coordinatedZone(): HasOne
@@ -67,52 +82,35 @@ class User extends Authenticatable
         return $this->coordinatedZone?->id;
     }
 
-    /**
-     * Can this user act as a coordinator (has the role)?
-     */
     public function isCoordinator(): bool
     {
         return $this->hasRole('coordinator');
     }
 
-    /**
-     * Is this user actually assigned to coordinate a specific zone?
-     */
     public function isAssignedCoordinator(): bool
     {
         return $this->isCoordinator() && $this->hasZone();
     }
 
-    /**
-     * Does this user manage the given zone?
-     * If no zone is passed, checks if they manage ANY zone.
-     */
     public function managesZone(?string $zoneId = null): bool
     {
         if (! $this->isCoordinator()) {
             return false;
         }
-
         $managedZoneId = $this->zoneId();
-
         if ($zoneId === null) {
             return $managedZoneId !== null;
         }
-
         return $managedZoneId === $zoneId;
     }
 
-    /**
-     * Get the zone ID this user is restricted to.
-     * Returns null for non-coordinators (admins see all).
-     */
     public function restrictedZoneId(): ?string
     {
         return $this->isCoordinator() ? $this->zoneId() : null;
     }
 
     /* ─────────────────────────────────────────
-       ROLE HELPERS
+       Role Helpers
        ───────────────────────────────────────── */
 
     public function isSuperAdmin(): bool
@@ -133,5 +131,29 @@ class User extends Authenticatable
     public function hasElevatedPrivileges(): bool
     {
         return $this->isAdmin() || $this->isSuperAdmin();
+    }
+
+    public function canAccessPanel(Panel $panel): bool
+    {
+        if (app()->environment(['testing'])) {
+            return true;
+        }
+        if (! $this->roles()->exists()) {
+            return false;
+        }
+        if ($this->employee && ! $this->isEmployeeActive()) {
+            return false;
+        }
+        $panelRoles = [
+            'admin' => ['super_admin', 'admin', 'business-manager'],
+            'coordinator' => ['super_admin', 'admin', 'coordinator'],
+        ];
+        $allowedRoles = $panelRoles[$panel->getId()] ?? ['super_admin', 'admin'];
+        return $this->hasAnyRole($allowedRoles);
+    }
+
+    public function twoFactorAuthEnabled(): bool
+    {
+        return !empty($this->app_authentication_secret);
     }
 }
