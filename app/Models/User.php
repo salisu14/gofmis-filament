@@ -7,6 +7,7 @@ use Filament\Auth\MultiFactor\App\Concerns\InteractsWithAppAuthenticationRecover
 use Filament\Auth\MultiFactor\App\Contracts\HasAppAuthentication;
 use Filament\Auth\MultiFactor\App\Contracts\HasAppAuthenticationRecovery;
 use Filament\Models\Contracts\FilamentUser;
+use Filament\Models\Contracts\HasAvatar;
 use Filament\Panel;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -17,6 +18,7 @@ use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable implements
     FilamentUser,
+    HasAvatar,
     HasAppAuthentication,
     HasAppAuthenticationRecovery
 {
@@ -59,14 +61,17 @@ class User extends Authenticatable implements
             'password' => 'hashed',
             'date_of_birth' => 'date',
             'is_active' => 'boolean',
-            // ⚠️ NO 'encrypted' cast on MFA columns — traits handle it
         ];
+    }
+
+    public function getFilamentAvatarUrl(): ?string
+    {
+        return $this->photo;
     }
 
     /* ─────────────────────────────────────────
        Zone / Coordinator
        ───────────────────────────────────────── */
-
     public function coordinatedZone(): HasOne
     {
         return $this->hasOne(Zone::class, 'coordinator_id');
@@ -145,7 +150,7 @@ class User extends Authenticatable implements
             return false;
         }
         $panelRoles = [
-            'admin' => ['super_admin', 'admin', 'business-manager'],
+            'admin' => ['super_admin', 'admin'],
             'coordinator' => ['super_admin', 'admin', 'coordinator'],
         ];
         $allowedRoles = $panelRoles[$panel->getId()] ?? ['super_admin', 'admin'];
