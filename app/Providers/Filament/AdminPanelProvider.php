@@ -40,7 +40,7 @@ class AdminPanelProvider extends PanelProvider
             ->multiFactorAuthentication([
                 AppAuthentication::make()
                     ->recoverable()
-                    ->regenerableRecoveryCodes(false)
+                    ->regenerableRecoveryCodes(true)
                     ->recoveryCodeCount(10)
                     ->brandName('GOFMIS'),
             ])
