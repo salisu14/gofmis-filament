@@ -25,11 +25,9 @@ class WriteOffWidowLoanAction extends Action
         $this->label('Write Off Loan')
             ->icon('heroicon-o-x-circle')
             ->color('danger')
-            ->visible(fn (WidowLoan $record) => auth()->user()?->hasRole('super_admin') &&
-                $record->status === WidowLoanStatus::WRITTEN_OFF && // Wait! Wait! In UI, should this be visible when status is DISBURSED, not WRITTEN_OFF! Let's check:
-                // Yes! If a loan has already been written off, we don't show the Write Off button again. We show it only when it is DISBURSED!
-                $record->status === WidowLoanStatus::DISBURSED &&
-                (float) $record->outstanding_balance > 0
+            ->visible(fn (WidowLoan $record) => auth()->user()?->hasRole('super_admin')
+                && $record->status === WidowLoanStatus::DISBURSED
+                && (float) $record->outstanding_balance > 0
             )
             ->modalHeading('Write Off Loan (Waive Remaining Debt)')
             ->modalDescription(
