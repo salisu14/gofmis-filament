@@ -24,7 +24,9 @@ use Filament\Tables\Table;
 class SchedulesRelationManager extends RelationManager
 {
     protected static ?string $model = WidowLoan::class;
+
     protected static string $relationship = 'schedules';
+
     protected static ?string $title = 'Repayment Schedule';
 
     public function form(Schema $schema): Schema
@@ -34,6 +36,9 @@ class SchedulesRelationManager extends RelationManager
             TextInput::make('amount_due')->numeric()->prefix('₦')->required(),
             DatePicker::make('due_date')->required()->native(false),
             Toggle::make('is_paid')->label('Paid Status'),
+            \Filament\Forms\Components\Select::make('status')
+                ->options(\App\Enums\WidowLoanScheduleStatus::class)
+                ->required(),
         ]);
     }
 
@@ -44,7 +49,10 @@ class SchedulesRelationManager extends RelationManager
                 TextColumn::make('installment_number')->label('#')->alignCenter(),
                 TextColumn::make('due_date')->date()->sortable(),
                 TextColumn::make('amount_due')->money('NGN'),
-                IconColumn::make('is_paid')->label('Status')->boolean(),
+                IconColumn::make('is_paid')->label('Paid')->boolean(),
+                TextColumn::make('status')
+                    ->badge()
+                    ->sortable(),
             ])
             ->defaultSort('installment_number', 'asc')
             ->headerActions([
@@ -55,7 +63,7 @@ class SchedulesRelationManager extends RelationManager
                     ->requiresConfirmation()
                     ->modalHeading('Regenerate Repayment Schedule')
                     ->modalDescription('This will delete the existing schedule and recalculate all installments based on the current Total Payable and Disbursement Date. This action cannot be undone.')
-                    ->visible(fn() => in_array($this->ownerRecord->status, [WidowLoanStatus::DISBURSED, WidowLoanStatus::COMPLETED]))
+                    ->visible(fn () => in_array($this->ownerRecord->status, [WidowLoanStatus::DISBURSED, WidowLoanStatus::COMPLETED]))
                     ->action(function () {
                         try {
                             // Ensure total_payable is set before regenerating
@@ -78,14 +86,14 @@ class SchedulesRelationManager extends RelationManager
                                 ->body($e->getMessage())
                                 ->send();
                         }
-                    })
+                    }),
             ])
             ->recordActions([
                 // Only super admins can manually correct schedule entries.
                 EditAction::make()
-                    ->visible(fn() => auth()->user()->hasRole('super_admin')),
+                    ->visible(fn () => auth()->user()->hasRole('super_admin')),
                 DeleteAction::make()
-                    ->visible(fn() => auth()->user()->hasRole('super_admin')),
+                    ->visible(fn () => auth()->user()->hasRole('super_admin')),
             ]);
     }
 }

@@ -19,13 +19,15 @@ class WidowLoanSchedule extends Model
         'due_date',
         'is_paid',
         'paid_at',
+        'status',
     ];
 
     protected $casts = [
         'amount_due' => 'decimal:2',
-        'due_date'   => 'date',
-        'paid_at'    => 'date',
-        'is_paid'    => 'boolean',
+        'due_date' => 'date',
+        'paid_at' => 'date',
+        'is_paid' => 'boolean',
+        'status' => \App\Enums\WidowLoanScheduleStatus::class,
     ];
 
     public function widowLoan(): BelongsTo

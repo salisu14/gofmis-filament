@@ -71,6 +71,12 @@ class WidowLoan extends Model
         'total_payable',
         'total_paid',
         'outstanding_balance',
+        'amount_written_off',
+        'written_off_at',
+        'written_off_by',
+        'reapplication_allowed',
+        'reapplication_authorized_by',
+        'reapplication_authorized_at',
         'status',
         'disbursed_at',
         'collected_at',
@@ -90,9 +96,13 @@ class WidowLoan extends Model
         'total_payable' => 'decimal:2',
         'total_paid' => 'decimal:2',
         'outstanding_balance' => 'decimal:2',
+        'amount_written_off' => 'decimal:2',
         'disbursed_at' => 'datetime',
         'collected_at' => 'datetime',
         'amount_adjusted_at' => 'datetime',
+        'written_off_at' => 'datetime',
+        'reapplication_allowed' => 'boolean',
+        'reapplication_authorized_at' => 'datetime',
         'fully_repaid' => 'boolean',
         'status' => WidowLoanStatus::class,
         'repayment_frequency' => LoanRepaymentFrequency::class,
@@ -152,6 +162,21 @@ class WidowLoan extends Model
     public function transactions(): MorphMany
     {
         return $this->morphMany(Transaction::class, 'transactionable', 'transactionable_type', 'transactionable_id');
+    }
+
+    public function writeOff(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(WidowLoanWriteOff::class, 'widow_loan_id');
+    }
+
+    public function writtenOffBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'written_off_by');
+    }
+
+    public function reapplicationAuthorizedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'reapplication_authorized_by');
     }
 
     // ==================================================
@@ -276,8 +301,10 @@ class WidowLoan extends Model
         // Fallback to principal_amount if total_payable was somehow lost
         $totalPayable = (float) ($this->total_payable ?? $this->principal_amount);
         $totalPaid = (float) $this->repayments()->sum('amount');
-        $outstanding = max(0, $totalPayable - $totalPaid);
-        $fullyRepaid = $outstanding <= 0;
+        $amountWrittenOff = (float) ($this->amount_written_off ?? 0);
+        $outstanding = max(0, $totalPayable - $totalPaid - $amountWrittenOff);
+
+        $fullyRepaid = $outstanding <= 0 && $this->status !== WidowLoanStatus::WRITTEN_OFF && $amountWrittenOff <= 0;
 
         $updateData = [
             'total_payable' => $totalPayable, // <-- Re-save it to fix the null data!
@@ -299,6 +326,7 @@ class WidowLoan extends Model
     /**
      * Generate the repayment installment schedule.
      * MUST only be called after disbursed_at is set.
+     *
      * @throws \Throwable
      */
     public function generateLedger(): void
@@ -336,25 +364,47 @@ class WidowLoan extends Model
                     'amount_due' => $amountDue,
                     'due_date' => $dueDate,
                     'is_paid' => false,
+                    'status' => \App\Enums\WidowLoanScheduleStatus::PENDING->value,
                 ]);
 
                 $scheduledTotal += $amountDue;
             }
         });
     }
+
     /**
      * Synchronize the is_paid flag on schedule installments
      * based on the running cumulative total_paid.
      */
     public function syncScheduleStatus(): void
     {
-        // Reset all to unpaid
-        $this->schedules()->update([
-            'is_paid' => false,
-            'paid_at' => null,
-        ]);
+        // For a written-off loan, we want to leave already paid installments as PAID
+        // and outstanding unpaid installments as WAIVED. We should not reset everything blindly.
+        if ($this->status === WidowLoanStatus::WRITTEN_OFF) {
+            $this->schedules()
+                ->where('is_paid', false)
+                ->where('status', '!=', \App\Enums\WidowLoanScheduleStatus::WAIVED->value)
+                ->update([
+                    'status' => \App\Enums\WidowLoanScheduleStatus::WAIVED->value,
+                ]);
 
-        $schedules = $this->schedules()->orderBy('installment_number')->get();
+            return;
+        }
+
+        // Reset all to unpaid (except waived ones, just in case)
+        $this->schedules()
+            ->where('status', '!=', \App\Enums\WidowLoanScheduleStatus::WAIVED->value)
+            ->update([
+                'is_paid' => false,
+                'paid_at' => null,
+                'status' => \App\Enums\WidowLoanScheduleStatus::PENDING->value,
+            ]);
+
+        $schedules = $this->schedules()
+            ->where('status', '!=', \App\Enums\WidowLoanScheduleStatus::WAIVED->value)
+            ->orderBy('installment_number')
+            ->get();
+
         $repayments = $this->repayments()
             ->orderBy('paid_at')
             ->orderBy('created_at')
@@ -380,9 +430,18 @@ class WidowLoan extends Model
                 $schedule->update([
                     'is_paid' => true,
                     'paid_at' => $paidAt,
+                    'status' => \App\Enums\WidowLoanScheduleStatus::PAID->value,
                 ]);
             } else {
-                break;
+                // Check if overdue
+                $isOverdue = $schedule->due_date->isPast();
+                $schedule->update([
+                    'is_paid' => false,
+                    'paid_at' => null,
+                    'status' => $isOverdue
+                        ? \App\Enums\WidowLoanScheduleStatus::OVERDUE->value
+                        : \App\Enums\WidowLoanScheduleStatus::PENDING->value,
+                ]);
             }
         }
     }
