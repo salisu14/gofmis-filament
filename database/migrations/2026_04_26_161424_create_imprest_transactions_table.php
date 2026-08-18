@@ -43,7 +43,10 @@ return new class extends Migration
             $table->index('voucher_no');
             $table->index(['fund_id', 'status', 'date'], 'idx_fund_status_date');
             $table->index(['deceased_id', 'status'], 'idx_deceased_status');
-            $table->fullText(['name', 'item_service'], 'idx_search');
+            
+            if (\Illuminate\Support\Facades\DB::getDriverName() !== 'sqlite') {
+                $table->fullText(['name', 'item_service'], 'idx_search');
+            }
         });
     }
 

@@ -39,18 +39,20 @@ return new class extends Migration
         });
 
         // Add CHECK constraint using raw SQL
-        DB::statement('
-            ALTER TABLE journal_lines
-            ADD CONSTRAINT chk_debit_credit_exclusive
-            CHECK (
-                debit >= 0 AND
-                credit >= 0 AND
-                (
-                    (debit > 0 AND credit = 0) OR
-                    (credit > 0 AND debit = 0)
+        if (\Illuminate\Support\Facades\DB::getDriverName() !== 'sqlite') {
+            DB::statement('
+                ALTER TABLE journal_lines
+                ADD CONSTRAINT chk_debit_credit_exclusive
+                CHECK (
+                    debit >= 0 AND
+                    credit >= 0 AND
+                    (
+                        (debit > 0 AND credit = 0) OR
+                        (credit > 0 AND debit = 0)
+                    )
                 )
-            )
-        ');
+            ');
+        }
     }
 
     /**
