@@ -124,13 +124,28 @@ class Widow extends Model
             return false;
         }
 
-        // Block if there is any loan that is not COMPLETED or REJECTED.
-        // This covers DRAFT, PENDING, APPROVED, DISBURSED, COLLECTED and DEFAULTED.
+        if (! $this->is_eligible) {
+            return false;
+        }
+
+        // Block if there is any loan that is active (DRAFT, PENDING, APPROVED, DISBURSED, DEFAULTED)
         $hasActiveLoan = $this->widowLoans()
             ->whereIn('status', array_column(\App\Enums\WidowLoanStatus::activeStatuses(), 'value'))
             ->exists();
+        if ($hasActiveLoan) {
+            return false;
+        }
 
-        return ! $hasActiveLoan;
+        // Block if there is any written-off loan where reapplication is denied
+        $hasDeniedWriteOff = $this->widowLoans()
+            ->where('status', \App\Enums\WidowLoanStatus::WRITTEN_OFF->value)
+            ->where('reapplication_allowed', false)
+            ->exists();
+        if ($hasDeniedWriteOff) {
+            return false;
+        }
+
+        return true;
     }
 
     protected static function booted(): void

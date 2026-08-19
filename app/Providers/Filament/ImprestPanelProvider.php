@@ -3,15 +3,10 @@
 namespace App\Providers\Filament;
 
 use App\Filament\Imprest\Pages\Dashboard;
-use App\Filament\Imprest\Resources\ImprestFundResource;
-use App\Filament\Imprest\Resources\ImprestTransactionResource;
-use App\Filament\Imprest\Resources\ImprestReplenishmentResource;
-use App\Filament\Imprest\Resources\ImprestReconciliationResource;
 use App\Http\Middleware\Imprest\EnsureFundCustodian;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
-use Filament\Pages;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
@@ -37,6 +32,13 @@ class ImprestPanelProvider extends PanelProvider
                 'danger' => Color::Rose,
                 'warning' => Color::Amber,
                 'success' => Color::Teal,
+            ])
+            ->profile()
+            ->userMenuItems([
+                'profile' => \Filament\Navigation\MenuItem::make()
+                    ->label('Security / MFA')
+                    ->icon('heroicon-o-shield-check')
+                    ->url('/mfa/settings'),
             ])
             ->brandName('GOF - Impress Management')
             ->brandLogo(fn () => view('filament.imprest.logo'))
@@ -67,6 +69,8 @@ class ImprestPanelProvider extends PanelProvider
             ])
             ->authMiddleware([
                 Authenticate::class,
+                \App\Http\Middleware\EnsureActiveUser::class,
+                \App\Http\Middleware\EnsureMfaVerified::class,
             ])
             ->navigationGroups([
                 'Fund Management',

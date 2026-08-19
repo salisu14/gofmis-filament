@@ -33,13 +33,75 @@ class WidowLoanForm
                                 ->preload()
                                 ->required()
                                 ->disabledOn('edit')
+                                ->live()
                                 ->hint(function ($state) {
-                                    if (!$state) return null;
+                                    if (! $state) {
+                                        return null;
+                                    }
                                     $widow = Widow::find($state);
-                                    if (!$widow) return null;
-                                    if ($widow->is_married) return '⚠️ Remarried (Ineligible)';
+                                    if (! $widow) {
+                                        return null;
+                                    }
+                                    if ($widow->is_married) {
+                                        return '⚠️ Remarried (Ineligible)';
+                                    }
+                                    if ($widow->widowLoans()->where('status', WidowLoanStatus::WRITTEN_OFF)->where('reapplication_allowed', false)->exists()) {
+                                        return '❌ Denied reapplication after write-off';
+                                    }
+
                                     return $widow->canApplyForLoan() ? '✅ Eligible' : '❌ Active Loan Exists';
                                 }),
+
+                            Section::make('Previous Loan Write-Off')
+                                ->description('Important notice regarding the borrower\'s loan history.')
+                                ->icon('heroicon-m-exclamation-triangle')
+                                ->visible(function ($get) {
+                                    $widowId = $get('widow_id');
+                                    if (! $widowId) {
+                                        return false;
+                                    }
+                                    $widow = Widow::find($widowId);
+
+                                    return $widow && $widow->widowLoans()->where('status', WidowLoanStatus::WRITTEN_OFF)->exists();
+                                })
+                                ->schema([
+                                    \Filament\Forms\Components\Placeholder::make('write_off_details')
+                                        ->label('')
+                                        ->content(function ($get) {
+                                            $widowId = $get('widow_id');
+                                            if (! $widowId) {
+                                                return '';
+                                            }
+                                            $widow = Widow::find($widowId);
+                                            if (! $widow) {
+                                                return '';
+                                            }
+                                            $writtenOffLoan = $widow->widowLoans()
+                                                ->where('status', WidowLoanStatus::WRITTEN_OFF)
+                                                ->first();
+                                            if (! $writtenOffLoan) {
+                                                return '';
+                                            }
+
+                                            $writeOff = $writtenOffLoan->writeOff;
+                                            $amount = number_format($writtenOffLoan->amount_written_off ?? $writeOff?->amount_written_off ?? 0, 2);
+                                            $date = $writtenOffLoan->written_off_at?->format('M d, Y') ?? $writeOff?->authorized_at?->format('M d, Y') ?? 'N/A';
+                                            $reason = $writeOff?->write_off_reason ?? 'N/A';
+                                            $authorizedBy = $writtenOffLoan->writtenOffBy?->name ?? $writeOff?->authorizedBy?->name ?? 'N/A';
+
+                                            return new \Illuminate\Support\HtmlString("
+                                                <div class='p-4 bg-danger-50 border border-danger-200 rounded-lg text-danger-900 dark:bg-danger-950 dark:border-danger-800 dark:text-danger-100'>
+                                                    <h4 class='font-bold text-lg mb-2 text-danger-800 dark:text-danger-200'>⚠️ Previous Loan Write-Off Notice</h4>
+                                                    <p class='mb-1'><strong>Loan ID:</strong> {$writtenOffLoan->id}</p>
+                                                    <p class='mb-1'><strong>Amount Written Off:</strong> ₦{$amount}</p>
+                                                    <p class='mb-1'><strong>Date:</strong> {$date}</p>
+                                                    <p class='mb-1'><strong>Reason:</strong> {$reason}</p>
+                                                    <p class='mb-1'><strong>Authorized By:</strong> {$authorizedBy}</p>
+                                                </div>
+                                            ");
+                                        }),
+                                ])
+                                ->columnSpanFull(),
 
                             TextInput::make('purpose')
                                 ->label('Loan Purpose')
@@ -113,8 +175,8 @@ class WidowLoanForm
                                 ->live(onBlur: true)
                                 ->afterStateUpdated(function ($state, $get, $set) {
                                     $principal = (float) $get('total_payable');
-                                    $duration  = (int) $state;
-                                    $freq      = $get('repayment_frequency');
+                                    $duration = (int) $state;
+                                    $freq = $get('repayment_frequency');
                                     if ($principal > 0 && $duration > 0) {
                                         $intervals = ($freq === LoanRepaymentFrequency::WEEKLY->value || $freq === 'weekly')
                                             ? $duration * 4

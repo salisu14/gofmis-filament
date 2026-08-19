@@ -1,4 +1,5 @@
 <?php
+
 // app/Providers/Filament/CoordinatorPanelProvider.php
 
 namespace App\Providers\Filament;
@@ -29,6 +30,13 @@ class CoordinatorPanelProvider extends PanelProvider
             ->login()
             ->colors([
                 'primary' => Color::Emerald,
+            ])
+            ->profile()
+            ->userMenuItems([
+                'profile' => \Filament\Navigation\MenuItem::make()
+                    ->label('Security / MFA')
+                    ->icon('heroicon-o-shield-check')
+                    ->url('/mfa/settings'),
             ])
             ->spa(hasPrefetching: true)
             ->brandName('Coordinator Portal - Garko Foundation')
@@ -80,6 +88,8 @@ class CoordinatorPanelProvider extends PanelProvider
             ])
             ->authMiddleware([
                 Authenticate::class,
+                \App\Http\Middleware\EnsureActiveUser::class,
+                \App\Http\Middleware\EnsureMfaVerified::class,
                 EnsureCoordinator::class, // Custom middleware
             ])
 

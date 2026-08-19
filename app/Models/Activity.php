@@ -59,6 +59,6 @@ class Activity extends Model implements ActivityContract
 
     public function getProperty(string $propertyName, mixed $defaultValue = null): mixed
     {
-        // TODO: Implement getProperty() method.
+        return data_get($this->properties, $propertyName, $defaultValue);
     }
 }

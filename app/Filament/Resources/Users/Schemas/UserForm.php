@@ -7,7 +7,6 @@ use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
-use Filament\Forms\Components\ToggleButtons;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
@@ -59,14 +58,15 @@ class UserForm
                                             ->prefixIcon('heroicon-o-envelope'),
 
                                         Grid::make(2)
+                                            ->visible(fn (string $context): bool => $context === 'create')
                                             ->schema([
                                                 TextInput::make('password')
-                                                    ->label(fn (string $context): string => $context === 'create' ? 'Password' : 'New Password')
+                                                    ->label('Password')
                                                     ->password()
                                                     ->revealable()
-                                                    ->required(fn (string $context): bool => $context === 'create')
+                                                    ->required()
                                                     ->rule(Password::default()->mixedCase()->numbers()->symbols())
-                                                    ->dehydrateStateUsing(fn ($state) => filled($state) ? Hash::make($state) : null)
+                                                    ->dehydrateStateUsing(fn ($state) => Hash::make($state))
                                                     ->dehydrated(fn ($state) => filled($state))
                                                     ->live(debounce: 500)
                                                     ->autocomplete('new-password'),
@@ -75,7 +75,7 @@ class UserForm
                                                     ->label('Confirm Password')
                                                     ->password()
                                                     ->revealable()
-                                                    ->required(fn (string $context): bool => $context === 'create')
+                                                    ->required()
                                                     ->visible(fn ($get) => filled($get('password')))
                                                     ->same('password')
                                                     ->dehydrated(false)
@@ -89,7 +89,61 @@ class UserForm
                                             ->offIcon('heroicon-o-x-mark')
                                             ->onColor('success')
                                             ->offColor('danger')
-                                            ->helperText('Inactive users cannot log in.'),
+                                            ->helperText('Inactive users cannot log in.')
+                                            ->rules([
+                                                function ($record) {
+                                                    return function ($attribute, $value, $fail) use ($record) {
+                                                        $actor = auth()->user();
+                                                        if (! $actor) {
+                                                            $fail('Unauthenticated.');
+
+                                                            return;
+                                                        }
+                                                        if ($record && ! $value) {
+                                                            if ($record->isSuperAdmin() && ! $actor->isSuperAdmin()) {
+                                                                $fail('Unauthorized: Admins cannot deactivate a Super Admin.');
+
+                                                                return;
+                                                            }
+                                                            if ($record->isSuperAdmin()) {
+                                                                if (\App\Models\User::getActiveSuperAdminCount() <= 1) {
+                                                                    $fail('Unauthorized: Cannot deactivate the last active Super Admin.');
+                                                                }
+                                                            }
+                                                        }
+                                                    };
+                                                },
+                                            ]),
+
+                                        Select::make('status')
+                                            ->label('Account Status')
+                                            ->options(\App\Enums\UserStatus::class)
+                                            ->required()
+                                            ->default(\App\Enums\UserStatus::ACTIVE)
+                                            ->rules([
+                                                function ($record) {
+                                                    return function ($attribute, $value, $fail) use ($record) {
+                                                        $actor = auth()->user();
+                                                        if (! $actor) {
+                                                            $fail('Unauthenticated.');
+
+                                                            return;
+                                                        }
+                                                        if ($record) {
+                                                            if ($record->isSuperAdmin() && ! $actor->isSuperAdmin() && $value !== 'active') {
+                                                                $fail('Unauthorized: Admins cannot change the status of a Super Admin.');
+
+                                                                return;
+                                                            }
+                                                            if ($record->isSuperAdmin() && $value !== 'active') {
+                                                                if (\App\Models\User::getActiveSuperAdminCount() <= 1) {
+                                                                    $fail('Unauthorized: Cannot disable or suspend the last active Super Admin.');
+                                                                }
+                                                            }
+                                                        }
+                                                    };
+                                                },
+                                            ]),
                                     ])
                                     ->columnSpan(['lg' => 2]),
                             ]),
@@ -173,6 +227,7 @@ class UserForm
                             })
                             ->disabled(function (): bool {
                                 $user = auth()->user();
+
                                 return ! ($user?->can('assign_roles') || $user?->can('role_edit'));
                             })
                             ->helperText(function () {
@@ -180,9 +235,60 @@ class UserForm
                                 if ($user?->hasRole('super_admin')) {
                                     return 'You can assign any role including Super Admin.';
                                 }
+
                                 return 'Super Admin role is restricted.';
                             })
-                            ->placeholder('Select roles'),
+                            ->placeholder('Select roles')
+                            ->rules([
+                                function ($record) {
+                                    return function ($attribute, $value, $fail) use ($record) {
+                                        $actor = auth()->user();
+                                        if (! $actor) {
+                                            $fail('Unauthenticated.');
+
+                                            return;
+                                        }
+
+                                        if ($record) {
+                                            if ($record->isSuperAdmin() && ! $actor->isSuperAdmin()) {
+                                                $fail('Unauthorized: Only super administrators can modify a super administrator account.');
+
+                                                return;
+                                            }
+                                            if ($record->isAdmin() && ! $actor->isSuperAdmin() && $record->id !== $actor->id) {
+                                                $fail('Unauthorized: Only super administrators can modify an administrator account.');
+
+                                                return;
+                                            }
+                                        }
+
+                                        foreach ($value as $roleId) {
+                                            $role = \App\Models\Role::where('uuid', $roleId)->orWhere('name', $roleId)->first();
+                                            if ($role) {
+                                                if ($role->name === 'super_admin' && ! $actor->isSuperAdmin()) {
+                                                    $fail('Unauthorized: Only super administrators can assign the Super Admin role.');
+
+                                                    return;
+                                                }
+                                                if ($role->name === 'admin' && ! $actor->isSuperAdmin()) {
+                                                    $fail('Unauthorized: Only super administrators can assign the Admin role.');
+
+                                                    return;
+                                                }
+                                            }
+                                        }
+
+                                        if ($record && $record->isSuperAdmin()) {
+                                            $selectedRoleNames = \App\Models\Role::whereIn('uuid', $value)->pluck('name')->toArray();
+                                            if (! in_array('super_admin', $selectedRoleNames)) {
+                                                if (\App\Models\User::getActiveSuperAdminCount() <= 1) {
+                                                    $fail('Unauthorized: Cannot remove the Super Admin role from the last active Super Admin.');
+                                                }
+                                            }
+                                        }
+                                    };
+                                },
+                            ]),
                     ]),
             ]);
     }

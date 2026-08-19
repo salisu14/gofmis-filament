@@ -14,7 +14,14 @@ class EditUser extends EditRecord
     {
         return [
             Actions\ViewAction::make(),
-            Actions\DeleteAction::make(),
+            \App\Filament\Actions\ResetUserPasswordAction::make(),
+            \App\Filament\Actions\ResetMfaAction::make(),
+            \App\Security\SensitiveActionConfirmation::apply(
+                Actions\DeleteAction::make(),
+                \App\Enums\SensitiveConfirmationLevel::PASSWORD_AND_PHRASE,
+                'DELETE USER',
+                'user_deletion'
+            ),
         ];
     }
 }

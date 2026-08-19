@@ -3,6 +3,7 @@
 use App\Http\Controllers\IdCardController;
 use App\Http\Controllers\IdCardDownloadController;
 use App\Http\Controllers\WidowLoanRepaymentController;
+use App\Http\Controllers\WidowLoanWriteOffController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -66,14 +67,13 @@ Route::get('/verify-id-card/{card}', [IdCardController::class, 'verify'])
 if (app()->environment('local')) {
     Route::get('/debug-routes', function () {
         $routes = collect(\Illuminate\Support\Facades\Route::getRoutes())
-            ->filter(fn($r) => str_contains($r->getName() ?? '', 'healthcare'))
-            ->map(fn($r) => $r->getName())
+            ->filter(fn ($r) => str_contains($r->getName() ?? '', 'healthcare'))
+            ->map(fn ($r) => $r->getName())
             ->values();
 
         return response()->json($routes);
     })->middleware('auth');
 }
-
 
 // Loan Repayment Receipt Download Route
 Route::get('/repayments/{repayment}/receipt', [WidowLoanRepaymentController::class, 'downloadReceipt'])
@@ -83,3 +83,21 @@ Route::get('/repayments/{repayment}/receipt', [WidowLoanRepaymentController::cla
 Route::get('/loans/{loan}/statement', [WidowLoanRepaymentController::class, 'downloadStatement'])
     ->name('loans.statement.download')
     ->middleware('auth');
+
+Route::get('/loans/write-off-documents/{writeOff}', [WidowLoanWriteOffController::class, 'downloadDocument'])
+    ->name('loans.write-off-document.download')
+    ->middleware('auth');
+
+Route::middleware(['auth'])->group(function () {
+    Route::get('/mfa/challenge', \App\Livewire\Mfa\MfaChallenge::class)->name('mfa.challenge');
+    Route::get('/mfa/enroll', \App\Livewire\Mfa\MfaEnroll::class)->name('mfa.enroll');
+    Route::get('/mfa/recovery', \App\Livewire\Mfa\MfaRecovery::class)->name('mfa.recovery');
+    Route::get('/mfa/settings', \App\Livewire\Mfa\MfaSettings::class)->name('mfa.settings');
+    Route::post('/mfa/logout', function () {
+        \Illuminate\Support\Facades\Auth::logout();
+        request()->session()->invalidate();
+        request()->session()->regenerateToken();
+
+        return redirect()->to('/admin/login');
+    })->name('mfa.logout');
+});

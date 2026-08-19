@@ -76,7 +76,11 @@ class OrphanEducation extends Model
      */
     public function getBalanceAttribute(): float
     {
-        return (float) $this->invoices->sum('amount') - $this->total_paid;
+        $activeInvoicesAmount = (float) $this->invoices
+            ->reject(fn ($invoice) => $invoice->isVoided())
+            ->sum('amount');
+
+        return $activeInvoicesAmount - $this->total_paid;
     }
 
     public function getLevelAttribute(): string

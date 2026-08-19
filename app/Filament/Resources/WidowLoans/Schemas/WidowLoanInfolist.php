@@ -74,14 +74,19 @@ class WidowLoanInfolist
                                 ->money('NGN')
                                 ->color('success')
                                 ->weight('bold')
-                                ->state(fn (WidowLoan $record) => $record->repayments()->sum('amount')),
+                                ->state(fn (WidowLoan $record) => (float) $record->total_paid),
+
+                            TextEntry::make('amount_written_off')
+                                ->label('Amount Written Off')
+                                ->money('NGN')
+                                ->color('warning')
+                                ->weight('bold')
+                                ->visible(fn (WidowLoan $record) => (float) $record->amount_written_off > 0),
 
                             TextEntry::make('outstanding_balance')
                                 ->label('Remaining Balance')
                                 ->money('NGN')
-                                ->state(fn (WidowLoan $record) =>
-                                    max(0, (float) $record->total_payable - (float) $record->repayments()->sum('amount'))
-                                )
+                                ->state(fn (WidowLoan $record) => (float) $record->outstanding_balance)
                                 ->color(fn ($state) => $state > 0 ? 'danger' : 'success')
                                 ->weight('bold'),
                         ]),
@@ -156,7 +161,7 @@ class WidowLoanInfolist
                                 ->label('Agreement File')
                                 ->placeholder('No Document Attached')
                                 ->url(fn ($record) => $record->loan_agreement_url
-                                    ? asset('storage/' . $record->loan_agreement_url)
+                                    ? asset('storage/'.$record->loan_agreement_url)
                                     : null)
                                 ->openUrlInNewTab()
                                 ->color('primary')
@@ -166,6 +171,51 @@ class WidowLoanInfolist
                                 ->label('Rejection Narrative')
                                 ->visible(fn ($record) => $record->status === WidowLoanStatus::REJECTED)
                                 ->placeholder('No specific reason provided'),
+                        ]),
+                    ]),
+
+                Section::make('Write-Off Details')
+                    ->description('Detailed audit information regarding the loan write-off.')
+                    ->icon('heroicon-m-x-circle')
+                    ->visible(fn (WidowLoan $record) => $record->status === WidowLoanStatus::WRITTEN_OFF)
+                    ->schema([
+                        Grid::make(4)->schema([
+                            TextEntry::make('amount_written_off')
+                                ->label('Amount Written Off')
+                                ->money('NGN')
+                                ->color('warning')
+                                ->weight('bold'),
+
+                            TextEntry::make('written_off_at')
+                                ->label('Written Off At')
+                                ->dateTime(),
+
+                            TextEntry::make('writtenOffBy.name')
+                                ->label('Authorized By'),
+
+                            TextEntry::make('reapplication_allowed')
+                                ->label('Reapplication Allowed')
+                                ->badge()
+                                ->color(fn ($state) => $state ? 'success' : 'danger')
+                                ->formatStateUsing(fn ($state) => $state ? 'Allowed' : 'Denied'),
+                        ]),
+                        Grid::make(1)->schema([
+                            TextEntry::make('writeOff.write_off_reason')
+                                ->label('Reason for Write-Off'),
+
+                            TextEntry::make('writeOff.write_off_verification_notes')
+                                ->label('Verification Notes'),
+
+                            TextEntry::make('writeOff.write_off_document_path')
+                                ->label('Supporting Verification Document')
+                                ->placeholder('No supporting document attached')
+                                ->url(fn ($record) => $record->writeOff?->write_off_document_path
+                                    ? route('loans.write-off-document.download', $record->writeOff)
+                                    : null)
+                                ->openUrlInNewTab()
+                                ->color('primary')
+                                ->icon('heroicon-m-paper-clip')
+                                ->visible(fn ($record) => auth()->user()?->hasAnyRole(['admin', 'super_admin'])),
                         ]),
                     ]),
 

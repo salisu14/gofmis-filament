@@ -19,6 +19,7 @@
         "livewire/livewire": "^4.1.4",
         "maatwebsite/excel": "^3.1",
         "phpoffice/phpspreadsheet": "^1.30",
+        "pragmarx/google2fa-laravel": "^0.3.0",
         "rakutentech/laravel-request-docs": "^2.43",
         "simplesoftwareio/simple-qrcode": "^4.2",
         "spatie/laravel-activitylog": "^5.0",

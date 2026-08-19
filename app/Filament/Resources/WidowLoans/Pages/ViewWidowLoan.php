@@ -29,6 +29,8 @@ class ViewWidowLoan extends ViewRecord
             // 4. Confirm the widow has physically collected the funds
             \App\Filament\Actions\MarkLoanCollectedAction::make(),
 
+            // Write off loan (Super Admin only)
+            \App\Filament\Actions\WriteOffWidowLoanAction::make(),
 
             Action::make('downloadStatement')
                 ->label('Download Statement')

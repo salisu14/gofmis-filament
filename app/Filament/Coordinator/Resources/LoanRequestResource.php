@@ -1,4 +1,5 @@
 <?php
+
 // app/Filament/Coordinator/Resources/LoanRequestResource.php
 
 namespace App\Filament\Coordinator\Resources;
@@ -30,11 +31,17 @@ use Illuminate\Database\Eloquent\Builder;
 class LoanRequestResource extends Resource
 {
     protected static ?string $model = WidowLoan::class;
+
     protected static string|null|\BackedEnum $navigationIcon = 'heroicon-o-banknotes';
+
     protected static ?string $navigationLabel = 'Loan Requests';
+
     protected static ?string $modelLabel = 'Loan Request';
+
     protected static ?string $pluralModelLabel = 'Loan Requests';
+
     protected static string|null|\UnitEnum $navigationGroup = 'Intervention Requests';
+
     protected static ?int $navigationSort = 1;
 
     public static function getEloquentQuery(): Builder
@@ -53,8 +60,7 @@ class LoanRequestResource extends Resource
             return $query->whereRaw('1 = 0');
         }
 
-        return $query->whereHas('widow', fn(Builder $q) => $q->whereHas('deceased', fn($q2) =>
-        $q2->where('zone_id', $zoneId)
+        return $query->whereHas('widow', fn (Builder $q) => $q->whereHas('deceased', fn ($q2) => $q2->where('zone_id', $zoneId)
         ));
     }
 
@@ -84,7 +90,9 @@ class LoanRequestResource extends Resource
     public static function canEdit($record): bool
     {
         $user = auth()->user();
-        if ($user?->hasAnyRole(['admin', 'super_admin'])) return true;
+        if ($user?->hasAnyRole(['admin', 'super_admin'])) {
+            return true;
+        }
 
         // ✅ FIXED: Use coordinatedZone for zone comparison
         $zoneId = $user?->coordinatedZone?->id;
@@ -114,24 +122,29 @@ class LoanRequestResource extends Resource
                             ->relationship(
                                 'widow',
                                 'full_name',
-                                fn(Builder $query) => $query
-                                    ->whereHas('deceased', fn($q) => $q->where('zone_id', $zoneId))
+                                fn (Builder $query) => $query
+                                    ->whereHas('deceased', fn ($q) => $q->where('zone_id', $zoneId))
                                     ->where('is_eligible', true)
                                     ->where('is_married', false)
-                                    ->whereDoesntHave('widowLoans', fn($q) => $q->whereNotIn('status', [
-                                        WidowLoanStatus::COMPLETED->value,
-                                        WidowLoanStatus::REJECTED->value,
-                                    ]))
+                                    ->whereDoesntHave('widowLoans', fn ($q) => $q
+                                        ->whereIn('status', array_column(WidowLoanStatus::activeStatuses(), 'value'))
+                                        ->orWhere(fn ($q2) => $q2
+                                            ->where('status', WidowLoanStatus::WRITTEN_OFF->value)
+                                            ->where('reapplication_allowed', false)
+                                        )
+                                    )
                             )
                             ->searchable()
                             ->preload()
                             ->required()
                             ->live()
                             ->afterStateUpdated(function (Set $set, ?string $state) {
-                                if (!$state) return;
+                                if (! $state) {
+                                    return;
+                                }
 
                                 $widow = Widow::find($state);
-                                if ($widow && !$widow->canApplyForLoan()) {
+                                if ($widow && ! $widow->canApplyForLoan()) {
                                     Notification::make()
                                         ->title('Not Eligible')
                                         ->body('This widow already has an active loan or is remarried.')
@@ -141,6 +154,56 @@ class LoanRequestResource extends Resource
                                 }
                             })
                             ->helperText('Only eligible widows without active loans are shown'),
+                    ]),
+
+                \Filament\Forms\Components\Section::make('Previous Loan Write-Off')
+                    ->description('Important notice regarding the beneficiary\'s loan history.')
+                    ->icon('heroicon-m-exclamation-triangle')
+                    ->visible(function ($get) {
+                        $widowId = $get('widow_id');
+                        if (! $widowId) {
+                            return false;
+                        }
+                        $widow = Widow::find($widowId);
+
+                        return $widow && $widow->widowLoans()->where('status', WidowLoanStatus::WRITTEN_OFF)->exists();
+                    })
+                    ->schema([
+                        \Filament\Forms\Components\Placeholder::make('write_off_details')
+                            ->label('')
+                            ->content(function ($get) {
+                                $widowId = $get('widow_id');
+                                if (! $widowId) {
+                                    return '';
+                                }
+                                $widow = Widow::find($widowId);
+                                if (! $widow) {
+                                    return '';
+                                }
+                                $writtenOffLoan = $widow->widowLoans()
+                                    ->where('status', WidowLoanStatus::WRITTEN_OFF)
+                                    ->first();
+                                if (! $writtenOffLoan) {
+                                    return '';
+                                }
+
+                                $writeOff = $writtenOffLoan->writeOff;
+                                $amount = number_format($writtenOffLoan->amount_written_off ?? $writeOff?->amount_written_off ?? 0, 2);
+                                $date = $writtenOffLoan->written_off_at?->format('M d, Y') ?? $writeOff?->authorized_at?->format('M d, Y') ?? 'N/A';
+                                $reason = $writeOff?->write_off_reason ?? 'N/A';
+                                $authorizedBy = $writtenOffLoan->writtenOffBy?->name ?? $writeOff?->authorizedBy?->name ?? 'N/A';
+
+                                return new \Illuminate\Support\HtmlString("
+                                    <div class='p-4 bg-danger-50 border border-danger-200 rounded-lg text-danger-900 dark:bg-danger-950 dark:border-danger-800 dark:text-danger-100'>
+                                        <h4 class='font-bold text-lg mb-2 text-danger-800 dark:text-danger-200'>⚠️ Previous Loan Write-Off Notice</h4>
+                                        <p class='mb-1'><strong>Loan ID:</strong> {$writtenOffLoan->id}</p>
+                                        <p class='mb-1'><strong>Amount Written Off:</strong> ₦{$amount}</p>
+                                        <p class='mb-1'><strong>Date:</strong> {$date}</p>
+                                        <p class='mb-1'><strong>Reason:</strong> {$reason}</p>
+                                        <p class='mb-1'><strong>Authorized By:</strong> {$authorizedBy}</p>
+                                    </div>
+                                ");
+                            }),
                     ]),
 
                 Section::make('Loan Details')
@@ -264,7 +327,7 @@ class LoanRequestResource extends Resource
                         // ✅ FIXED: Use coordinatedZone instead of zone_id
                         $zoneId = auth()->user()?->coordinatedZone?->id;
                         if ($zoneId) {
-                            $query->whereHas('widow.deceased', fn($q) => $q->where('zone_id', $zoneId));
+                            $query->whereHas('widow.deceased', fn ($q) => $q->where('zone_id', $zoneId));
                         }
                     })
                     ->default(),
@@ -273,7 +336,7 @@ class LoanRequestResource extends Resource
                 ViewAction::make(),
 
                 EditAction::make()
-                    ->visible(fn($record) => $record->status === WidowLoanStatus::DRAFT),
+                    ->visible(fn ($record) => $record->status === WidowLoanStatus::DRAFT),
 
                 Action::make('submit')
                     ->label('Submit for Approval')
@@ -282,7 +345,7 @@ class LoanRequestResource extends Resource
                     ->requiresConfirmation()
                     ->modalHeading('Submit Loan Request')
                     ->modalDescription('This will send the loan request for admin approval.')
-                    ->visible(fn($record) => $record->status === WidowLoanStatus::DRAFT)
+                    ->visible(fn ($record) => $record->status === WidowLoanStatus::DRAFT)
                     ->action(function (WidowLoan $record) {
                         $record->update(['status' => WidowLoanStatus::PENDING]);
 
@@ -297,8 +360,8 @@ class LoanRequestResource extends Resource
                     ->label('Repayment Schedule')
                     ->icon('heroicon-m-calendar')
                     ->color('info')
-                    ->url(fn($record) => static::getUrl('view', ['record' => $record]))
-                    ->visible(fn($record) => in_array(($record->status->value ?? $record->status), ['approved', 'disbursed', 'completed'], true)),
+                    ->url(fn ($record) => static::getUrl('view', ['record' => $record]))
+                    ->visible(fn ($record) => in_array(($record->status->value ?? $record->status), ['approved', 'disbursed', 'completed'], true)),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
