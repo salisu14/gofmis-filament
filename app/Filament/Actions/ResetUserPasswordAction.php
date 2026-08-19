@@ -23,27 +23,39 @@ class ResetUserPasswordAction extends Action
     {
         parent::setUp();
 
-        SensitiveActionConfirmation::apply(
-            $this,
-            SensitiveConfirmationLevel::PASSWORD_AND_PHRASE,
-            'RESET USER PASSWORD',
-            'reset_user_password'
-        );
-
-        $this->label('Reset Password')
+        $this
+            ->label('Reset Password')
             ->icon('heroicon-o-key')
             ->color('warning')
-            ->visible(fn (User $record) => auth()->check() && Gate::forUser(auth()->user())->allows('resetPassword', $record))
+            ->visible(
+                fn (User $record): bool => auth()->check()
+                    && Gate::forUser(auth()->user())
+                        ->allows('resetPassword', $record)
+            )
             ->modalHeading('Reset User Password')
-            ->modalDescription('As an administrator, you may reset another user\'s password. This action requires re-confirming your OWN password and typing the confirmation phrase.')
-            ->modalSubmitActionLabel('Reset Password')
-            ->form([
+            ->modalDescription(
+                'As an administrator, you may reset another user\'s password. '.
+                'This action requires re-confirming your own password and typing the confirmation phrase.'
+            )
+            ->modalSubmitActionLabel('Reset Password');
+
+        SensitiveActionConfirmation::apply(
+            action: $this,
+            level: SensitiveConfirmationLevel::PASSWORD_AND_PHRASE,
+            phrase: 'RESET USER PASSWORD',
+            actionKey: 'reset_user_password',
+            fields: [
                 TextInput::make('new_password')
                     ->label('New Password')
                     ->password()
                     ->revealable()
                     ->required()
-                    ->rule(Password::default()->mixedCase()->numbers()->symbols())
+                    ->rule(
+                        Password::default()
+                            ->mixedCase()
+                            ->numbers()
+                            ->symbols()
+                    )
                     ->autocomplete('new-password'),
 
                 TextInput::make('new_password_confirmation')
@@ -53,25 +65,31 @@ class ResetUserPasswordAction extends Action
                     ->required()
                     ->same('new_password')
                     ->autocomplete('new-password'),
-            ])
-            ->action(function (User $record, array $data): void {
-                $service = new UserSecurityService;
+            ],
+        );
 
-                try {
-                    $service->resetPassword(auth()->user(), $record, $data['new_password']);
+        $this->action(function (User $record, array $data): void {
+            try {
+                app(UserSecurityService::class)->resetPassword(
+                    auth()->user(),
+                    $record,
+                    $data['new_password'],
+                );
 
-                    Notification::make()
-                        ->title('Password Reset Successfully')
-                        ->body("Password for {$record->email} has been updated.")
-                        ->success()
-                        ->send();
-                } catch (\Exception $e) {
-                    Notification::make()
-                        ->title('Password Reset Failed')
-                        ->body($e->getMessage())
-                        ->danger()
-                        ->send();
-                }
-            });
+                Notification::make()
+                    ->title('Password Reset Successfully')
+                    ->body("Password for {$record->email} has been updated.")
+                    ->success()
+                    ->send();
+            } catch (\Throwable $e) {
+                report($e);
+
+                Notification::make()
+                    ->title('Password Reset Failed')
+                    ->body($e->getMessage())
+                    ->danger()
+                    ->send();
+            }
+        });
     }
 }

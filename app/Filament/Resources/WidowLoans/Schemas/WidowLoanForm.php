@@ -52,7 +52,7 @@ class WidowLoanForm
                                     return $widow->canApplyForLoan() ? '✅ Eligible' : '❌ Active Loan Exists';
                                 }),
 
-                            \Filament\Forms\Components\Section::make('Previous Loan Write-Off')
+                            Section::make('Previous Loan Write-Off')
                                 ->description('Important notice regarding the borrower\'s loan history.')
                                 ->icon('heroicon-m-exclamation-triangle')
                                 ->visible(function ($get) {

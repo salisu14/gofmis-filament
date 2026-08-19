@@ -2,8 +2,10 @@
 
 namespace App\Filament\Actions;
 
+use App\Enums\SensitiveConfirmationLevel;
 use App\Enums\WidowLoanStatus;
 use App\Models\WidowLoan;
+use App\Security\SensitiveActionConfirmation;
 use App\Services\WidowLoanWriteOffService;
 use Filament\Actions\Action;
 use Filament\Forms\Components\FileUpload;
@@ -22,19 +24,14 @@ class WriteOffWidowLoanAction extends Action
     {
         parent::setUp();
 
-        \App\Security\SensitiveActionConfirmation::apply(
-            $this,
-            \App\Enums\SensitiveConfirmationLevel::PASSWORD_AND_PHRASE,
-            'WRITE OFF LOAN',
-            'loan_write_off'
-        );
-
-        $this->label('Write Off Loan')
+        $this
+            ->label('Write Off Loan')
             ->icon('heroicon-o-x-circle')
             ->color('danger')
-            ->visible(fn (WidowLoan $record) => auth()->user()?->hasRole('super_admin')
-                && $record->status === WidowLoanStatus::DISBURSED
-                && (float) $record->outstanding_balance > 0
+            ->visible(
+                fn (WidowLoan $record): bool => auth()->user()?->hasRole('super_admin')
+                    && $record->status === WidowLoanStatus::DISBURSED
+                    && (float) $record->outstanding_balance > 0
             )
             ->modalHeading('Write Off Loan (Waive Remaining Debt)')
             ->modalDescription(
@@ -42,17 +39,29 @@ class WriteOffWidowLoanAction extends Action
                 'Repayments already made will remain historically recorded, but the outstanding balance will be waived and set to zero. '.
                 'This action cannot be undone.'
             )
-            ->modalSubmitActionLabel('Write Off Balance')
-            ->form([
+            ->modalSubmitActionLabel('Write Off Balance');
+
+        SensitiveActionConfirmation::apply(
+            action: $this,
+            level: SensitiveConfirmationLevel::PASSWORD_AND_PHRASE,
+            phrase: 'WRITE OFF LOAN',
+            actionKey: 'loans.write_off',
+            fields: [
                 Textarea::make('write_off_reason')
                     ->label('Reason for Write-Off')
-                    ->placeholder('Provide detailed explanation for this write-off (e.g. genuine hardship, illness, etc.)...')
+                    ->placeholder(
+                        'Provide detailed explanation for this write-off '.
+                        '(e.g. genuine hardship, illness, etc.)...'
+                    )
                     ->required()
                     ->rows(3),
 
                 Textarea::make('write_off_verification_notes')
                     ->label('Verification Notes')
-                    ->placeholder('Notes on how the hardship was verified (e.g. physical visitation, coordinator report)...')
+                    ->placeholder(
+                        'Notes on how the hardship was verified '.
+                        '(e.g. physical visitation, coordinator report)...'
+                    )
                     ->rows(2),
 
                 FileUpload::make('write_off_document_path')
@@ -61,41 +70,48 @@ class WriteOffWidowLoanAction extends Action
                     ->directory('loan-write-offs')
                     ->visibility('private')
                     ->maxSize(2048)
-                    ->helperText('Upload proof of verification or coordinator request (max 2MB)'),
+                    ->helperText(
+                        'Upload proof of verification or coordinator request (max 2MB)'
+                    ),
 
                 Toggle::make('reapplication_allowed')
                     ->label('Allow Reapplication in Future')
-                    ->helperText('Check this if the widow should be eligible to apply for another loan in the future.')
+                    ->helperText(
+                        'Check this if the widow should be eligible to apply for another loan in the future.'
+                    )
                     ->default(false),
-            ])
-            ->action(function (WidowLoan $record, array $data): void {
-                $service = new WidowLoanWriteOffService;
+            ],
+        );
 
-                try {
-                    $service->writeOff(
-                        $record,
-                        auth()->user(),
-                        $data['write_off_reason'],
-                        $data['write_off_verification_notes'] ?? null,
-                        (bool) ($data['reapplication_allowed'] ?? false),
-                        $data['write_off_document_path'] ?? null
-                    );
+        $this->action(function (WidowLoan $record, array $data): void {
+            try {
+                app(WidowLoanWriteOffService::class)->writeOff(
+                    $record,
+                    auth()->user(),
+                    $data['write_off_reason'],
+                    $data['write_off_verification_notes'] ?? null,
+                    (bool) ($data['reapplication_allowed'] ?? false),
+                    $data['write_off_document_path'] ?? null,
+                );
 
-                    Notification::make()
-                        ->title('Loan Written Off Successfully')
-                        ->body($data['reapplication_allowed']
-                            ? 'Loan written off; widow may reapply'
-                            : 'Loan written off; widow remains restricted from new applications'
-                        )
-                        ->success()
-                        ->send();
-                } catch (\Exception $e) {
-                    Notification::make()
-                        ->title('Error Writing Off Loan')
-                        ->body($e->getMessage())
-                        ->danger()
-                        ->send();
-                }
-            });
+                Notification::make()
+                    ->title('Loan Written Off Successfully')
+                    ->body(
+                        ($data['reapplication_allowed'] ?? false)
+                            ? 'Loan written off; widow may reapply.'
+                            : 'Loan written off; widow remains restricted from new applications.'
+                    )
+                    ->success()
+                    ->send();
+            } catch (\Throwable $e) {
+                report($e);
+
+                Notification::make()
+                    ->title('Error Writing Off Loan')
+                    ->body($e->getMessage())
+                    ->danger()
+                    ->send();
+            }
+        });
     }
 }
