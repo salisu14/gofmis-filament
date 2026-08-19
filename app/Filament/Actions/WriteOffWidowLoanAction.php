@@ -22,6 +22,13 @@ class WriteOffWidowLoanAction extends Action
     {
         parent::setUp();
 
+        \App\Security\SensitiveActionConfirmation::apply(
+            $this,
+            \App\Enums\SensitiveConfirmationLevel::PASSWORD_AND_PHRASE,
+            'WRITE OFF LOAN',
+            'loan_write_off'
+        );
+
         $this->label('Write Off Loan')
             ->icon('heroicon-o-x-circle')
             ->color('danger')

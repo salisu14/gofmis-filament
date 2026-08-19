@@ -84,7 +84,12 @@ class RoleResource extends Resource
             ->recordActions([
                 ViewAction::make(),
                 EditAction::make(),
-                DeleteAction::make(),
+                \App\Security\SensitiveActionConfirmation::apply(
+                    DeleteAction::make(),
+                    \App\Enums\SensitiveConfirmationLevel::PASSWORD_AND_PHRASE,
+                    'DELETE ROLE',
+                    'role_deletion'
+                ),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
@@ -103,30 +108,22 @@ class RoleResource extends Resource
 
     public static function canViewAny(): bool
     {
-        $user = auth()->user();
-
-        return $user?->can('view_roles') || $user?->can('role_access');
+        return auth()->user()?->can('viewAny', Role::class) ?? false;
     }
 
     public static function canCreate(): bool
     {
-        $user = auth()->user();
-
-        return $user?->can('create_roles') || $user?->can('role_create');
+        return auth()->user()?->can('create', Role::class) ?? false;
     }
 
     public static function canEdit($record): bool
     {
-        $user = auth()->user();
-
-        return $user?->can('edit_roles') || $user?->can('role_edit');
+        return auth()->user()?->can('update', $record) ?? false;
     }
 
     public static function canDelete($record): bool
     {
-        $user = auth()->user();
-
-        return $user?->can('delete_roles') || $user?->can('role_delete');
+        return auth()->user()?->can('delete', $record) ?? false;
     }
 
     public static function infolist(Schema $schema): Schema

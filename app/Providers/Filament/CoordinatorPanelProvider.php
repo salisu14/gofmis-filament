@@ -1,4 +1,5 @@
 <?php
+
 // app/Providers/Filament/CoordinatorPanelProvider.php
 
 namespace App\Providers\Filament;
@@ -80,6 +81,7 @@ class CoordinatorPanelProvider extends PanelProvider
             ])
             ->authMiddleware([
                 Authenticate::class,
+                \App\Http\Middleware\EnsureActiveUser::class,
                 EnsureCoordinator::class, // Custom middleware
             ])
 

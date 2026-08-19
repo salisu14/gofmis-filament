@@ -54,7 +54,20 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        Gate::before(function ($user, $ability) {
+        Gate::policy(\App\Models\User::class, \App\Policies\UserPolicy::class);
+        Gate::policy(\App\Models\Role::class, \App\Policies\RolePolicy::class);
+        Gate::policy(\App\Models\Permission::class, \App\Policies\PermissionPolicy::class);
+
+        Gate::before(function ($user, $ability, $arguments = []) {
+            // For security models (User, Role, Permission), ALWAYS fall back to policy to enforce hierarchy, self-destruction, and role demotion invariants.
+            $target = is_array($arguments) ? reset($arguments) : $arguments;
+            if ($target) {
+                $class = is_object($target) ? get_class($target) : (is_string($target) ? $target : null);
+                if ($class && in_array($class, [\App\Models\User::class, \App\Models\Role::class, \App\Models\Permission::class], true)) {
+                    return null; // Fall back to policy
+                }
+            }
+
             return $user->hasRole('super_admin') ? true : null;
         });
     }
