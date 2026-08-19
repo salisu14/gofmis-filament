@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\LoanRepaymentFrequency;
+use App\Enums\WidowLoanPerformanceStatus;
 use App\Enums\WidowLoanStatus;
 use App\Traits\Approvable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -78,6 +79,18 @@ class WidowLoan extends Model
         'reapplication_authorized_by',
         'reapplication_authorized_at',
         'status',
+        'performance_status',
+        'first_overdue_at',
+        'last_payment_at',
+        'days_past_due',
+        'overdue_amount',
+        'arrears_installments',
+        'defaulted_at',
+        'default_reason',
+        'recovery_status',
+        'last_recovery_action_at',
+        'next_recovery_action_at',
+        'hardship_active',
         'disbursed_at',
         'collected_at',
         'collected_by',
@@ -105,7 +118,17 @@ class WidowLoan extends Model
         'reapplication_authorized_at' => 'datetime',
         'fully_repaid' => 'boolean',
         'status' => WidowLoanStatus::class,
+        'performance_status' => WidowLoanPerformanceStatus::class,
         'repayment_frequency' => LoanRepaymentFrequency::class,
+        'first_overdue_at' => 'datetime',
+        'last_payment_at' => 'datetime',
+        'days_past_due' => 'integer',
+        'overdue_amount' => 'decimal:2',
+        'arrears_installments' => 'integer',
+        'defaulted_at' => 'datetime',
+        'last_recovery_action_at' => 'datetime',
+        'next_recovery_action_at' => 'datetime',
+        'hardship_active' => 'boolean',
     ];
 
     // ==================================================
@@ -177,6 +200,31 @@ class WidowLoan extends Model
     public function reapplicationAuthorizedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'reapplication_authorized_by');
+    }
+
+    public function hardshipCases(): HasMany
+    {
+        return $this->hasMany(WidowLoanHardshipCase::class, 'widow_loan_id');
+    }
+
+    public function reliefPeriods(): HasMany
+    {
+        return $this->hasMany(WidowLoanReliefPeriod::class, 'widow_loan_id');
+    }
+
+    public function restructures(): HasMany
+    {
+        return $this->hasMany(WidowLoanRestructure::class, 'widow_loan_id');
+    }
+
+    public function recoveryCases(): HasMany
+    {
+        return $this->hasMany(WidowLoanRecoveryCase::class, 'widow_loan_id');
+    }
+
+    public function writeOffRecommendations(): HasMany
+    {
+        return $this->hasMany(WidowLoanWriteOffRecommendation::class, 'widow_loan_id');
     }
 
     // ==================================================
@@ -315,12 +363,22 @@ class WidowLoan extends Model
 
         if ($fullyRepaid && $this->status === WidowLoanStatus::DISBURSED) {
             $updateData['status'] = WidowLoanStatus::COMPLETED;
+            $updateData['performance_status'] = WidowLoanPerformanceStatus::CURRENT;
+        }
+
+        if ($this->status === WidowLoanStatus::WRITTEN_OFF) {
+            $updateData['performance_status'] = WidowLoanPerformanceStatus::WRITTEN_OFF;
         }
 
         $this->update($updateData);
 
         // Sync schedule installment paid flags based on the new total_paid
         $this->syncScheduleStatus();
+
+        // Recalculate delinquency/performance if active (not written off or completed)
+        if ($this->status === WidowLoanStatus::DISBURSED) {
+            app(\App\Services\WidowLoanDelinquencyService::class)->evaluateLoan($this);
+        }
     }
 
     /**
@@ -393,6 +451,7 @@ class WidowLoan extends Model
 
         // Reset all to unpaid (except waived ones, just in case)
         $this->schedules()
+            ->whereNull('superseded_at')
             ->where('status', '!=', \App\Enums\WidowLoanScheduleStatus::WAIVED->value)
             ->update([
                 'is_paid' => false,
@@ -401,6 +460,7 @@ class WidowLoan extends Model
             ]);
 
         $schedules = $this->schedules()
+            ->whereNull('superseded_at')
             ->where('status', '!=', \App\Enums\WidowLoanScheduleStatus::WAIVED->value)
             ->orderBy('installment_number')
             ->get();

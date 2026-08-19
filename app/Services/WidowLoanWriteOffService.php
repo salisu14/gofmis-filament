@@ -77,9 +77,23 @@ class WidowLoanWriteOffService
 
             // Mark all unpaid schedule lines as WAIVED
             $loan->schedules()
+                ->whereNull('superseded_at')
                 ->where('is_paid', false)
                 ->update([
                     'status' => WidowLoanScheduleStatus::WAIVED,
+                ]);
+
+            // Update any pending or endorsed write-off recommendations to EXECUTED
+            $loan->writeOffRecommendations()
+                ->whereIn('status', [
+                    \App\Enums\WidowLoanWriteOffRecommendationStatus::PENDING,
+                    \App\Enums\WidowLoanWriteOffRecommendationStatus::ENDORSED,
+                ])
+                ->update([
+                    'status' => \App\Enums\WidowLoanWriteOffRecommendationStatus::EXECUTED,
+                    'reviewed_by' => $actor->id,
+                    'reviewed_at' => now(),
+                    'review_notes' => 'Executed via write-off service.',
                 ]);
 
             // Log activity to audit log trail if activity logger helper is available

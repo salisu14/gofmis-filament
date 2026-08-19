@@ -45,6 +45,7 @@ class SchedulesRelationManager extends RelationManager
     public function table(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(fn (\Illuminate\Database\Eloquent\Builder $query) => $query->whereNull('superseded_at'))
             ->columns([
                 TextColumn::make('installment_number')->label('#')->alignCenter(),
                 TextColumn::make('due_date')->date()->sortable(),
@@ -63,7 +64,7 @@ class SchedulesRelationManager extends RelationManager
                     ->requiresConfirmation()
                     ->modalHeading('Regenerate Repayment Schedule')
                     ->modalDescription('This will delete the existing schedule and recalculate all installments based on the current Total Payable and Disbursement Date. This action cannot be undone.')
-                    ->visible(fn () => in_array($this->ownerRecord->status, [WidowLoanStatus::DISBURSED, WidowLoanStatus::COMPLETED]))
+                    ->visible(fn () => in_array($this->ownerRecord->status, [WidowLoanStatus::DISBURSED, WidowLoanStatus::COMPLETED]) && $this->ownerRecord->schedules()->max('schedule_version') <= 1)
                     ->action(function () {
                         try {
                             // Ensure total_payable is set before regenerating

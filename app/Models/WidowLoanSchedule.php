@@ -20,6 +20,9 @@ class WidowLoanSchedule extends Model
         'is_paid',
         'paid_at',
         'status',
+        'schedule_version',
+        'superseded_at',
+        'superseded_by',
     ];
 
     protected $casts = [
@@ -28,10 +31,17 @@ class WidowLoanSchedule extends Model
         'paid_at' => 'date',
         'is_paid' => 'boolean',
         'status' => \App\Enums\WidowLoanScheduleStatus::class,
+        'schedule_version' => 'integer',
+        'superseded_at' => 'datetime',
     ];
 
     public function widowLoan(): BelongsTo
     {
         return $this->belongsTo(WidowLoan::class);
+    }
+
+    public function restructure(): BelongsTo
+    {
+        return $this->belongsTo(WidowLoanRestructure::class, 'superseded_by');
     }
 }
