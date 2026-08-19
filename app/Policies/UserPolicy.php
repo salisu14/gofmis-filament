@@ -131,8 +131,8 @@ class UserPolicy
 
     public function resetMfa(User $user, User $model): bool
     {
-        // Only super admin can reset Super Admin MFA.
-        if ($model->isSuperAdmin() && ! $user->isSuperAdmin()) {
+        // Must NOT reset any super_admin MFA (even super_admin -> super_admin is denied)
+        if ($model->isSuperAdmin()) {
             return false;
         }
 

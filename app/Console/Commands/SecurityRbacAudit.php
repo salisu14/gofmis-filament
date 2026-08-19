@@ -160,6 +160,31 @@ class SecurityRbacAudit extends Command
             $this->info('[OK] No direct permissions are assigned directly to users.');
         }
 
+        // 10. Verification of MFA status for mandatory roles
+        $mandatoryRoles = config('security.mfa.mandatory_roles', ['super_admin', 'admin', 'custodian', 'auditor']);
+        $existingRoles = \App\Models\Role::whereIn('name', $mandatoryRoles)->pluck('name')->toArray();
+
+        $usersWithoutMfa = collect();
+        if (! empty($existingRoles)) {
+            $usersWithoutMfa = User::role($existingRoles)
+                ->where('is_active', true)
+                ->where('status', \App\Enums\UserStatus::ACTIVE)
+                ->get()
+                ->filter(fn ($u) => ! $u->twoFactorAuthEnabled());
+        }
+
+        if ($usersWithoutMfa->isNotEmpty()) {
+            $this->warn("[WARNING] Found {$usersWithoutMfa->count()} active users in mandatory MFA roles who do not have MFA configured/enabled!");
+            $hasWarnings = true;
+            if ($this->option('details')) {
+                foreach ($usersWithoutMfa as $u) {
+                    $this->line("  - {$u->name} ({$u->email}) - Roles: ".implode(', ', $u->roles->pluck('name')->toArray()));
+                }
+            }
+        } else {
+            $this->info('[OK] All active users in mandatory MFA roles have MFA enabled.');
+        }
+
         $this->info('============================================================');
         if ($hasCritical) {
             $this->error('AUDIT STATUS: CRITICAL FINDINGS ENCOUNTERED');

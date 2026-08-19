@@ -55,6 +55,9 @@ class User extends Authenticatable implements FilamentUser, HasAppAuthentication
         'password_reset_required',
         'app_authentication_secret',
         'app_authentication_recovery_codes',
+        'mfa_enabled_at',
+        'mfa_confirmed_at',
+        'mfa_enrollment_required',
     ];
 
     protected $hidden = [
@@ -77,6 +80,9 @@ class User extends Authenticatable implements FilamentUser, HasAppAuthentication
             'suspended_at' => 'datetime',
             'locked_at' => 'datetime',
             'password_reset_required' => 'boolean',
+            'mfa_enabled_at' => 'datetime',
+            'mfa_confirmed_at' => 'datetime',
+            'mfa_enrollment_required' => 'boolean',
         ];
     }
 
@@ -258,7 +264,37 @@ class User extends Authenticatable implements FilamentUser, HasAppAuthentication
 
     public function twoFactorAuthEnabled(): bool
     {
-        return ! empty($this->app_authentication_secret);
+        return ! empty($this->app_authentication_secret) && ! empty($this->mfa_confirmed_at);
+    }
+
+    public function isMfaRequired(): bool
+    {
+        if ($this->mfa_enrollment_required) {
+            return true;
+        }
+
+        $mandatoryRoles = config('security.mfa.mandatory_roles', ['super_admin', 'admin']);
+
+        return $this->hasAnyRole($mandatoryRoles);
+    }
+
+    public function mfaState(): string
+    {
+        if (empty($this->app_authentication_secret)) {
+            return 'disabled';
+        }
+
+        if (empty($this->mfa_confirmed_at)) {
+            return 'pending_enrollment';
+        }
+
+        return 'enabled';
+    }
+
+    public function isMfaVerifiedInSession(): bool
+    {
+        return session()->get('mfa_verified_user_id') === $this->id &&
+               session()->has('mfa_verified_at');
     }
 
     protected static function booted(): void

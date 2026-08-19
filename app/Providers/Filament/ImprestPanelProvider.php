@@ -33,6 +33,13 @@ class ImprestPanelProvider extends PanelProvider
                 'warning' => Color::Amber,
                 'success' => Color::Teal,
             ])
+            ->profile()
+            ->userMenuItems([
+                'profile' => \Filament\Navigation\MenuItem::make()
+                    ->label('Security / MFA')
+                    ->icon('heroicon-o-shield-check')
+                    ->url('/mfa/settings'),
+            ])
             ->brandName('GOF - Impress Management')
             ->brandLogo(fn () => view('filament.imprest.logo'))
             ->favicon(asset('favicon.ico'))
@@ -63,6 +70,7 @@ class ImprestPanelProvider extends PanelProvider
             ->authMiddleware([
                 Authenticate::class,
                 \App\Http\Middleware\EnsureActiveUser::class,
+                \App\Http\Middleware\EnsureMfaVerified::class,
             ])
             ->navigationGroups([
                 'Fund Management',

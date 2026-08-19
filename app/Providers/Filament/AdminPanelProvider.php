@@ -5,7 +5,6 @@
 namespace App\Providers\Filament;
 
 use App\Filament\Resources\Verifications\EducationVerificationResource;
-use Filament\Auth\MultiFactor\App\AppAuthentication;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -38,12 +37,11 @@ class AdminPanelProvider extends PanelProvider
                 'primary' => Color::Amber,
             ])
             ->profile()
-            ->multiFactorAuthentication([
-                AppAuthentication::make()
-                    ->recoverable()
-                    ->regenerableRecoveryCodes(true)
-                    ->recoveryCodeCount(10)
-                    ->brandName('GOFMIS'),
+            ->userMenuItems([
+                'profile' => \Filament\Navigation\MenuItem::make()
+                    ->label('Security / MFA')
+                    ->icon('heroicon-o-shield-check')
+                    ->url('/mfa/settings'),
             ])
             ->unsavedChangesAlerts()
             ->databaseNotifications()
@@ -63,6 +61,7 @@ class AdminPanelProvider extends PanelProvider
             ->authMiddleware([
                 Authenticate::class,
                 \App\Http\Middleware\EnsureActiveUser::class,
+                \App\Http\Middleware\EnsureMfaVerified::class,
             ])
             ->navigation(function (NavigationBuilder $builder): NavigationBuilder {
                 $user = auth()->user();
@@ -308,14 +307,9 @@ class AdminPanelProvider extends PanelProvider
                 }
 
                 // Auth/Settings (super-admin ONLY)
-                if (
-                    $user?->can('view_users') ||
-                    $user?->can('user_access') ||
-                    $user?->can('view_roles') ||
-                    $user?->can('role_access')
-                ) {
+                if ($user?->isSuperAdmin() || $user?->isAdmin()) {
                     $builder = $builder->group(
-                        NavigationGroup::make('Auth')
+                        NavigationGroup::make('Security')
                             ->collapsible()
                             ->items([
                                 NavigationItem::make('Company Information')
@@ -329,6 +323,11 @@ class AdminPanelProvider extends PanelProvider
                                 NavigationItem::make('Roles & Permissions')
                                     ->icon('heroicon-o-shield-check')
                                     ->url('/admin/roles'),
+
+                                NavigationItem::make('MFA Management')
+                                    ->icon('heroicon-o-shield-check')
+                                    ->url('/admin/mfa-management')
+                                    ->isActiveWhen(fn () => request()->is('admin/mfa-management*')),
                             ])
                     );
                 }

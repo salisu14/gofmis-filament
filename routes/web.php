@@ -87,3 +87,17 @@ Route::get('/loans/{loan}/statement', [WidowLoanRepaymentController::class, 'dow
 Route::get('/loans/write-off-documents/{writeOff}', [WidowLoanWriteOffController::class, 'downloadDocument'])
     ->name('loans.write-off-document.download')
     ->middleware('auth');
+
+Route::middleware(['auth'])->group(function () {
+    Route::get('/mfa/challenge', \App\Livewire\Mfa\MfaChallenge::class)->name('mfa.challenge');
+    Route::get('/mfa/enroll', \App\Livewire\Mfa\MfaEnroll::class)->name('mfa.enroll');
+    Route::get('/mfa/recovery', \App\Livewire\Mfa\MfaRecovery::class)->name('mfa.recovery');
+    Route::get('/mfa/settings', \App\Livewire\Mfa\MfaSettings::class)->name('mfa.settings');
+    Route::post('/mfa/logout', function () {
+        \Illuminate\Support\Facades\Auth::logout();
+        request()->session()->invalidate();
+        request()->session()->regenerateToken();
+
+        return redirect()->to('/admin/login');
+    })->name('mfa.logout');
+});
