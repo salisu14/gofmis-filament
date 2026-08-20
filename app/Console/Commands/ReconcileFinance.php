@@ -69,12 +69,26 @@ class ReconcileFinance extends Command
             }
 
             // Verify transaction sum against ledger balance if transactions exist
-            if ($account->transactions()->exists()) {
-                $txSum = (float) $account->transactions()
-                    ->selectRaw("SUM(CASE WHEN type = 'credit' THEN amount WHEN type = 'debit' THEN -amount ELSE 0 END) as net_sum")
-                    ->value('net_sum');
+            $hasDirectTx = $account->transactions()->exists();
+            $hasTransferIn = \App\Models\Transaction::where('destination_bank_account_id', $account->id)->exists();
 
-                $expectedLedger = (float) $account->opening_balance + $txSum;
+            if ($hasDirectTx || $hasTransferIn) {
+                $creditTypes = ['deposit', 'credit', 'loan_repayment', 'imprest_replenishment_reversal', 'imprest_expense_void'];
+
+                $creditsOnAccount = (float) \App\Models\Transaction::where('bank_account_id', $account->id)
+                    ->whereIn('type', $creditTypes)
+                    ->sum('amount');
+
+                $transfersIn = (float) \App\Models\Transaction::where('destination_bank_account_id', $account->id)
+                    ->sum('amount');
+
+                $debitsOnAccount = (float) \App\Models\Transaction::where('bank_account_id', $account->id)
+                    ->whereNotIn('type', $creditTypes)
+                    ->sum('amount');
+
+                $netTxSum = ($creditsOnAccount + $transfersIn) - $debitsOnAccount;
+                $expectedLedger = (float) $account->opening_balance + $netTxSum;
+
                 if (! $account->isSubAccount() && abs($expectedLedger - $ledger) > 0.05) {
                     $inconsistencies[] = [
                         'module' => 'Bank Account',

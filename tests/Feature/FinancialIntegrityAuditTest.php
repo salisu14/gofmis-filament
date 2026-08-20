@@ -743,6 +743,86 @@ test('31. finance:reconcile reports clean state correctly when no errors exist',
     expect($output)->toContain('passed integrity and reconciliation checks cleanly');
 });
 
+test('35. bank account with opening balance and domain transactions reconciles correctly', function () {
+    $account = BankAccount::create([
+        'user_id' => $this->admin->id,
+        'account_name' => 'Seeded Operating Account',
+        'account_number' => '9998887771',
+        'opening_balance' => 99997.23,
+        'ledger_balance' => 99997.23,
+        'reserved_balance' => 0.00,
+        'usage' => BankAccount::USAGE_GENERAL,
+    ]);
+
+    \App\Models\Transaction::create([
+        'bank_account_id' => $account->id,
+        'amount' => 500000.00,
+        'type' => 'deposit',
+        'reference' => 'DEP-REC-01',
+        'description' => 'Test Deposit',
+        'date' => now(),
+        'is_system' => false,
+    ]);
+
+    expect((float) $account->fresh()->ledger_balance)->toBe(599997.23);
+
+    Artisan::call('finance:reconcile');
+    $output = Artisan::output();
+
+    expect($output)->not->toContain('9998887771');
+});
+
+test('36. transaction-only account reconciles correctly', function () {
+    $account = BankAccount::create([
+        'user_id' => $this->admin->id,
+        'account_name' => 'Zero Opening Account',
+        'account_number' => '9998887772',
+        'opening_balance' => 0.00,
+        'ledger_balance' => 0.00,
+        'reserved_balance' => 0.00,
+        'usage' => BankAccount::USAGE_GENERAL,
+    ]);
+
+    \App\Models\Transaction::create([
+        'bank_account_id' => $account->id,
+        'amount' => 150000.00,
+        'type' => 'deposit',
+        'reference' => 'DEP-REC-02',
+        'description' => 'Test Deposit Zero Opening',
+        'date' => now(),
+        'is_system' => false,
+    ]);
+
+    expect((float) $account->fresh()->ledger_balance)->toBe(150000.00);
+
+    Artisan::call('finance:reconcile');
+    $output = Artisan::output();
+
+    expect($output)->not->toContain('9998887772');
+});
+
+test('37. reserved balance does not distort ledger reconciliation', function () {
+    $account = BankAccount::create([
+        'user_id' => $this->admin->id,
+        'account_name' => 'Reserved Balance Account',
+        'account_number' => '9998887773',
+        'opening_balance' => 50000.00,
+        'ledger_balance' => 50000.00,
+        'reserved_balance' => 0.00,
+        'usage' => BankAccount::USAGE_GENERAL,
+    ]);
+
+    $account->reserve(20000.00);
+
+    expect((float) $account->fresh()->reserved_balance)->toBe(20000.00)
+        ->and((float) $account->fresh()->ledger_balance)->toBe(50000.00);
+
+    Artisan::call('finance:reconcile');
+    $output = Artisan::output();
+
+    expect($output)->not->toContain('9998887773');
+});
+
 /* =========================================================================
 | 7. ROUNDING & PRECISION
 | ========================================================================= */
