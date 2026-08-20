@@ -2,12 +2,14 @@
 
 namespace App\Filament\Actions;
 
+use App\Exceptions\InsufficientBankBalanceException;
 use App\Models\WidowLoan;
-use App\Services\ApprovalService;
+use App\Services\WidowLoanService;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Textarea;
 use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Section;
+use Throwable;
 
 class SubmitForApprovalAction
 {
@@ -30,30 +32,55 @@ class SubmitForApprovalAction
                     ]),
             ])
             ->action(function (WidowLoan $record): void {
-                /*
-                 * Single-step approval: the super admin is the sole approver.
-                 * This matches the described workflow: coordinator applies,
-                 * super admin approves or rejects.
-                 */
                 $approvers = [
                     ['role' => 'super_admin'],
                 ];
 
-                app(\App\Services\WidowLoanService::class)->submitForApproval($record, $approvers);
+                try {
+                    app(WidowLoanService::class)
+                        ->submitForApproval($record, $approvers);
 
-                Notification::make()
-                    ->success()
-                    ->title('Loan Submitted for Approval')
-                    ->body("Loan for {$record->widow->full_name} has been submitted. Awaiting super admin approval.")
-                    ->send();
+                    Notification::make()
+                        ->success()
+                        ->title('Loan Submitted for Approval')
+                        ->body(
+                            "Loan for {$record->widow->full_name} has been submitted. ".
+                            'Awaiting super admin approval.'
+                        )
+                        ->send();
+
+                } catch (InsufficientBankBalanceException $e) {
+                    Notification::make()
+                        ->danger()
+                        ->title('Insufficient Disbursement Funds')
+                        ->body($e->getMessage())
+                        ->persistent()
+                        ->send();
+
+                    return;
+
+                } catch (Throwable $e) {
+                    report($e);
+
+                    Notification::make()
+                        ->danger()
+                        ->title('Unable to Submit Loan')
+                        ->body(
+                            'The loan could not be submitted for approval. '.
+                            'Please try again or contact an administrator.'
+                        )
+                        ->persistent()
+                        ->send();
+                }
             })
-            ->visible(fn (WidowLoan $record) =>
-                $record->status === \App\Enums\WidowLoanStatus::DRAFT
-                && !$record->approvalFlow
+            ->visible(fn (WidowLoan $record) => $record->status === \App\Enums\WidowLoanStatus::DRAFT
+                && ! $record->approvalFlow
                 && (
-                    // Coordinators can submit loans they manage
-                    auth()->user()->hasAnyRole(['coordinator', 'admin', 'super_admin'])
-                    // Or any user with the explicit permission
+                    auth()->user()->hasAnyRole([
+                        'coordinator',
+                        'admin',
+                        'super_admin',
+                    ])
                     || auth()->user()->can('submit_widow_loans')
                 )
             );
