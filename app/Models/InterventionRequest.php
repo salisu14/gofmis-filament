@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
@@ -82,12 +83,26 @@ class InterventionRequest extends Model
     public function scopeEducation(Builder $query): Builder
     {
         return $query->whereHas('type', fn (Builder $query) => $query
-            ->whereRaw('LOWER(name) LIKE ?', ['%education%']));
+            ->where(function ($q) {
+                $q->whereRaw('LOWER(name) LIKE ?', ['%education%'])
+                    ->orWhereRaw('LOWER(name) LIKE ?', ['%school%'])
+                    ->orWhereRaw('LOWER(name) LIKE ?', ['%tuition%'])
+                    ->orWhereRaw('LOWER(name) LIKE ?', ['%uniform%'])
+                    ->orWhereRaw('LOWER(name) LIKE ?', ['%book%'])
+                    ->orWhereRaw('LOWER(name) LIKE ?', ['%scholarship%']);
+            }));
     }
 
     public function isEducationRequest(): bool
     {
-        return str_contains(strtolower((string) $this->type?->name), 'education');
+        $name = strtolower((string) $this->type?->name);
+
+        return str_contains($name, 'education')
+            || str_contains($name, 'school')
+            || str_contains($name, 'tuition')
+            || str_contains($name, 'uniform')
+            || str_contains($name, 'book')
+            || str_contains($name, 'scholarship');
     }
 
     public function canStartReview(): bool
@@ -175,7 +190,7 @@ class InterventionRequest extends Model
                     'action' => "education_request_{$request->status}",
                     'model_type' => self::class,
                     'model_id' => $request->id,
-                    'description' => "Education request {$request->status} by " . auth()->user()->name,
+                    'description' => "Education request {$request->status} by ".auth()->user()->name,
                     'details' => [
                         'old_status' => $request->getOriginal('status'),
                         'new_status' => $request->status,
