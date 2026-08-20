@@ -94,6 +94,7 @@ class OrphansRelationManager extends RelationManager
                     ->label('Add Orphan')
                     ->icon('heroicon-m-plus')
                     ->modalWidth('4xl')
+                    ->url(null)
                     ->using(function (array $data, RelationManager $livewire): Orphan {
                         $deceased = $livewire->getOwnerRecord();
 

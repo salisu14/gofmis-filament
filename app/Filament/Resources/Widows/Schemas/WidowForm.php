@@ -16,8 +16,57 @@ use Filament\Schemas\Schema;
 
 class WidowForm
 {
-    public static function configure(Schema $schema): Schema
+    public static function configure(Schema $schema, bool $includeDeceased = true): Schema
     {
+        $familyFields = [];
+
+        if ($includeDeceased) {
+            $familyFields[] = Select::make('deceased_id')
+                ->label('Deceased')
+                ->relationship(
+                    name: 'deceased',
+                    titleAttribute: 'id',
+                    modifyQueryUsing: fn ($query) => $query
+                        ->orderBy('first_name')
+                        ->orderBy('last_name')
+                )
+                ->getOptionLabelFromRecordUsing(
+                    fn (Deceased $record): string => $record->full_name
+                        ?: trim(
+                            collect([
+                                $record->first_name,
+                                $record->middle_name,
+                                $record->last_name,
+                            ])
+                                ->filter()
+                                ->implode(' ')
+                        )
+                        ?: 'Unnamed deceased record'
+                )
+                ->searchable([
+                    'full_name',
+                    'first_name',
+                    'middle_name',
+                    'last_name',
+                ])
+                ->preload()
+                ->required();
+        }
+
+        $familyFields[] = TextInput::make('child_sequence')
+            ->label('Sequence Order')
+            ->placeholder('Auto-calculated')
+            ->numeric()
+            ->disabled()
+            ->dehydrated(false);
+
+        $familyFields[] = Textarea::make('address')
+            ->label('Residential Address')
+            ->placeholder('Enter detailed address with landmarks...')
+            ->rows(3)
+            ->required()
+            ->columnSpanFull();
+
         return $schema
             ->components([
                 Section::make('Personal Information')
@@ -82,52 +131,7 @@ class WidowForm
 
                 Section::make('Family Link & Context')
                     ->icon('heroicon-m-home-modern')
-                    ->schema([
-                        Select::make('deceased_id')
-                            ->label('Deceased')
-                            ->relationship(
-                                name: 'deceased',
-                                titleAttribute: 'id',
-                                modifyQueryUsing: fn ($query) => $query
-                                    ->orderBy('first_name')
-                                    ->orderBy('last_name')
-                            )
-                            ->getOptionLabelFromRecordUsing(
-                                fn (Deceased $record): string => $record->full_name
-                                    ?: trim(
-                                        collect([
-                                            $record->first_name,
-                                            $record->middle_name,
-                                            $record->last_name,
-                                        ])
-                                            ->filter()
-                                            ->implode(' ')
-                                    )
-                                    ?: 'Unnamed deceased record'
-                            )
-                            ->searchable([
-                                'full_name',
-                                'first_name',
-                                'middle_name',
-                                'last_name',
-                            ])
-                            ->preload()
-                            ->required(),
-
-                        TextInput::make('child_sequence')
-                            ->label('Sequence Order')
-                            ->placeholder('Auto-calculated')
-                            ->numeric()
-                            ->disabled()
-                            ->dehydrated(false),
-
-                        Textarea::make('address')
-                            ->label('Residential Address')
-                            ->placeholder('Enter detailed address with landmarks...')
-                            ->rows(3)
-                            ->required()
-                            ->columnSpanFull(),
-                    ]),
+                    ->schema($familyFields),
 
                 Section::make('Documents')
                     ->icon('heroicon-m-photo')

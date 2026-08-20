@@ -283,7 +283,7 @@ test('14 & 15. no runtime orphan creation path writes raw draft or approved stri
         ->and($actionFile)->not->toContain("'status' => 'approved'");
 });
 
-test('16 & 17. Deceased -> Add Orphan relation manager inline CreateAction creates orphan bound to owner deceased record with canonical status', function () {
+test('16 & 17. Deceased relation managers inline CreateAction open modals without redirect and auto-assign owner deceased_id', function () {
     Livewire::test(\App\Filament\Resources\Deceased\RelationManagers\OrphansRelationManager::class, [
         'ownerRecord' => $this->deceased,
         'pageClass' => \App\Filament\Resources\Deceased\Pages\EditDeceased::class,
@@ -304,6 +304,27 @@ test('16 & 17. Deceased -> Add Orphan relation manager inline CreateAction creat
         'deceased_id' => $this->deceased->id,
         'status' => OrphanStatus::PENDING_REVIEW,
         'is_eligible' => false,
+    ]);
+
+    Livewire::test(\App\Filament\Resources\Deceased\RelationManagers\WidowsRelationManager::class, [
+        'ownerRecord' => $this->deceased,
+        'pageClass' => \App\Filament\Resources\Deceased\Pages\EditDeceased::class,
+    ])
+        ->callTableAction('create', data: [
+            'first_name' => 'Inline',
+            'last_name' => 'Widow',
+            'nin' => '98765432102',
+            'address' => '789 Modal Ave',
+            'is_eligible' => true,
+            'is_married' => false,
+        ])
+        ->assertHasNoTableActionErrors();
+
+    $this->assertDatabaseHas('widows', [
+        'first_name' => 'Inline',
+        'last_name' => 'Widow',
+        'deceased_id' => $this->deceased->id,
+        'is_eligible' => true,
     ]);
 });
 
