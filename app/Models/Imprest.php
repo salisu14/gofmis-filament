@@ -11,13 +11,17 @@ class Imprest extends Model
 {
     use HasUuids;
 
+    protected $table = 'imprest_funds';
+
     protected $fillable = [
-        'name',
+        'location',
         'authorized_amount',
         'current_balance',
         'custodian_id',
         'start_date',
+        'status',
         'is_active',
+        'notes',
     ];
 
     protected $casts = [
