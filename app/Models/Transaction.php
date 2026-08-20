@@ -121,15 +121,48 @@ class Transaction extends Model
         });
     }
 
-    public function isCreditType(?string $type = null): bool
+    public static function getCreditTypes(): array
     {
-        return in_array($type ?? $this->type, [
+        return [
             'deposit',
             'credit',
             'loan_repayment',
             'imprest_replenishment_reversal',
             'imprest_expense_void',
-        ], true);
+            'education_fee_payment_void',
+        ];
+    }
+
+    public static function getDebitTypes(): array
+    {
+        return [
+            'withdrawal',
+            'debit',
+            'transfer',
+            'loan_disbursement',
+            'imprest_funding',
+            'imprest_replenishment',
+            'imprest_expense',
+            'education_fee_payment',
+            'intervention',
+        ];
+    }
+
+    public function isCreditType(?string $type = null): bool
+    {
+        return in_array($type ?? $this->type, static::getCreditTypes(), true);
+    }
+
+    public function isDebitType(?string $type = null): bool
+    {
+        return in_array($type ?? $this->type, static::getDebitTypes(), true);
+    }
+
+    public function isRecognizedType(?string $type = null): bool
+    {
+        $targetType = $type ?? $this->type;
+
+        return $this->isCreditType($targetType) || $this->isDebitType($targetType);
     }
 
     public static function generateReference(?string $type = null): string

@@ -73,30 +73,51 @@ class ReconcileFinance extends Command
             $hasTransferIn = \App\Models\Transaction::where('destination_bank_account_id', $account->id)->exists();
 
             if ($hasDirectTx || $hasTransferIn) {
-                $creditTypes = ['deposit', 'credit', 'loan_repayment', 'imprest_replenishment_reversal', 'imprest_expense_void'];
+                $creditTypes = \App\Models\Transaction::getCreditTypes();
+                $debitTypes = \App\Models\Transaction::getDebitTypes();
 
-                $creditsOnAccount = (float) \App\Models\Transaction::where('bank_account_id', $account->id)
-                    ->whereIn('type', $creditTypes)
-                    ->sum('amount');
+                // Explicitly check for unknown transaction types
+                $unknownTypes = \App\Models\Transaction::where(function ($query) use ($account) {
+                    $query->where('bank_account_id', $account->id)
+                        ->orWhere('destination_bank_account_id', $account->id);
+                })
+                    ->whereNotIn('type', array_merge($creditTypes, $debitTypes))
+                    ->distinct()
+                    ->pluck('type')
+                    ->toArray();
 
-                $transfersIn = (float) \App\Models\Transaction::where('destination_bank_account_id', $account->id)
-                    ->sum('amount');
-
-                $debitsOnAccount = (float) \App\Models\Transaction::where('bank_account_id', $account->id)
-                    ->whereNotIn('type', $creditTypes)
-                    ->sum('amount');
-
-                $netTxSum = ($creditsOnAccount + $transfersIn) - $debitsOnAccount;
-                $expectedLedger = (float) $account->opening_balance + $netTxSum;
-
-                if (! $account->isSubAccount() && abs($expectedLedger - $ledger) > 0.05) {
+                if (! empty($unknownTypes)) {
                     $inconsistencies[] = [
                         'module' => 'Bank Account',
                         'id' => $account->id,
                         'reference' => $account->display_name ?? $account->account_number,
-                        'issue' => 'Ledger balance (₦'.number_format($ledger, 2).') mismatch with transaction sum (₦'.number_format($expectedLedger, 2).')',
+                        'issue' => 'UNKNOWN TRANSACTION TYPE: '.implode(', ', $unknownTypes),
                     ];
                     $totalIssues++;
+                } else {
+                    $creditsOnAccount = (float) \App\Models\Transaction::where('bank_account_id', $account->id)
+                        ->whereIn('type', $creditTypes)
+                        ->sum('amount');
+
+                    $transfersIn = (float) \App\Models\Transaction::where('destination_bank_account_id', $account->id)
+                        ->sum('amount');
+
+                    $debitsOnAccount = (float) \App\Models\Transaction::where('bank_account_id', $account->id)
+                        ->whereIn('type', $debitTypes)
+                        ->sum('amount');
+
+                    $netTxSum = ($creditsOnAccount + $transfersIn) - $debitsOnAccount;
+                    $expectedLedger = (float) $account->opening_balance + $netTxSum;
+
+                    if (! $account->isSubAccount() && abs($expectedLedger - $ledger) > 0.05) {
+                        $inconsistencies[] = [
+                            'module' => 'Bank Account',
+                            'id' => $account->id,
+                            'reference' => $account->display_name ?? $account->account_number,
+                            'issue' => 'Ledger balance (₦'.number_format($ledger, 2).') mismatch with transaction sum (₦'.number_format($expectedLedger, 2).')',
+                        ];
+                        $totalIssues++;
+                    }
                 }
             }
         }
