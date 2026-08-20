@@ -12,6 +12,17 @@ class CreateOrphan extends CreateRecord
 {
     protected static string $resource = OrphanResource::class;
 
+    public function mount(): void
+    {
+        parent::mount();
+
+        if ($deceasedId = request()->query('deceased_id')) {
+            $this->form->fill([
+                'deceased_id' => $deceasedId,
+            ]);
+        }
+    }
+
     /**
      * Intercepts the creation process to use the custom RegisterOrphanAction.
      * This ensures that registration numbers, educational records,

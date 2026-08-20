@@ -5,7 +5,6 @@ namespace App\Filament\Resources\Orphans\RelationManagers;
 use App\Enums\IllnessCategory;
 use App\Filament\Resources\Orphans\OrphanResource;
 use App\Models\Illness;
-use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
@@ -24,6 +23,7 @@ use Filament\Tables\Table;
 class PrescriptionsRelationManager extends RelationManager
 {
     protected static string $relationship = 'prescriptions';
+
     protected static ?string $relatedResource = OrphanResource::class;
 
     protected static ?string $recordTitleAttribute = 'illness';
@@ -50,7 +50,7 @@ class PrescriptionsRelationManager extends RelationManager
                                 ->preload()
                                 ->native(false)
                                 ->optionsLimit(50)
-                                ->getOptionLabelFromRecordUsing(fn(Illness $record): string => "{$record->name} — {$record->category?->label()}")
+                                ->getOptionLabelFromRecordUsing(fn (Illness $record): string => "{$record->name} — {$record->category?->label()}")
                                 ->createOptionForm([
                                     Section::make('New Illness')
                                         ->schema([
@@ -165,14 +165,15 @@ class PrescriptionsRelationManager extends RelationManager
                 TextColumn::make('total_cost')
                     ->label('Total Cost')
                     ->money('NGN')
-                    ->state(fn($record) => (float)$record->lab_test_cost + (float)$record->drug_cost)
+                    ->state(fn ($record) => (float) $record->lab_test_cost + (float) $record->drug_cost)
                     ->color('success'),
             ])
             ->headerActions([
-                CreateAction::make()
+                Action::make('createPrescription')
                     ->label('New Prescription')
                     ->icon('heroicon-m-plus')
-                    ->modalWidth('4xl'),
+                    ->button()
+                    ->url(fn (RelationManager $livewire): string => \App\Filament\Resources\Prescriptions\PrescriptionResource::getUrl('create').'?prescribable_type='.urlencode(Orphan::class).'&prescribable_id='.$livewire->getOwnerRecord()->getKey()),
             ])
             ->recordActions([
                 ViewAction::make(),

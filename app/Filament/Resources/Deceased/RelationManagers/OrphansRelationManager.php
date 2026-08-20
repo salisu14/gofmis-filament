@@ -9,9 +9,7 @@ use App\Models\Illness;
 use App\Models\Medication;
 use App\Models\Orphan;
 use App\Models\Prescription;
-use App\Services\RegistrationNumberService;
 use Filament\Actions\Action;
-use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
@@ -257,19 +255,11 @@ class OrphansRelationManager extends RelationManager
                     ),
             ])
             ->headerActions([
-                CreateAction::make()
+                Action::make('createOrphan')
                     ->label('Add Orphan')
                     ->icon('heroicon-m-plus')
-                    ->modalWidth('4xl')
-                    ->mutateDataUsing(function (array $data, RelationManager $livewire): array {
-
-                        $deceased = $livewire->getOwnerRecord();
-
-                        $generated = app(RegistrationNumberService::class)
-                            ->generateOrphanData($deceased);
-
-                        return array_merge($data, $generated);
-                    }),
+                    ->button()
+                    ->url(fn (RelationManager $livewire): string => OrphanResource::getUrl('create').'?deceased_id='.$livewire->getOwnerRecord()->getKey()),
             ])
             ->recordActions([
                 // IMPROVED MEDICAL RECORDS ACTION
