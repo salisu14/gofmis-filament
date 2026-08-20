@@ -18,6 +18,8 @@ class OrphanForm
 {
     public static function configure(Schema $schema, bool $includeDeceased = true): Schema
     {
+        $isArchivedOrIneligible = fn ($record) => $record?->status === \App\Enums\OrphanStatus::ARCHIVED || $record?->is_eligible === false;
+
         $personalSchema = [
             Grid::make(3)->schema([
                 TextInput::make('first_name')
@@ -35,7 +37,8 @@ class OrphanForm
                     ->label('Gender')
                     ->options(\App\Enums\Gender::class)
                     ->required()
-                    ->native(false),
+                    ->native(false)
+                    ->disabled($isArchivedOrIneligible),
 
                 TextInput::make('nin')
                     ->label('NIN')
@@ -57,6 +60,7 @@ class OrphanForm
                     ->required()
                     ->native(false)
                     ->displayFormat('d/m/Y')
+                    ->disabled($isArchivedOrIneligible)
                     ->live()
                     ->afterStateUpdated(function ($state, $set) {
                         if ($state) {
@@ -100,6 +104,7 @@ class OrphanForm
                     'last_name',
                 ])
                 ->preload()
+                ->disabled($isArchivedOrIneligible)
                 ->required();
         }
 
@@ -117,11 +122,13 @@ class OrphanForm
                             Toggle::make('is_eligible')
                                 ->label('Eligible for Support')
                                 ->default(true)
+                                ->disabled($isArchivedOrIneligible)
                                 ->inline(false),
 
                             Toggle::make('is_married')
                                 ->label('Remarried')
                                 ->default(false)
+                                ->disabled($isArchivedOrIneligible)
                                 ->live()
                                 ->inline(false),
 
@@ -137,6 +144,7 @@ class OrphanForm
                             ->label('Date of New Marriage')
                             ->visible(fn ($get) => $get('is_married'))
                             ->required(fn ($get) => $get('is_married'))
+                            ->disabled($isArchivedOrIneligible)
                             ->native(false),
 
                         TagsInput::make('skills')

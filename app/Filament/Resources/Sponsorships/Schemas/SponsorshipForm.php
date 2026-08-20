@@ -23,7 +23,14 @@ class SponsorshipForm
                         Grid::make(2)->schema([
                             Select::make('orphan_id')
                                 ->label('Sponsored Orphan')
-                                ->relationship('orphan', 'full_name')
+                                ->relationship(
+                                    name: 'orphan',
+                                    titleAttribute: 'full_name',
+                                    modifyQueryUsing: fn ($query, $operation, $record) => $query
+                                        ->when($operation === 'create', fn ($q) => $q->eligible())
+                                        ->when($record?->orphan_id, fn ($q) => $q->orWhere('id', $record->orphan_id))
+                                        ->orderBy('full_name')
+                                )
                                 ->searchable()
                                 ->preload()
                                 ->required()

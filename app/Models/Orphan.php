@@ -209,6 +209,16 @@ class Orphan extends Model
         return $query;
     }
 
+    public function hasHistoricalRecords(): bool
+    {
+        return $this->educations()->exists()
+            || $this->prescriptions()->exists()
+            || $this->interventionRequests()->exists()
+            || $this->interventions()->exists()
+            || $this->sponsorships()->exists()
+            || $this->idCards()->exists();
+    }
+
     public function isEligibleForIntervention(): bool
     {
         if ($this->is_married) {
@@ -248,12 +258,38 @@ class Orphan extends Model
             });
         });
 
+        $preventDelete = function (Orphan $orphan) {
+            $status = $orphan->status instanceof OrphanStatus ? $orphan->status : OrphanStatus::tryFrom((string) $orphan->status);
+
+            if ($status === OrphanStatus::ARCHIVED || ! $orphan->is_eligible) {
+                throw new \DomainException('Archived orphan records cannot be deleted as they preserve historical beneficiary records.');
+            }
+
+            if ($orphan->hasHistoricalRecords()) {
+                throw new \DomainException('Beneficiaries with historical records cannot be deleted.');
+            }
+        };
+
+        static::deleting($preventDelete);
+
         static::saving(function ($model) {
             if ($model->birth_date) {
                 $model->age = \Carbon\Carbon::parse($model->birth_date)->age;
             }
 
             $gender = $model->gender instanceof Gender ? $model->gender : Gender::tryFrom((string) $model->gender);
+
+            // Prevent silent reactivation of archived/ineligible records
+            if ($model->exists) {
+                $originalStatus = $model->getOriginal('status');
+                $originalStatusValue = $originalStatus instanceof OrphanStatus ? $originalStatus : OrphanStatus::tryFrom((string) $originalStatus);
+                $originalEligible = (bool) $model->getOriginal('is_eligible');
+
+                if ($originalStatusValue === OrphanStatus::ARCHIVED || ! $originalEligible) {
+                    $model->status = OrphanStatus::ARCHIVED;
+                    $model->is_eligible = false;
+                }
+            }
 
             if (
                 ($gender === Gender::MALE && $model->age >= 18) ||

@@ -358,13 +358,42 @@ class OrphansTable
                                 ->send();
                         }),
 
-                    DeleteAction::make(),
+                    DeleteAction::make()
+                        ->visible(fn (Orphan $record): bool => $record->status !== OrphanStatus::ARCHIVED && $record->is_eligible && ! $record->hasHistoricalRecords()),
                 ]),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make(),
-                    ForceDeleteBulkAction::make(),
+                    DeleteBulkAction::make()
+                        ->action(function (\Illuminate\Database\Eloquent\Collection $records) {
+                            $deletable = $records->filter(fn (Orphan $record) => $record->status !== OrphanStatus::ARCHIVED && $record->is_eligible && ! $record->hasHistoricalRecords());
+                            $skipped = $records->count() - $deletable->count();
+
+                            $deletable->each->delete();
+
+                            if ($skipped > 0) {
+                                Notification::make()
+                                    ->warning()
+                                    ->title('Bulk Delete Warning')
+                                    ->body("{$skipped} archived or historical orphan record(s) were protected from deletion.")
+                                    ->send();
+                            }
+                        }),
+                    ForceDeleteBulkAction::make()
+                        ->action(function (\Illuminate\Database\Eloquent\Collection $records) {
+                            $deletable = $records->filter(fn (Orphan $record) => $record->status !== OrphanStatus::ARCHIVED && $record->is_eligible && ! $record->hasHistoricalRecords());
+                            $skipped = $records->count() - $deletable->count();
+
+                            $deletable->each->forceDelete();
+
+                            if ($skipped > 0) {
+                                Notification::make()
+                                    ->warning()
+                                    ->title('Bulk Force Delete Warning')
+                                    ->body("{$skipped} archived or historical orphan record(s) were protected from force deletion.")
+                                    ->send();
+                            }
+                        }),
                     RestoreBulkAction::make(),
                 ]),
             ]);
