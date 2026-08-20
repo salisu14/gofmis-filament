@@ -190,3 +190,74 @@ test('6. medication pivot records preserve historical prescription linkage', fun
     expect(\Illuminate\Support\Facades\DB::table('medication_prescriptions')->where('prescription_id', $prescription->id)->count())->toBe(1);
     expect($prescription->medications()->first()->name)->toBe('Artemether / Lumefantrine');
 });
+
+test('7. admin prescriptions table index renders cleanly without TypeError when loading records', function () {
+    $prescription = Prescription::create([
+        'prescribable_type' => Orphan::class,
+        'prescribable_id' => $this->orphan->id,
+        'doctor_name' => 'Dr. ListTest',
+        'illness_id' => $this->illness->id,
+        'user_id' => $this->coordinator->id,
+        'prescription_date' => now()->toDateString(),
+    ]);
+
+    Filament::setCurrentPanel(Filament::getPanel('admin'));
+    $this->actingAs($this->admin);
+
+    Livewire::test(\App\Filament\Resources\Prescriptions\Pages\ListPrescriptions::class)
+        ->assertSuccessful()
+        ->assertCanSeeTableRecords([$prescription])
+        ->assertTableActionExists('markTreated')
+        ->assertTableActionExists('edit')
+        ->assertTableActionExists('view');
+});
+
+test('8. action visibility rules on pending vs treated records', function () {
+    $pendingPrescription = Prescription::create([
+        'prescribable_type' => Orphan::class,
+        'prescribable_id' => $this->orphan->id,
+        'doctor_name' => 'Dr. PendingVis',
+        'illness_id' => $this->illness->id,
+        'user_id' => $this->coordinator->id,
+        'prescription_date' => now()->toDateString(),
+    ]);
+
+    $treatedPrescription = Prescription::create([
+        'prescribable_type' => Orphan::class,
+        'prescribable_id' => $this->orphan->id,
+        'doctor_name' => 'Dr. TreatedVis',
+        'illness_id' => $this->illness->id,
+        'user_id' => $this->coordinator->id,
+        'prescription_date' => now()->toDateString(),
+    ]);
+    $treatedPrescription->markAsTreated('Finished', now()->toDateTimeString(), $this->admin->id);
+
+    Filament::setCurrentPanel(Filament::getPanel('admin'));
+    $this->actingAs($this->admin);
+
+    Livewire::test(\App\Filament\Resources\Prescriptions\Pages\ListPrescriptions::class)
+        ->assertTableActionVisible('edit', $pendingPrescription)
+        ->assertTableActionVisible('markTreated', $pendingPrescription)
+        ->assertTableActionVisible('delete', $pendingPrescription)
+        ->assertTableActionHidden('edit', $treatedPrescription)
+        ->assertTableActionHidden('markTreated', $treatedPrescription)
+        ->assertTableActionHidden('delete', $treatedPrescription);
+});
+
+test('9. direct navigation to edit page for treated prescription is denied with forbidden status', function () {
+    $treatedPrescription = Prescription::create([
+        'prescribable_type' => Orphan::class,
+        'prescribable_id' => $this->orphan->id,
+        'doctor_name' => 'Dr. DirectNav',
+        'illness_id' => $this->illness->id,
+        'user_id' => $this->coordinator->id,
+        'prescription_date' => now()->toDateString(),
+    ]);
+    $treatedPrescription->markAsTreated('Finished', now()->toDateTimeString(), $this->admin->id);
+
+    Filament::setCurrentPanel(Filament::getPanel('admin'));
+    $this->actingAs($this->admin);
+
+    Livewire::test(\App\Filament\Resources\Prescriptions\Pages\EditPrescription::class, ['record' => $treatedPrescription->getRouteKey()])
+        ->assertForbidden();
+});

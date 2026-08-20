@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Prescriptions\Tables;
 
 use App\Enums\PrescriptionStatus;
+use App\Models\Prescription;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;

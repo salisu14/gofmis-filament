@@ -31,6 +31,16 @@ class PrescriptionResource extends Resource
         return PrescriptionsTable::configure($table);
     }
 
+    public static function canEdit($record): bool
+    {
+        return $record?->isPending() ?? true;
+    }
+
+    public static function canDelete($record): bool
+    {
+        return $record?->isPending() ?? true;
+    }
+
     public static function getRelations(): array
     {
         return [
