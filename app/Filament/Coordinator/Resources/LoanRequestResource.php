@@ -351,23 +351,7 @@ class LoanRequestResource extends Resource
                 EditAction::make()
                     ->visible(fn ($record) => $record->status === WidowLoanStatus::DRAFT),
 
-                Action::make('submit')
-                    ->label('Submit for Approval')
-                    ->icon('heroicon-m-paper-airplane')
-                    ->color('primary')
-                    ->requiresConfirmation()
-                    ->modalHeading('Submit Loan Request')
-                    ->modalDescription('This will send the loan request for admin approval.')
-                    ->visible(fn ($record) => $record->status === WidowLoanStatus::DRAFT)
-                    ->action(function (WidowLoan $record) {
-                        $record->update(['status' => WidowLoanStatus::PENDING]);
-
-                        Notification::make()
-                            ->title('Submitted Successfully')
-                            ->body('Loan request has been submitted for approval.')
-                            ->success()
-                            ->send();
-                    }),
+                \App\Filament\Actions\SubmitForApprovalAction::make(),
 
                 Action::make('view_schedule')
                     ->label('Repayment Schedule')

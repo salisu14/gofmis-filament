@@ -264,7 +264,8 @@ class WidowLoan extends Model
      */
     public function canSubmitForApproval(): bool
     {
-        return $this->status === WidowLoanStatus::DRAFT && ! $this->isAwaitingApproval();
+        return ($this->status === WidowLoanStatus::DRAFT || ($this->status === WidowLoanStatus::PENDING && ! $this->approvalFlow))
+            && ! $this->isAwaitingApproval();
     }
 
     /**

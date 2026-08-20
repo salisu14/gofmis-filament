@@ -1,4 +1,5 @@
 <?php
+
 // app/Filament\Coordinator\Resources\LoanRequestResource/Pages/ViewLoanRequest.php
 
 namespace App\Filament\Coordinator\Resources\LoanRequestResource\Pages;
@@ -15,7 +16,7 @@ class ViewLoanRequest extends ViewRecord
     {
         return [
             Actions\EditAction::make(),
-//                ->visible(fn($record) => $record->status === \App\Enums\BeneficiaryStatus::PENDING),
+            \App\Filament\Actions\SubmitForApprovalAction::make(),
         ];
     }
 }

@@ -66,7 +66,14 @@ class WidowLoanService
 
         $bankAccount = $loan->bankAccount;
         if (! $bankAccount) {
-            throw new \RuntimeException('A bank account must be assigned before submission.');
+            $defaultAccount = BankAccount::dedicatedTo(BankAccount::USAGE_WIDOW_LOAN_DISBURSEMENT)->first();
+            if ($defaultAccount) {
+                $loan->update(['bank_account_id' => $defaultAccount->id]);
+                $loan->refresh();
+                $bankAccount = $loan->bankAccount;
+            } else {
+                throw new \RuntimeException('A bank account must be assigned before submission.');
+            }
         }
 
         DB::transaction(function () use ($loan, $approvers, $bankAccount) {
