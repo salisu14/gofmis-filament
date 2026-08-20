@@ -8,7 +8,6 @@ use Filament\Forms\Components\Textarea;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
-use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 
 class ZoneTransferForm
@@ -23,25 +22,34 @@ class ZoneTransferForm
                     ->schema([
                         Grid::make(2)->schema([
                             Select::make('deceased_id')
-                                ->label('Household Head (Deceased)')
-                                ->relationship('deceased', 'full_name')
-                                ->getOptionLabelFromRecordUsing(fn ($record) => "{$record->full_name} ({$record->reg_no})")
-                                ->searchable()
-                                ->preload()
-                                ->required()
-                                ->live()
-                                // Auto-fill the current zone when a household is selected
-                                ->afterStateUpdated(function (Get $get, Set $set, ?string $state) {
-                                    if (!$state) {
-                                        $set('from_zone_id', null);
-                                        return;
-                                    }
-
-                                    $deceased = Deceased::find($state);
-                                    if ($deceased) {
-                                        $set('from_zone_id', $deceased->zone_id);
-                                    }
-                                }),
+                                ->label('Deceased')
+                                ->relationship(
+                                    name: 'deceased',
+                                    titleAttribute: 'id',
+                                    modifyQueryUsing: fn ($query) => $query
+                                        ->orderBy('first_name')
+                                        ->orderBy('last_name')
+                                )
+                                ->getOptionLabelFromRecordUsing(
+                                    fn (Deceased $record): string => $record->full_name
+                                        ?: trim(
+                                            collect([
+                                                $record->first_name,
+                                                $record->middle_name,
+                                                $record->last_name,
+                                            ])
+                                                ->filter()
+                                                ->implode(' ')
+                                        )
+                                        ?: 'Unnamed deceased record'
+                                )
+                                ->searchable([
+                                    'full_name',
+                                    'first_name',
+                                    'middle_name',
+                                    'last_name',
+                                ])
+                                ->preload(),
 
                             Select::make('moved_by')
                                 ->label('Authorized By')

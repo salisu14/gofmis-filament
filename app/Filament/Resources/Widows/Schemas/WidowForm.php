@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Widows\Schemas;
 
+use App\Models\Deceased;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
@@ -83,9 +84,33 @@ class WidowForm
                     ->icon('heroicon-m-home-modern')
                     ->schema([
                         Select::make('deceased_id')
-                            ->label('Deceased Spouse')
-                            ->relationship('deceased', 'full_name')
-                            ->searchable()
+                            ->label('Deceased')
+                            ->relationship(
+                                name: 'deceased',
+                                titleAttribute: 'id',
+                                modifyQueryUsing: fn ($query) => $query
+                                    ->orderBy('first_name')
+                                    ->orderBy('last_name')
+                            )
+                            ->getOptionLabelFromRecordUsing(
+                                fn (Deceased $record): string => $record->full_name
+                                    ?: trim(
+                                        collect([
+                                            $record->first_name,
+                                            $record->middle_name,
+                                            $record->last_name,
+                                        ])
+                                            ->filter()
+                                            ->implode(' ')
+                                    )
+                                    ?: 'Unnamed deceased record'
+                            )
+                            ->searchable([
+                                'full_name',
+                                'first_name',
+                                'middle_name',
+                                'last_name',
+                            ])
                             ->preload()
                             ->required(),
 
