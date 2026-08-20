@@ -279,13 +279,12 @@ class Orphan extends Model
 
             $gender = $model->gender instanceof Gender ? $model->gender : Gender::tryFrom((string) $model->gender);
 
-            // Prevent silent reactivation of archived/ineligible records
+            // Prevent silent reactivation of archived records
             if ($model->exists) {
                 $originalStatus = $model->getOriginal('status');
                 $originalStatusValue = $originalStatus instanceof OrphanStatus ? $originalStatus : OrphanStatus::tryFrom((string) $originalStatus);
-                $originalEligible = (bool) $model->getOriginal('is_eligible');
 
-                if ($originalStatusValue === OrphanStatus::ARCHIVED || ! $originalEligible) {
+                if ($originalStatusValue === OrphanStatus::ARCHIVED) {
                     $model->status = OrphanStatus::ARCHIVED;
                     $model->is_eligible = false;
                 }
