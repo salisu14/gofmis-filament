@@ -281,9 +281,13 @@ class ViewWidowLoan extends ViewRecord
                             ->first();
 
                         if ($case) {
+                            $activityType = $data['activity_type'] instanceof WidowLoanRecoveryActivityType
+                                ? $data['activity_type']
+                                : WidowLoanRecoveryActivityType::from($data['activity_type']);
+
                             app(WidowLoanRecoveryService::class)->createRecoveryActivity(
                                 caseId: $case->id,
-                                type: WidowLoanRecoveryActivityType::from($data['activity_type']),
+                                type: $activityType,
                                 notes: $data['notes'],
                                 contactMethod: $data['contact_method'],
                                 nextFollowUpAt: $data['next_follow_up_at'] ?? null,
@@ -473,11 +477,15 @@ class ViewWidowLoan extends ViewRecord
                 ])
                 ->action(function (WidowLoan $record, array $data): void {
                     try {
+                        $frequency = $data['new_repayment_frequency'] instanceof LoanRepaymentFrequency
+                            ? $data['new_repayment_frequency']
+                            : LoanRepaymentFrequency::from($data['new_repayment_frequency']);
+
                         app(WidowLoanRestructureService::class)->proposeRestructure(
                             loanId: $record->id,
                             hardshipCaseId: $record->hardshipCases()->first()?->id,
                             newDurationMonths: (int) $data['new_duration_months'],
-                            newFrequency: LoanRepaymentFrequency::from($data['new_repayment_frequency']),
+                            newFrequency: $frequency,
                             newInstallmentAmount: (float) $data['new_installment_amount'],
                             effectiveDate: $data['effective_date'],
                             reason: $data['reason'],
