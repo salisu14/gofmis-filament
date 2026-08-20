@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Prescriptions\Schemas;
 
 use App\Enums\IllnessCategory;
+use App\Enums\PrescriptionStatus;
 use App\Models\Illness;
 use App\Models\Orphan;
 use App\Models\Widow;
@@ -22,6 +23,42 @@ class PrescriptionForm
     public static function configure(Schema $schema, bool $includePatient = true): Schema
     {
         $components = [
+            Section::make('Treatment Status & Outcome')
+                ->description('Status of treatment administration and completion details.')
+                ->icon('heroicon-m-check-badge')
+                ->schema([
+                    Grid::make(3)->schema([
+                        Select::make('status')
+                            ->label('Treatment Status')
+                            ->options(PrescriptionStatus::class)
+                            ->enum(PrescriptionStatus::class)
+                            ->default(PrescriptionStatus::PENDING->value)
+                            ->native(false)
+                            ->disabled()
+                            ->dehydrated(),
+
+                        DatePicker::make('treated_at')
+                            ->label('Completed Date')
+                            ->native(false)
+                            ->disabled()
+                            ->dehydrated(),
+
+                        Select::make('treated_by_id')
+                            ->label('Completed By')
+                            ->relationship('treatedBy', 'name')
+                            ->disabled()
+                            ->dehydrated(),
+                    ]),
+
+                    Textarea::make('treatment_notes')
+                        ->label('Treatment Outcome & Administration Notes')
+                        ->rows(3)
+                        ->disabled()
+                        ->dehydrated()
+                        ->columnSpanFull()
+                        ->visible(fn ($record) => $record?->isTreated()),
+                ]),
+
             Section::make('Clinical Information')
                 ->description('Diagnosis details and attending physician.')
                 ->icon('heroicon-m-beaker')
@@ -30,16 +67,17 @@ class PrescriptionForm
                         TextInput::make('doctor_name')
                             ->label('Doctor Name')
                             ->placeholder('e.g. Dr. Adamu Musa')
+                            ->disabled(fn ($record) => $record?->isTreated())
                             ->required()
                             ->maxLength(255),
 
-                        // Wider illness select with category display and inline creation
                         Select::make('illness_id')
                             ->label('Illness / Diagnosis')
                             ->relationship('illnessModel', 'name')
                             ->searchable()
                             ->preload()
                             ->native(false)
+                            ->disabled(fn ($record) => $record?->isTreated())
                             ->optionsLimit(50)
                             ->getOptionLabelFromRecordUsing(function (Illness $record): string {
                                 $categoryLabel = $record->category instanceof IllnessCategory ? $record->category->label() : ($record->category ?? 'General');
@@ -72,29 +110,13 @@ class PrescriptionForm
                             ->createOptionUsing(function (array $data): string {
                                 return Illness::create($data)->getKey();
                             })
-                            ->editOptionForm([
-                                Section::make('Edit Illness')
-                                    ->schema([
-                                        TextInput::make('name')
-                                            ->required()
-                                            ->maxLength(255),
-
-                                        Select::make('category')
-                                            ->options(IllnessCategory::class)
-                                            ->enum(IllnessCategory::class)
-                                            ->required()
-                                            ->native(false),
-
-                                        Textarea::make('description')
-                                            ->rows(2),
-                                    ]),
-                            ])
-                            ->columnSpan(2) // Makes illness select wider (2/3 of row)
+                            ->columnSpan(2)
                             ->required(),
 
                         DatePicker::make('prescription_date')
                             ->label('Date of Visit')
                             ->default(now())
+                            ->disabled(fn ($record) => $record?->isTreated())
                             ->required()
                             ->native(false)
                             ->closeOnDateSelection(),
@@ -115,6 +137,7 @@ class PrescriptionForm
                                 Widow::class => 'Widow',
                             ])
                             ->required()
+                            ->disabledOn('edit')
                             ->live()
                             ->afterStateUpdated(
                                 fn (Set $set) => $set('prescribable_id', null)
@@ -126,6 +149,7 @@ class PrescriptionForm
                         Select::make('prescribable_id')
                             ->label('Patient Name')
                             ->placeholder('Select patient')
+                            ->disabledOn('edit')
                             ->options(function (Get $get): array {
                                 $type = $get('prescribable_type');
 
@@ -168,6 +192,7 @@ class PrescriptionForm
                             ->label('Issuing Staff')
                             ->relationship('user', 'name')
                             ->required()
+                            ->disabled(fn ($record) => $record?->isTreated())
                             ->default(auth()->id())
                             ->searchable()
                             ->preload()
@@ -179,31 +204,39 @@ class PrescriptionForm
                 ->default(auth()->id());
         }
 
+        $isStaff = auth()->user()?->hasAnyRole(['admin', 'super_admin']);
+
+        $medicationSelect = Select::make('medications')
+            ->label('Prescribed Medications')
+            ->multiple()
+            ->relationship('medications', 'name')
+            ->preload()
+            ->searchable()
+            ->native(false)
+            ->disabled(fn ($record) => $record?->isTreated())
+            ->columnSpanFull()
+            ->hint('Select drugs from the pharmacy master list')
+            ->hintIcon('heroicon-m-information-circle');
+
+        if ($isStaff) {
+            $medicationSelect->createOptionForm([
+                TextInput::make('name')
+                    ->required()
+                    ->maxLength(255),
+                TextInput::make('dosage_form')
+                    ->placeholder('e.g. Tablet, Syrup, Injection'),
+                TextInput::make('unit_price')
+                    ->numeric()
+                    ->prefix('₦')
+                    ->default(0),
+            ]);
+        }
+
         $components[] = Section::make('Pharmacy & Billing')
             ->description('Medications prescribed and associated costs.')
             ->icon('heroicon-m-banknotes')
             ->schema([
-                Select::make('medications')
-                    ->label('Prescribed Medications')
-                    ->multiple()
-                    ->relationship('medications', 'name')
-                    ->preload()
-                    ->searchable()
-                    ->native(false)
-                    ->columnSpanFull()
-                    ->hint('Select drugs from the pharmacy master list')
-                    ->hintIcon('heroicon-m-information-circle')
-                    ->createOptionForm([
-                        TextInput::make('name')
-                            ->required()
-                            ->maxLength(255),
-                        TextInput::make('dosage_form')
-                            ->placeholder('e.g. Tablet, Syrup, Injection'),
-                        TextInput::make('unit_price')
-                            ->numeric()
-                            ->prefix('₦')
-                            ->default(0),
-                    ]),
+                $medicationSelect,
 
                 Grid::make(3)->schema([
                     TextInput::make('lab_test_cost')
@@ -211,6 +244,7 @@ class PrescriptionForm
                         ->numeric()
                         ->default(0)
                         ->prefix('₦')
+                        ->disabled(fn ($record) => $record?->isTreated())
                         ->minValue(0)
                         ->step(0.01)
                         ->required(),
@@ -220,6 +254,7 @@ class PrescriptionForm
                         ->numeric()
                         ->default(0)
                         ->prefix('₦')
+                        ->disabled(fn ($record) => $record?->isTreated())
                         ->minValue(0)
                         ->step(0.01)
                         ->required(),
@@ -241,6 +276,7 @@ class PrescriptionForm
                 Textarea::make('note')
                     ->label('Clinical Notes & Dosage Instructions')
                     ->placeholder('Enter dosage instructions, frequency, duration, or additional observations...')
+                    ->disabled(fn ($record) => $record?->isTreated())
                     ->rows(4)
                     ->columnSpanFull()
                     ->hint('Include dosage, frequency, and duration for each medication'),

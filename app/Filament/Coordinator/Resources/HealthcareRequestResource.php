@@ -4,7 +4,7 @@
 
 namespace App\Filament\Coordinator\Resources;
 
-use App\Enums\IllnessCategory;
+use App\Enums\PrescriptionStatus;
 use App\Filament\Coordinator\Resources\HealthcareRequestResource\Pages\CreateHealthcareRequest;
 use App\Filament\Coordinator\Resources\HealthcareRequestResource\Pages\EditHealthcareRequest;
 use App\Filament\Coordinator\Resources\HealthcareRequestResource\Pages\ListHealthcareRequests;
@@ -102,6 +102,11 @@ class HealthcareRequestResource extends Resource
     public static function canEdit($record): bool
     {
         $user = auth()->user();
+
+        if (! $record || $record->isTreated()) {
+            return false;
+        }
+
         if ($user?->hasAnyRole(['admin', 'super_admin'])) {
             return true;
         }
@@ -111,6 +116,10 @@ class HealthcareRequestResource extends Resource
 
     public static function canDelete($record): bool
     {
+        if ($record?->isTreated()) {
+            return false;
+        }
+
         return auth()->user()?->hasAnyRole(['admin', 'super_admin']) ?? false;
     }
 
@@ -130,6 +139,31 @@ class HealthcareRequestResource extends Resource
 
         return $schema
             ->schema([
+                Section::make('Treatment Outcome & Status')
+                    ->description('Administration details and completion status.')
+                    ->icon('heroicon-m-check-badge')
+                    ->schema([
+                        Select::make('status')
+                            ->label('Status')
+                            ->options(PrescriptionStatus::class)
+                            ->enum(PrescriptionStatus::class)
+                            ->disabled()
+                            ->dehydrated(),
+
+                        DatePicker::make('treated_at')
+                            ->label('Treated Date')
+                            ->disabled()
+                            ->dehydrated(),
+
+                        Textarea::make('treatment_notes')
+                            ->label('Treatment Notes')
+                            ->rows(3)
+                            ->disabled()
+                            ->dehydrated()
+                            ->columnSpanFull(),
+                    ])
+                    ->visible(fn ($record) => $record?->isTreated()),
+
                 Section::make('Patient Information')
                     ->schema([
                         Select::make('prescribable_type')
@@ -139,6 +173,7 @@ class HealthcareRequestResource extends Resource
                                 Widow::class => 'Widow',
                             ])
                             ->required()
+                            ->disabledOn('edit')
                             ->live()
                             ->afterStateUpdated(fn (Set $set) => $set('prescribable_id', null))
                             ->native(false)
@@ -147,6 +182,7 @@ class HealthcareRequestResource extends Resource
 
                         Select::make('prescribable_id')
                             ->label('Patient')
+                            ->disabledOn('edit')
                             ->options(function (Get $get) {
                                 $type = $get('prescribable_type');
                                 if (! $type) {
@@ -286,6 +322,7 @@ class HealthcareRequestResource extends Resource
                         Forms\Components\TextInput::make('doctor_name')
                             ->label('Doctor/Hospital Name')
                             ->required()
+                            ->disabled(fn ($record) => $record?->isTreated())
                             ->placeholder('Dr. Name or Hospital')
                             ->maxLength(255),
 
@@ -294,25 +331,29 @@ class HealthcareRequestResource extends Resource
                             ->relationship('illnessModel', 'name')
                             ->searchable()
                             ->preload()
+                            ->disabled(fn ($record) => $record?->isTreated())
                             ->required()
                             ->native(false)
-                            ->getOptionLabelFromRecordUsing(fn (Illness $record) => "{$record->name} (".($record->category?->label() ?? 'Other').')')
-                            ->createOptionForm([
-                                TextInput::make('name')
-                                    ->required()
-                                    ->unique(Illness::class, 'name'),
-                                Select::make('category')
-                                    ->options(IllnessCategory::class)
-                                    ->required()
-                                    ->native(false),
-                                Textarea::make('description')->rows(2),
-                            ]),
+                            ->getOptionLabelFromRecordUsing(fn (Illness $record) => "{$record->name} (".($record->category?->label() ?? 'Other').')'),
+
+                        Select::make('medications')
+                            ->label('Prescribed / Requested Medications')
+                            ->multiple()
+                            ->relationship('medications', 'name')
+                            ->preload()
+                            ->searchable()
+                            ->native(false)
+                            ->disabled(fn ($record) => $record?->isTreated())
+                            ->columnSpanFull()
+                            ->hint('Select drugs from the pharmacy master list')
+                            ->hintIcon('heroicon-m-information-circle'),
 
                         Forms\Components\TextInput::make('lab_test_cost')
                             ->label('Lab Test Cost (₦)')
                             ->numeric()
                             ->prefix('₦')
                             ->default(0)
+                            ->disabled(fn ($record) => $record?->isTreated())
                             ->live()
                             ->afterStateUpdated(fn (Set $set, Get $get) => $set('total_cost', (float) ($get('lab_test_cost') ?? 0) + (float) ($get('drug_cost') ?? 0))
                             ),
@@ -322,6 +363,7 @@ class HealthcareRequestResource extends Resource
                             ->numeric()
                             ->prefix('₦')
                             ->default(0)
+                            ->disabled(fn ($record) => $record?->isTreated())
                             ->live()
                             ->afterStateUpdated(fn (Set $set, Get $get) => $set('total_cost', (float) ($get('lab_test_cost') ?? 0) + (float) ($get('drug_cost') ?? 0))
                             ),
@@ -343,6 +385,7 @@ class HealthcareRequestResource extends Resource
                             ->label('Prescription Date')
                             ->required()
                             ->default(now())
+                            ->disabled(fn ($record) => $record?->isTreated())
                             ->native(false)
                             ->closeOnDateSelection(),
                     ]),
@@ -352,6 +395,7 @@ class HealthcareRequestResource extends Resource
                         Textarea::make('note')
                             ->label('Clinical Notes & Dosage Instructions')
                             ->rows(4)
+                            ->disabled(fn ($record) => $record?->isTreated())
                             ->placeholder('Enter dosage instructions, frequency, duration, or additional observations...')
                             ->columnSpanFull(),
                     ]),
@@ -384,6 +428,11 @@ class HealthcareRequestResource extends Resource
                     ->searchable()
                     ->limit(30),
 
+                Tables\Columns\TextColumn::make('status')
+                    ->label('Status')
+                    ->badge()
+                    ->sortable(),
+
                 Tables\Columns\TextColumn::make('doctor_name')
                     ->label('Doctor/Hospital')
                     ->searchable()
@@ -398,6 +447,12 @@ class HealthcareRequestResource extends Resource
                     ->date('M d, Y')
                     ->sortable(),
 
+                Tables\Columns\TextColumn::make('treated_at')
+                    ->label('Treated At')
+                    ->date('M d, Y')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+
                 Tables\Columns\TextColumn::make('user.name')
                     ->label('Prescribed By')
                     ->toggleable(isToggledHiddenByDefault: true),
@@ -408,6 +463,10 @@ class HealthcareRequestResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
+                Tables\Filters\SelectFilter::make('status')
+                    ->label('Treatment Status')
+                    ->options(PrescriptionStatus::class),
+
                 Tables\Filters\SelectFilter::make('prescribable_type')
                     ->label('Patient Type')
                     ->options([
@@ -444,7 +503,7 @@ class HealthcareRequestResource extends Resource
             ->recordActions([
                 ViewAction::make(),
                 EditAction::make()
-                    ->visible(fn ($record) => $record->created_at->diffInDays(now()) <= 7),
+                    ->visible(fn ($record) => $record->isPending() && $record->created_at->diffInDays(now()) <= 7),
             ])
             ->defaultSort('prescription_date', 'desc');
     }

@@ -2,7 +2,10 @@
 
 use App\Enums\Gender;
 use App\Enums\IllnessCategory;
+use App\Enums\PrescriptionStatus;
+use App\Filament\Coordinator\Resources\HealthcareRequestResource;
 use App\Filament\Coordinator\Resources\HealthcareRequestResource\Pages\ViewHealthcareRequest;
+use App\Filament\Resources\Prescriptions\Pages\ViewPrescription;
 use App\Models\Deceased;
 use App\Models\Illness;
 use App\Models\Medication;
@@ -89,4 +92,101 @@ test('1. end-to-end healthcare request creation -> medication prescription fulfi
     Livewire::test(ViewHealthcareRequest::class, ['record' => $prescription->getRouteKey()])
         ->assertSuccessful()
         ->assertSee('Amina');
+});
+
+test('2. admin can mark healthcare request as treated with action', function () {
+    $prescription = Prescription::create([
+        'prescribable_type' => Orphan::class,
+        'prescribable_id' => $this->orphan->id,
+        'doctor_name' => 'Dr. TreatmentTest',
+        'illness_id' => $this->illness->id,
+        'user_id' => $this->coordinator->id,
+        'prescription_date' => now()->toDateString(),
+    ]);
+
+    expect($prescription->isPending())->toBeTrue();
+    expect($prescription->isTreated())->toBeFalse();
+
+    Filament::setCurrentPanel(Filament::getPanel('admin'));
+    $this->actingAs($this->admin);
+
+    Livewire::test(ViewPrescription::class, ['record' => $prescription->getRouteKey()])
+        ->callAction('markTreated', [
+            'treated_at' => now()->toDateString(),
+            'treatment_notes' => 'Medication fully administered. Patient recovered.',
+        ])
+        ->assertHasNoActionErrors();
+
+    $prescription->refresh();
+    expect($prescription->status)->toBe(PrescriptionStatus::TREATED);
+    expect($prescription->isTreated())->toBeTrue();
+    expect($prescription->treated_by_id)->toBe($this->admin->id);
+    expect($prescription->treatment_notes)->toBe('Medication fully administered. Patient recovered.');
+});
+
+test('3. marking an already treated record throws domain exception', function () {
+    $prescription = Prescription::create([
+        'prescribable_type' => Orphan::class,
+        'prescribable_id' => $this->orphan->id,
+        'doctor_name' => 'Dr. DoubleTreat',
+        'illness_id' => $this->illness->id,
+        'user_id' => $this->coordinator->id,
+        'prescription_date' => now()->toDateString(),
+    ]);
+
+    $prescription->markAsTreated('First treatment completion', now()->toDateTimeString(), $this->admin->id);
+
+    expect(fn () => $prescription->markAsTreated('Second attempt'))
+        ->toThrow(\DomainException::class, 'This healthcare request has already been marked as treated.');
+});
+
+test('4. treated healthcare record cannot be deleted', function () {
+    $prescription = Prescription::create([
+        'prescribable_type' => Orphan::class,
+        'prescribable_id' => $this->orphan->id,
+        'doctor_name' => 'Dr. DeletionGuard',
+        'illness_id' => $this->illness->id,
+        'user_id' => $this->coordinator->id,
+        'prescription_date' => now()->toDateString(),
+    ]);
+
+    $prescription->markAsTreated('Completed treatment', now()->toDateTimeString(), $this->admin->id);
+
+    expect(fn () => $prescription->delete())
+        ->toThrow(\DomainException::class, 'Completed healthcare and treatment records cannot be deleted.');
+});
+
+test('5. coordinator cannot edit or delete treated record', function () {
+    $prescription = Prescription::create([
+        'prescribable_type' => Orphan::class,
+        'prescribable_id' => $this->orphan->id,
+        'doctor_name' => 'Dr. CoordGuard',
+        'illness_id' => $this->illness->id,
+        'user_id' => $this->coordinator->id,
+        'prescription_date' => now()->toDateString(),
+    ]);
+
+    $prescription->markAsTreated('Done', now()->toDateTimeString(), $this->admin->id);
+
+    Filament::setCurrentPanel(Filament::getPanel('coordinator'));
+    $this->actingAs($this->coordinator);
+
+    expect(HealthcareRequestResource::canEdit($prescription))->toBeFalse();
+    expect(HealthcareRequestResource::canDelete($prescription))->toBeFalse();
+});
+
+test('6. medication pivot records preserve historical prescription linkage', function () {
+    $prescription = Prescription::create([
+        'prescribable_type' => Orphan::class,
+        'prescribable_id' => $this->orphan->id,
+        'doctor_name' => 'Dr. Preservative',
+        'illness_id' => $this->illness->id,
+        'user_id' => $this->coordinator->id,
+        'prescription_date' => now()->toDateString(),
+    ]);
+
+    $prescription->medications()->attach([$this->medication1->id]);
+
+    expect(\Illuminate\Support\Facades\DB::table('medication_prescriptions')->where('prescription_id', $prescription->id)->count())->toBe(1);
+    expect($prescription->medications()->first()->name)->toBe('Artemether / Lumefantrine');
 });
