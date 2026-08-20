@@ -44,6 +44,8 @@ class WidowLoanResource extends Resource
         return [
             RelationManagers\SchedulesRelationManager::class,
             RelationManagers\RepaymentsRelationManager::class,
+            RelationManagers\HardshipRelationManager::class,
+            RelationManagers\RecoveryRelationManager::class,
         ];
     }
 
@@ -67,6 +69,6 @@ class WidowLoanResource extends Resource
 
     public function getActiveRelationManager(): int
     {
-        return (int)request()->query('relation', 0);
+        return (int) request()->query('relation', 0);
     }
 }

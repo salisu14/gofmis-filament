@@ -35,8 +35,11 @@ This document provides a structured manual testing checklist for user acceptance
 | **Financial** | Bank Balance Reconciliation | Stored balance matches calculated transaction sum | `admin`, `auditor` | **PASS** | Verified via `finance:reconcile` |
 | **Financial** | Bank Balance Repair Command | Dry run reports zero changes, apply updates inside DB transaction | `super_admin` | **PASS** | Verified in RepairBankBalancesTest |
 | **Widow Loans** | Disburse Loan & Generate Schedule | Disbursing loan generates versioned repayment schedule | `admin` | **PASS** | Verified in WidowLoanDelinquencyAndHardshipTest |
-| **Widow Loans** | Evaluate Delinquency | Daily command updates DPD and flags overdue/delinquent loans | `system` | **PASS** | Verified via `widow-loans:evaluate-delinquency` |
-| **Widow Loans** | Write Off Loan | Super admin writes off loan with supporting document | `super_admin` | **PASS** | Verified in WidowLoanWriteOffTest |
+| **Widow Loans** | Evaluate Delinquency | Daily command updates DPD and flags overdue/delinquent loans | `system` | **PASS** | Verified via `widow-loans:evaluate-delinquency` (Scheduled daily in `routes/console.php`) |
+| **Widow Loans** | Report & Approve Hardship | Coordinator reports hardship; Admin verifies; Super Admin approves relief window | `coordinator`, `admin`, `super_admin` | **PASS** | Verified in `WidowLoanUiTest` & `WidowLoanDelinquencyAndHardshipTest` |
+| **Widow Loans** | Recovery Activity & Promise to Pay | Log contact activities and register/fulfill/break promise to pay | `coordinator`, `admin` | **PASS** | Verified in `WidowLoanUiTest` |
+| **Widow Loans** | Write-Off Recommendation | Coordinator/Admin recommends write-off for administrative review | `coordinator`, `admin` | **PASS** | Verified in `WidowLoanUiTest` |
+| **Widow Loans** | Write Off Loan | Super admin writes off loan with supporting document & MFA phrase confirmation | `super_admin` | **PASS** | Verified in `WidowLoanWriteOffTest` & `WidowLoanUiTest` |
 | **Welfare** | Package & Beneficiary Allocation | Welfare package items allocated to eligible beneficiaries | `admin` | **PASS** | Verified in FilamentResourceSmokeTest |
 | **Projects** | Project Creation & Milestones | Project budget allocated and milestones tracked | `admin` | **PASS** | Verified in FilamentResourceSmokeTest |
 | **Imprest** | Fund Replenishment & Expense | Custodian records imprest expense against parent/sub-account | `finance-custodian` | **PASS** | Verified in FilamentResourceSmokeTest |
