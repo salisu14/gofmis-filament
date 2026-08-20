@@ -1,4 +1,5 @@
 <?php
+
 // app/Filament/Coordinator\Resources\EducationRequestResource/Pages/EditEducationRequest.php
 
 namespace App\Filament\Coordinator\Resources\EducationRequestResource\Pages;
@@ -17,8 +18,19 @@ class EditEducationRequest extends EditRecord
         return [
             Actions\ViewAction::make(),
             Actions\DeleteAction::make()
-                ->visible(fn() => auth()->user()?->hasAnyRole(['admin', 'super_admin'])),
+                ->visible(fn () => auth()->user()?->hasAnyRole(['admin', 'super_admin'])),
         ];
+    }
+
+    protected function mutateFormDataBeforeSave(array $data): array
+    {
+        foreach ($data as $k => $v) {
+            if (is_array($v) && ! in_array($k, ['supporting_documents', 'items', 'verification_documents'], true)) {
+                $data[$k] = reset($v);
+            }
+        }
+
+        return $data;
     }
 
     protected function beforeSave(): void

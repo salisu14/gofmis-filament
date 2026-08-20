@@ -9,15 +9,21 @@ use App\Filament\Coordinator\Resources\EducationRequestResource\Pages\EditEducat
 use App\Filament\Coordinator\Resources\EducationRequestResource\Pages\ListEducationRequests;
 use App\Filament\Coordinator\Resources\EducationRequestResource\Pages\ViewEducationRequest;
 use App\Models\InterventionRequest;
+use App\Models\InterventionType;
+use App\Models\Item;
+use App\Models\Orphan;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Hidden;
+use Filament\Forms\Components\Placeholder;
+use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Tables;
@@ -143,6 +149,51 @@ class EducationRequestResource extends Resource
                             ->searchable()
                             ->required()
                             ->helperText('Search and select an eligible orphan in your zone.'),
+
+                        Placeholder::make('current_education_summary')
+                            ->label('Current Education Context')
+                            ->content(function ($get) {
+                                $orphanId = $get('orphan_id');
+                                if (is_array($orphanId)) {
+                                    $orphanId = reset($orphanId);
+                                }
+                                if (! $orphanId || ! is_string($orphanId)) {
+                                    return 'Select an orphan to view education record.';
+                                }
+
+                                $user = auth()->user();
+                                $zoneId = $user?->coordinatedZone?->id;
+
+                                $orphan = Orphan::find($orphanId);
+                                if (! $orphan) {
+                                    return 'Select an orphan to view education record.';
+                                }
+
+                                if (! $user?->hasAnyRole(['admin', 'super_admin']) && $orphan->deceased?->zone_id !== $zoneId) {
+                                    return 'Unauthorized: Orphan outside assigned zone.';
+                                }
+
+                                $education = \App\Models\OrphanEducation::with(['institution', 'orphanClass'])
+                                    ->where('orphan_id', $orphanId)
+                                    ->where('is_current', true)
+                                    ->latest()
+                                    ->first() ?? \App\Models\OrphanEducation::with(['institution', 'orphanClass'])
+                                    ->where('orphan_id', $orphanId)
+                                    ->latest()
+                                    ->first();
+
+                                if (! $education) {
+                                    return 'No school enrollment record found for this orphan.';
+                                }
+
+                                $institutionName = $education->institution?->name ?? 'N/A';
+                                $level = $education->level;
+                                $fee = $education->school_fee ? '₦'.number_format($education->school_fee, 2) : 'N/A';
+                                $freq = ucfirst($education->fee_frequency ?? 'termly');
+                                $supported = $education->is_fee_supported ? 'Yes (₦'.number_format($education->support_amount, 2).')' : 'No';
+
+                                return "School: {$institutionName} | Level: {$level} | Fee: {$fee} ({$freq}) | Fee Supported: {$supported}";
+                            }),
                     ]),
 
                 Section::make('Request Details')
@@ -150,11 +201,32 @@ class EducationRequestResource extends Resource
                     ->schema([
                         Select::make('intervention_type_id')
                             ->label('Education Support Type')
-                            ->options(fn () => \App\Models\InterventionType::query()
-                                ->whereRaw('LOWER(name) LIKE ?', ['%education%'])
-                                ->pluck('name', 'id'))
+                            ->options(function () {
+                                $getOptions = fn () => \App\Models\InterventionType::query()
+                                    ->where(function ($q) {
+                                        $q->whereRaw('LOWER(name) LIKE ?', ['%education%'])
+                                            ->orWhereRaw('LOWER(name) LIKE ?', ['%school%'])
+                                            ->orWhereRaw('LOWER(name) LIKE ?', ['%tuition%'])
+                                            ->orWhereRaw('LOWER(name) LIKE ?', ['%uniform%'])
+                                            ->orWhereRaw('LOWER(name) LIKE ?', ['%book%'])
+                                            ->orWhereRaw('LOWER(name) LIKE ?', ['%scholarship%']);
+                                    })
+                                    ->pluck('name', 'id')
+                                    ->toArray();
+
+                                $options = $getOptions();
+                                if (empty($options)) {
+                                    (new \Database\Seeders\InterventionTypeSeeder)->run();
+                                    $options = $getOptions();
+                                }
+
+                                return $options;
+                            })
                             ->required()
-                            ->searchable(),
+                            ->searchable()
+                            ->preload()
+                            ->dehydrateStateUsing(fn ($state) => is_array($state) ? (reset($state) ?: null) : $state)
+                            ->exists('intervention_types', 'id'),
 
                         DatePicker::make('request_date')
                             ->label('Request Date')
@@ -185,6 +257,95 @@ class EducationRequestResource extends Resource
                             ->numeric()
                             ->prefix('₦')
                             ->placeholder('If fee support requested'),
+                    ]),
+
+                Section::make('Requested Items')
+                    ->description('Specify physical items required for this education request.')
+                    ->icon('heroicon-m-shopping-bag')
+                    ->visible(function ($get) {
+                        $typeId = $get('intervention_type_id');
+                        if (is_array($typeId)) {
+                            $typeId = reset($typeId);
+                        }
+                        if (! $typeId) {
+                            return true;
+                        }
+
+                        $type = InterventionType::find($typeId);
+                        if (! $type) {
+                            return true;
+                        }
+
+                        return $type->supportsItems() || $type->requiresItems();
+                    })
+                    ->schema([
+                        Repeater::make('items')
+                            ->relationship('items')
+                            ->disabled(fn ($record) => $record && $record->status !== 'pending')
+                            ->schema([
+                                Grid::make(2)->schema([
+                                    Select::make('item_id')
+                                        ->label('Item')
+                                        ->searchable()
+                                        ->preload()
+                                        ->required()
+                                        ->options(function () {
+                                            return Item::with('category')->get()
+                                                ->groupBy(fn ($item) => $item->category?->name ?? 'General Education Items')
+                                                ->map(fn ($items) => $items->pluck('name', 'id'))
+                                                ->toArray();
+                                        })
+                                        ->live()
+                                        ->afterStateUpdated(function ($state, $set) {
+                                            if ($state) {
+                                                $item = Item::find($state);
+                                                $set('item_name', $item?->name);
+                                                if ($item?->description) {
+                                                    $set('specification', $item->description);
+                                                }
+                                            }
+                                        }),
+
+                                    TextInput::make('quantity_requested')
+                                        ->label('Qty Requested')
+                                        ->numeric()
+                                        ->minValue(1)
+                                        ->default(1)
+                                        ->required(),
+                                ]),
+
+                                Grid::make(2)->schema([
+                                    TextInput::make('orphan_class')
+                                        ->label('Size / Class Context')
+                                        ->placeholder('e.g. Large, Size 34, JSS 1'),
+
+                                    TextInput::make('specification')
+                                        ->label('Specific Details')
+                                        ->placeholder('e.g. Blue color, Cotton material'),
+                                ]),
+
+                                Hidden::make('item_name'),
+                            ])
+                            ->minItems(function ($get) {
+                                $typeId = $get('intervention_type_id');
+                                if (is_array($typeId)) {
+                                    $typeId = reset($typeId);
+                                }
+                                if (! $typeId) {
+                                    return 0;
+                                }
+
+                                $type = InterventionType::find($typeId);
+
+                                return ($type && $type->requiresItems()) ? 1 : 0;
+                            })
+                            ->addActionLabel('Add Requested Item')
+                            ->collapsible()
+                            ->defaultItems(0)
+                            ->itemLabel(fn (array $state): ?string => ! empty($state['item_name'])
+                                ? $state['item_name'].(isset($state['quantity_requested']) ? " (Qty: {$state['quantity_requested']})" : '')
+                                : (! empty($state['item_id']) ? (Item::find($state['item_id'])?->name ?? 'Requested Item') : 'Requested Item')
+                            ),
                     ]),
 
                 Section::make('Justification')
