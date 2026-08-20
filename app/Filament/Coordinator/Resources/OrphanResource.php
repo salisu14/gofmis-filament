@@ -295,13 +295,8 @@ class OrphanResource extends Resource
 
                 Tables\Columns\TextColumn::make('status')
                     ->badge()
-                    ->color(fn (string $state) => match ($state) {
-                        'active', 'approved' => 'success',
-                        'pending', 'pending_review' => 'warning',
-                        'rejected', 'inactive' => 'danger',
-                        Orphan::STATUS_ARCHIVED => 'gray',
-                        default => 'gray',
-                    }),
+                    ->formatStateUsing(fn ($state) => $state instanceof \App\Enums\OrphanStatus ? $state->label() : (\App\Enums\OrphanStatus::tryFrom((string) $state)?->label() ?? ucfirst((string) $state)))
+                    ->color(fn ($state) => $state instanceof \App\Enums\OrphanStatus ? $state->color() : (\App\Enums\OrphanStatus::tryFrom((string) $state)?->color() ?? 'gray')),
 
                 Tables\Columns\IconColumn::make('is_eligible')
                     ->label('Eligible')
@@ -317,15 +312,7 @@ class OrphanResource extends Resource
             ->filters([
                 Tables\Filters\SelectFilter::make('gender')->options(Gender::class),
                 Tables\Filters\SelectFilter::make('status')
-                    ->options([
-                        'active' => 'Active',
-                        'approved' => 'Approved',
-                        'pending' => 'Pending',
-                        'pending_review' => 'Pending Review',
-                        'inactive' => 'Inactive',
-                        'rejected' => 'Rejected',
-                        Orphan::STATUS_ARCHIVED => 'Archived',
-                    ]),
+                    ->options(\App\Enums\OrphanStatus::class),
                 Tables\Filters\TernaryFilter::make('is_eligible')->label('Eligible Only'),
                 Tables\Filters\TernaryFilter::make('is_married')->label('Married Only'),
             ])

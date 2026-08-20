@@ -1,4 +1,5 @@
 <?php
+
 // app/Filament/Coordinator/Widgets/RecentActivityWidget.php
 
 namespace App\Filament\Coordinator\Widgets;
@@ -16,7 +17,9 @@ use Illuminate\Database\Eloquent\Builder;
 class RecentActivityWidget extends Widget
 {
     protected static ?int $sort = 3;
+
     protected int|string|array $columnSpan = ['lg' => 2];
+
     protected string $view = 'filament.coordinator.widgets.recent-activity';
 
     // Helper method at top of class
@@ -29,6 +32,7 @@ class RecentActivityWidget extends Widget
                 'record' => $record->id,
                 'error' => $e->getMessage(),
             ]);
+
             return null;
         }
     }
@@ -39,7 +43,7 @@ class RecentActivityWidget extends Widget
         $zoneId = auth()->user()?->coordinatedZone?->id;
         $isAdmin = auth()->user()?->hasAnyRole(['admin', 'super_admin']);
 
-        if (!$isAdmin && !$zoneId) {
+        if (! $isAdmin && ! $zoneId) {
             return ['activities' => collect()];
         }
 
@@ -47,14 +51,14 @@ class RecentActivityWidget extends Widget
 
         // Deceased registrations
         $deceasedQuery = Deceased::query();
-        if (!$isAdmin && $zoneId) {
+        if (! $isAdmin && $zoneId) {
             $deceasedQuery->where('zone_id', $zoneId);
         }
         $deceasedQuery->latest()->limit(5)->get()
-            ->each(fn($item) => $activities->push([
+            ->each(fn ($item) => $activities->push([
                 'type' => 'deceased_registered',
                 'label' => 'Deceased Registered',
-                'description' => $item->full_name,
+                'description' => $item->display_name,
                 'icon' => 'heroicon-m-user-minus',
                 'color' => 'gray',
                 'time' => $item->created_at,
@@ -63,14 +67,14 @@ class RecentActivityWidget extends Widget
 
         // Orphan registrations
         $orphanQuery = Orphan::query()->with('deceased');
-        if (!$isAdmin && $zoneId) {
-            $orphanQuery->whereHas('deceased', fn($q) => $q->where('zone_id', $zoneId));
+        if (! $isAdmin && $zoneId) {
+            $orphanQuery->whereHas('deceased', fn ($q) => $q->where('zone_id', $zoneId));
         }
         $orphanQuery->latest()->limit(5)->get()
-            ->each(fn($item) => $activities->push([
+            ->each(fn ($item) => $activities->push([
                 'type' => 'orphan_registered',
                 'label' => 'Orphan Registered',
-                'description' => $item->full_name,
+                'description' => $item->display_name,
                 'icon' => 'heroicon-m-users',
                 'color' => 'info',
                 'time' => $item->created_at,
@@ -79,14 +83,14 @@ class RecentActivityWidget extends Widget
 
         // Widow registrations
         $widowQuery = Widow::query()->with('deceased');
-        if (!$isAdmin && $zoneId) {
-            $widowQuery->whereHas('deceased', fn($q) => $q->where('zone_id', $zoneId));
+        if (! $isAdmin && $zoneId) {
+            $widowQuery->whereHas('deceased', fn ($q) => $q->where('zone_id', $zoneId));
         }
         $widowQuery->latest()->limit(5)->get()
-            ->each(fn($item) => $activities->push([
+            ->each(fn ($item) => $activities->push([
                 'type' => 'widow_registered',
                 'label' => 'Widow Registered',
-                'description' => $item->full_name,
+                'description' => $item->display_name,
                 'icon' => 'heroicon-m-heart',
                 'color' => 'warning',
                 'time' => $item->created_at,
@@ -95,14 +99,14 @@ class RecentActivityWidget extends Widget
 
         // Loan requests
         $loanQuery = WidowLoan::query()->with('widow');
-        if (!$isAdmin && $zoneId) {
-            $loanQuery->whereHas('widow.deceased', fn($q) => $q->where('zone_id', $zoneId));
+        if (! $isAdmin && $zoneId) {
+            $loanQuery->whereHas('widow.deceased', fn ($q) => $q->where('zone_id', $zoneId));
         }
         $loanQuery->latest()->limit(5)->get()
-            ->each(fn($item) => $activities->push([
+            ->each(fn ($item) => $activities->push([
                 'type' => 'loan_requested',
                 'label' => 'Loan Requested',
-                'description' => '₦' . number_format($item->principal_amount, 2) . ' - ' . ($item->widow?->full_name ?? 'Unknown'),
+                'description' => '₦'.number_format($item->principal_amount, 2).' - '.($item->widow?->display_name ?? 'Unknown'),
                 'icon' => 'heroicon-m-banknotes',
                 'color' => 'success',
                 'time' => $item->created_at,
@@ -111,46 +115,46 @@ class RecentActivityWidget extends Widget
 
         // Healthcare requests
         $prescriptionQuery = Prescription::query();
-        if (!$isAdmin && $zoneId) {
+        if (! $isAdmin && $zoneId) {
             $prescriptionQuery->where(function (Builder $q) use ($zoneId) {
                 $q->whereHas('prescribable', function (Builder $q2) use ($zoneId) {
                     $q2->where(function (Builder $q3) use ($zoneId) {
                         $q3->where('prescribable_type', \App\Models\Orphan::class)
-                            ->whereHas('deceased', fn($q4) => $q4->where('zone_id', $zoneId));
+                            ->whereHas('deceased', fn ($q4) => $q4->where('zone_id', $zoneId));
                     })->orWhere(function (Builder $q3) use ($zoneId) {
                         $q3->where('prescribable_type', \App\Models\Widow::class)
-                            ->whereHas('deceased', fn($q4) => $q4->where('zone_id', $zoneId));
+                            ->whereHas('deceased', fn ($q4) => $q4->where('zone_id', $zoneId));
                     });
                 });
             });
         }
         $prescriptionQuery->latest()->limit(5)->get()
-            ->each(fn($item) => $activities->push([
+            ->each(fn ($item) => $activities->push([
                 'type' => 'healthcare_requested',
                 'label' => 'Healthcare Request',
-                'description' => $item->illness . ' (₦' . number_format($item->total_cost, 2) . ')',
+                'description' => $item->illness.' (₦'.number_format($item->total_cost, 2).')',
                 'icon' => 'heroicon-m-heart',
                 'color' => 'danger',
                 'time' => $item->created_at,
                 'url' => rescue(
-                    fn() => \App\Filament\Coordinator\Resources\HealthcareRequestResource::getUrl('view', ['record' => $item]),
-                    fn() => \App\Filament\Coordinator\Resources\HealthcareRequestResource::getUrl('edit', ['record' => $item]), // fallback to edit
+                    fn () => \App\Filament\Coordinator\Resources\HealthcareRequestResource::getUrl('view', ['record' => $item]),
+                    fn () => \App\Filament\Coordinator\Resources\HealthcareRequestResource::getUrl('edit', ['record' => $item]), // fallback to edit
                     false
                 ),
             ]));
 
         // Education requests
         $educationQuery = InterventionRequest::query()
-            ->whereHas('type', fn($q) => $q->where('name', 'like', '%education%'))
+            ->whereHas('type', fn ($q) => $q->where('name', 'like', '%education%'))
             ->with('orphan', 'type');
-        if (!$isAdmin && $zoneId) {
-            $educationQuery->whereHas('orphan.deceased', fn($q) => $q->where('zone_id', $zoneId));
+        if (! $isAdmin && $zoneId) {
+            $educationQuery->whereHas('orphan.deceased', fn ($q) => $q->where('zone_id', $zoneId));
         }
         $educationQuery->latest()->limit(5)->get()
-            ->each(fn($item) => $activities->push([
+            ->each(fn ($item) => $activities->push([
                 'type' => 'education_requested',
                 'label' => 'Education Request',
-                'description' => ($item->orphan?->full_name ?? 'Unknown') . ' - ' . ($item->type?->name ?? ''),
+                'description' => ($item->orphan?->display_name ?? 'Unknown').' - '.($item->type?->name ?? ''),
                 'icon' => 'heroicon-m-academic-cap',
                 'color' => 'primary',
                 'time' => $item->created_at,
@@ -159,14 +163,14 @@ class RecentActivityWidget extends Widget
 
         // Welfare requests
         $welfareQuery = WelfareBeneficiary::query()->with('deceased', 'welfarePackage');
-        if (!$isAdmin && $zoneId) {
-            $welfareQuery->whereHas('deceased', fn($q) => $q->where('zone_id', $zoneId));
+        if (! $isAdmin && $zoneId) {
+            $welfareQuery->whereHas('deceased', fn ($q) => $q->where('zone_id', $zoneId));
         }
         $welfareQuery->latest()->limit(5)->get()
-            ->each(fn($item) => $activities->push([
+            ->each(fn ($item) => $activities->push([
                 'type' => 'welfare_requested',
                 'label' => 'Welfare Request',
-                'description' => ($item->welfarePackage?->name ?? 'Unknown') . ' - ' . ($item->deceased?->full_name ?? 'Unknown'),
+                'description' => ($item->welfarePackage?->name ?? 'Unknown').' - '.($item->deceased?->display_name ?? 'Unknown'),
                 'icon' => 'heroicon-m-gift',
                 'color' => 'warning',
                 'time' => $item->created_at,

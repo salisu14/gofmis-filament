@@ -49,6 +49,21 @@ class Widow extends Model
         $this->attributes['picture_url'] = $value;
     }
 
+    public function getDisplayNameAttribute(): string
+    {
+        if (! empty($this->full_name)) {
+            return $this->full_name;
+        }
+
+        $name = trim(implode(' ', array_filter([
+            $this->first_name,
+            $this->middle_name,
+            $this->last_name,
+        ])));
+
+        return $name !== '' ? $name : ($this->reg_no ?? 'Widow #'.$this->id);
+    }
+
     /**
      * Mark widow as married and revoke eligibility.
      */

@@ -55,7 +55,7 @@ class PendingItemsWidget extends Widget
             ->each(fn ($item) => $items->push([
                 'type' => 'loan',
                 'label' => 'Loan Request',
-                'name' => $item->widow?->full_name ?? 'Unknown',
+                'name' => $item->widow?->display_name ?? 'Unknown',
                 'detail' => '₦'.number_format($item->principal_amount, 2),
                 'status' => 'Pending Approval',
                 'color' => 'warning',
@@ -73,7 +73,7 @@ class PendingItemsWidget extends Widget
             ->each(fn ($item) => $items->push([
                 'type' => 'education',
                 'label' => 'Education Request',
-                'name' => $item->orphan?->full_name ?? 'Unknown',
+                'name' => $item->orphan?->display_name ?? 'Unknown',
                 'detail' => $item->type?->name ?? '',
                 'status' => 'Pending',
                 'color' => 'info',
@@ -90,7 +90,7 @@ class PendingItemsWidget extends Widget
             ->each(fn ($item) => $items->push([
                 'type' => 'welfare',
                 'label' => 'Welfare Request',
-                'name' => $item->deceased?->full_name ?? 'Unknown',
+                'name' => $item->deceased?->display_name ?? 'Unknown',
                 'detail' => $item->welfarePackage?->name ?? '',
                 'status' => 'Pending',
                 'color' => 'warning',
