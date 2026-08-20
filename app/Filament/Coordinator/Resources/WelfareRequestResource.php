@@ -27,6 +27,7 @@ use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 
 class WelfareRequestResource extends Resource
 {
@@ -127,14 +128,32 @@ class WelfareRequestResource extends Resource
                         Select::make('welfare_package_id')
                             ->label('Welfare Package')
                             ->options(fn () => WelfarePackage::open()->pluck('name', 'id')->toArray())
+                            ->live()
                             ->rules([
-                                fn () => function (string $attribute, $value, \Closure $fail) {
+                                fn (Get $get, ?Model $record) => function (string $attribute, $value, \Closure $fail) use ($get, $record) {
                                     if (! $value) {
                                         return;
                                     }
                                     $package = WelfarePackage::find($value);
                                     if (! $package || ! $package->isOpen()) {
                                         $fail('The selected welfare package is closed or invalid.');
+
+                                        return;
+                                    }
+
+                                    $deceasedId = $get('deceased_id');
+                                    if (is_array($deceasedId)) {
+                                        $deceasedId = reset($deceasedId);
+                                    }
+                                    if ($deceasedId && is_string($deceasedId)) {
+                                        $exists = WelfareBeneficiary::where('welfare_package_id', $value)
+                                            ->where('deceased_id', $deceasedId)
+                                            ->when($record, fn ($q) => $q->where('id', '!=', $record->id))
+                                            ->exists();
+
+                                        if ($exists) {
+                                            $fail('This family already has a welfare request/allocation for the selected package.');
+                                        }
                                     }
                                 },
                             ])
@@ -178,7 +197,7 @@ class WelfareRequestResource extends Resource
                     ->schema([
                         Select::make('deceased_id')
                             ->label('Family Head (Deceased)')
-                            ->options(function () {
+                            ->options(function (Get $get, ?Model $record) {
                                 $user = auth()->user();
                                 $zoneId = $user?->coordinatedZone?->id;
 
@@ -191,10 +210,25 @@ class WelfareRequestResource extends Resource
                                     $query->where('zone_id', $zoneId);
                                 }
 
+                                $packageId = $get('welfare_package_id');
+                                if (is_array($packageId)) {
+                                    $packageId = reset($packageId);
+                                }
+                                if ($packageId && is_string($packageId)) {
+                                    $existingDeceasedIds = WelfareBeneficiary::where('welfare_package_id', $packageId)
+                                        ->when($record, fn ($q) => $q->where('id', '!=', $record->id))
+                                        ->pluck('deceased_id')
+                                        ->toArray();
+
+                                    if (! empty($existingDeceasedIds)) {
+                                        $query->whereNotIn('id', $existingDeceasedIds);
+                                    }
+                                }
+
                                 return $query->pluck('full_name', 'id')->toArray();
                             })
                             ->rules([
-                                fn () => function (string $attribute, $value, \Closure $fail) {
+                                fn (Get $get, ?Model $record) => function (string $attribute, $value, \Closure $fail) use ($get, $record) {
                                     if (! $value) {
                                         return;
                                     }
@@ -212,6 +246,23 @@ class WelfareRequestResource extends Resource
                                         $zoneId = $user?->coordinatedZone?->id;
                                         if (! $zoneId || $deceased->zone_id !== $zoneId) {
                                             $fail('You are not authorized to create a welfare request for a beneficiary outside your assigned zone.');
+
+                                            return;
+                                        }
+                                    }
+
+                                    $packageId = $get('welfare_package_id');
+                                    if (is_array($packageId)) {
+                                        $packageId = reset($packageId);
+                                    }
+                                    if ($packageId && is_string($packageId)) {
+                                        $exists = WelfareBeneficiary::where('welfare_package_id', $packageId)
+                                            ->where('deceased_id', $value)
+                                            ->when($record, fn ($q) => $q->where('id', '!=', $record->id))
+                                            ->exists();
+
+                                        if ($exists) {
+                                            $fail('This family already has a welfare request/allocation for the selected package.');
                                         }
                                     }
                                 },

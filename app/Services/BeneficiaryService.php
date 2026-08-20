@@ -25,14 +25,30 @@ class BeneficiaryService
             throw new RuntimeException('This welfare package has ended.');
         }
 
-        return DB::transaction(function () use ($package, $deceasedId, $suggestedBy) {
-            return WelfareBeneficiary::create([
-                'welfare_package_id' => $package->id,
-                'deceased_id' => $deceasedId,
-                'suggested_by' => $suggestedBy ?? auth()->id(),
-                'status' => BeneficiaryStatus::PENDING,
-                'collection_status' => CollectionStatus::NOT_COLLECTED,
+        if (WelfareBeneficiary::where('welfare_package_id', $package->id)->where('deceased_id', $deceasedId)->exists()) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'deceased_id' => 'This family already has a welfare request/allocation for the selected package.',
             ]);
+        }
+
+        return DB::transaction(function () use ($package, $deceasedId, $suggestedBy) {
+            try {
+                return WelfareBeneficiary::create([
+                    'welfare_package_id' => $package->id,
+                    'deceased_id' => $deceasedId,
+                    'suggested_by' => $suggestedBy ?? auth()->id(),
+                    'status' => BeneficiaryStatus::PENDING,
+                    'collection_status' => CollectionStatus::NOT_COLLECTED,
+                ]);
+            } catch (\Illuminate\Database\UniqueConstraintViolationException|\Illuminate\Database\QueryException $e) {
+                if (str_contains($e->getMessage(), 'unique_package_deceased') || str_contains($e->getMessage(), 'UNIQUE constraint failed')) {
+                    throw \Illuminate\Validation\ValidationException::withMessages([
+                        'deceased_id' => 'This family already has a welfare request/allocation for the selected package.',
+                    ]);
+                }
+
+                throw $e;
+            }
         });
     }
 

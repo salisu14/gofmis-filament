@@ -42,7 +42,38 @@ class EditWelfareRequest extends EditRecord
             $data['deceased_id'] = reset($data['deceased_id']);
         }
 
+        $packageId = $data['welfare_package_id'] ?? $this->getRecord()->welfare_package_id;
+        $deceasedId = $data['deceased_id'] ?? $this->getRecord()->deceased_id;
+
+        if ($packageId && $deceasedId) {
+            $exists = \App\Models\WelfareBeneficiary::where('welfare_package_id', $packageId)
+                ->where('deceased_id', $deceasedId)
+                ->where('id', '!=', $this->getRecord()->id)
+                ->exists();
+
+            if ($exists) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'deceased_id' => 'This family already has a welfare request/allocation for the selected package.',
+                ]);
+            }
+        }
+
         return $data;
+    }
+
+    protected function handleRecordUpdate(\Illuminate\Database\Eloquent\Model $record, array $data): \Illuminate\Database\Eloquent\Model
+    {
+        try {
+            return parent::handleRecordUpdate($record, $data);
+        } catch (\Illuminate\Database\UniqueConstraintViolationException|\Illuminate\Database\QueryException $e) {
+            if (str_contains($e->getMessage(), 'unique_package_deceased') || str_contains($e->getMessage(), 'UNIQUE constraint failed')) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'deceased_id' => 'This family already has a welfare request/allocation for the selected package.',
+                ]);
+            }
+
+            throw $e;
+        }
     }
 
     protected function beforeSave(): void

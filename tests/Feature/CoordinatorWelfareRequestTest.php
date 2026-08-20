@@ -156,3 +156,112 @@ test('10. edit and view pages render cleanly', function () {
 
     expect($beneficiary->fresh()->collection_notes)->toBe('Updated justification text.');
 });
+
+test('11. duplicate request for same family and package returns validation error, not HTTP 500', function () {
+    // Initial request created
+    WelfareBeneficiary::create([
+        'welfare_package_id' => $this->openPackage->id,
+        'deceased_id' => $this->deceased->id,
+        'status' => BeneficiaryStatus::PENDING->value,
+        'suggested_by' => $this->coordinator->id,
+    ]);
+
+    expect(WelfareBeneficiary::where('welfare_package_id', $this->openPackage->id)->where('deceased_id', $this->deceased->id)->count())->toBe(1);
+
+    // Second request attempt via form fails with validation error on deceased_id
+    Livewire::test(CreateWelfareRequest::class)
+        ->fillForm([
+            'welfare_package_id' => (string) $this->openPackage->id,
+            'deceased_id' => (string) $this->deceased->id,
+            'collection_notes' => 'Duplicate submission attempt',
+        ])
+        ->call('create')
+        ->assertHasFormErrors(['deceased_id']);
+
+    // Count remains 1
+    expect(WelfareBeneficiary::where('welfare_package_id', $this->openPackage->id)->where('deceased_id', $this->deceased->id)->count())->toBe(1);
+});
+
+test('12. same family can be requested for a different open package', function () {
+    $secondPackage = WelfarePackage::create([
+        'name' => 'Eid Clothing Pack',
+        'description' => 'Clothes for children',
+        'start_date' => now()->subDays(1),
+        'end_date' => now()->addDays(10),
+        'status' => WelfarePackageStatus::OPEN,
+        'created_by' => $this->coordinator->id,
+    ]);
+
+    WelfareBeneficiary::create([
+        'welfare_package_id' => $this->openPackage->id,
+        'deceased_id' => $this->deceased->id,
+        'status' => BeneficiaryStatus::PENDING->value,
+        'suggested_by' => $this->coordinator->id,
+    ]);
+
+    Livewire::test(CreateWelfareRequest::class)
+        ->fillForm([
+            'welfare_package_id' => (string) $secondPackage->id,
+            'deceased_id' => (string) $this->deceased->id,
+            'collection_notes' => 'Request for second package',
+        ])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    $this->assertDatabaseHas('welfare_beneficiaries', [
+        'welfare_package_id' => $secondPackage->id,
+        'deceased_id' => $this->deceased->id,
+    ]);
+});
+
+test('13. different family can be requested for the same package', function () {
+    $secondDeceased = Deceased::factory()->create(['zone_id' => $this->zone->id, 'full_name' => 'Aliyu Hassan']);
+
+    WelfareBeneficiary::create([
+        'welfare_package_id' => $this->openPackage->id,
+        'deceased_id' => $this->deceased->id,
+        'status' => BeneficiaryStatus::PENDING->value,
+        'suggested_by' => $this->coordinator->id,
+    ]);
+
+    Livewire::test(CreateWelfareRequest::class)
+        ->fillForm([
+            'welfare_package_id' => (string) $this->openPackage->id,
+            'deceased_id' => (string) $secondDeceased->id,
+            'collection_notes' => 'Request for second family',
+        ])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    $this->assertDatabaseHas('welfare_beneficiaries', [
+        'welfare_package_id' => $this->openPackage->id,
+        'deceased_id' => $secondDeceased->id,
+    ]);
+});
+
+test('14. duplicate validation rejects submission against PENDING, APPROVED, REJECTED, and COLLECTED records', function () {
+    foreach ([BeneficiaryStatus::PENDING, BeneficiaryStatus::APPROVED, BeneficiaryStatus::REJECTED] as $status) {
+        $package = WelfarePackage::create([
+            'name' => 'Package '.$status->value,
+            'start_date' => now()->subDays(1),
+            'end_date' => now()->addDays(10),
+            'status' => WelfarePackageStatus::OPEN,
+            'created_by' => $this->coordinator->id,
+        ]);
+
+        WelfareBeneficiary::create([
+            'welfare_package_id' => $package->id,
+            'deceased_id' => $this->deceased->id,
+            'status' => $status->value,
+            'suggested_by' => $this->coordinator->id,
+        ]);
+
+        Livewire::test(CreateWelfareRequest::class)
+            ->fillForm([
+                'welfare_package_id' => (string) $package->id,
+                'deceased_id' => (string) $this->deceased->id,
+            ])
+            ->call('create')
+            ->assertHasFormErrors(['deceased_id']);
+    }
+});

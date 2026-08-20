@@ -38,7 +38,7 @@ beforeEach(function () {
     $this->openPackage = WelfarePackage::create([
         'name' => 'Ramadan Food Package 2026',
         'description' => 'Rice, Sugar, Oil & Flour distribution',
-        'is_open' => true,
+        'status' => \App\Enums\WelfarePackageStatus::OPEN,
         'start_date' => now()->subDays(5),
         'end_date' => now()->addDays(20),
         'created_by' => $this->admin->id,
@@ -157,4 +157,11 @@ test('5. coordinator cannot view or edit welfare request belonging to another zo
 
     expect(fn () => Livewire::test(EditWelfareRequest::class, ['record' => $otherZoneBeneficiary->getRouteKey()]))
         ->toThrow(\Illuminate\Database\Eloquent\ModelNotFoundException::class);
+});
+
+test('6. admin service and direct creation paths reject duplicate allocations with validation exception', function () {
+    $this->service->suggestBeneficiary($this->openPackage, $this->deceased->id, $this->admin->id);
+
+    expect(fn () => $this->service->suggestBeneficiary($this->openPackage, $this->deceased->id, $this->admin->id))
+        ->toThrow(\Illuminate\Validation\ValidationException::class);
 });
