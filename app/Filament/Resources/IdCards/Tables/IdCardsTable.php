@@ -43,7 +43,7 @@ class IdCardsTable
                 TextColumn::make('cardable_type')
                     ->label('Type')
                     ->badge()
-                    ->formatStateUsing(fn(string $state): string => class_basename($state))
+                    ->formatStateUsing(fn (string $state): string => class_basename($state))
                     ->colors([
                         'warning' => Widow::class,
                         'success' => Orphan::class,
@@ -67,7 +67,7 @@ class IdCardsTable
                 IconColumn::make('isActive')
                     ->label('Valid')
                     ->boolean()
-                    ->getStateUsing(fn(IdCard $record) => $record->isActive()),
+                    ->getStateUsing(fn (IdCard $record) => $record->isActive()),
 
                 TextColumn::make('issued_at')
                     ->date('M d, Y')
@@ -94,7 +94,7 @@ class IdCardsTable
                     ]),
                 Filter::make('expiring_soon')
                     ->label('Expiring Soon (30 days)')
-                    ->query(fn(Builder $query): Builder => $query
+                    ->query(fn (Builder $query): Builder => $query
                         ->where('expires_at', '<=', now()->addDays(30))
                         ->where('expires_at', '>=', now())
                         ->where('status', 'active')),
@@ -108,13 +108,13 @@ class IdCardsTable
                         ->label('Preview PDF')
                         ->icon('heroicon-o-eye')
                         ->color('info')
-                        ->url(fn(IdCard $record): string => route('id-cards.preview', ['card' => $record]))
+                        ->url(fn (IdCard $record): string => route('id-cards.preview', ['card' => $record]))
                         ->openUrlInNewTab(), // Recommended so the user doesn't leave the admin panel
 
                     Action::make('download')
                         ->label('Download PDF')
                         ->icon('heroicon-o-arrow-down-tray')
-                        ->url(fn(IdCard $record) => route(
+                        ->url(fn (IdCard $record) => route(
                             'id-cards.download',
                             ['idCard' => $record]
                         ))
@@ -130,7 +130,7 @@ class IdCardsTable
                             $newPath = $qrService->generateForCard($record);
                             $record->update(['qr_code_path' => $newPath]);
                         })
-                        ->visible(fn(IdCard $record) => $record->status !== 'revoked'),
+                        ->visible(fn (IdCard $record) => $record->status !== 'revoked'),
 
                     Action::make('revoke')
                         ->label('Revoke Card')
@@ -149,7 +149,7 @@ class IdCardsTable
                         ->action(function (IdCard $record, array $data) {
                             $record->revoke($data['reason']);
                         })
-                        ->visible(fn(IdCard $record) => $record->status === 'active'),
+                        ->visible(fn (IdCard $record) => $record->status === 'active'),
 
                     Action::make('reactivate')
                         ->label('Reactivate Card')
@@ -165,19 +165,26 @@ class IdCardsTable
                                 ->required()
                                 ->minLength(10),
                         ])
-                        ->action(function (IdCard $record, array $data) {
-                            $record->update([
-                                'status' => 'active',
-                                'revocation_reason' => null,
-                            ]);
+                        ->action(function (IdCard $record, array $data): void {
+                            if (! $record->beneficiaryIsEligible()) {
+                                Notification::make()
+                                    ->title('Card Cannot Be Reactivated')
+                                    ->body('This beneficiary is not currently eligible for an active ID card.')
+                                    ->danger()
+                                    ->send();
+
+                                return;
+                            }
+
+                            $record->reactivate();
 
                             Notification::make()
                                 ->title('Card Reactivated')
                                 ->success()
                                 ->send();
                         })
-                        ->visible(fn(IdCard $record) => $record->status === 'revoked'),
-                ])
+                        ->visible(fn (IdCard $record) => $record->status === 'revoked'),
+                ]),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
@@ -262,8 +269,30 @@ class IdCardsTable
                         ->icon('heroicon-o-check-circle')
                         ->color('success')
                         ->requiresConfirmation()
-                        ->action(fn(\Illuminate\Database\Eloquent\Collection $records) => $records->each->update(['status' => 'active', 'issued_at' => now()])
-                        ),
+                        ->action(function ($records): void {
+                            $ineligible = $records->filter(
+                                fn (IdCard $card) => ! $card->beneficiaryIsEligible()
+                            );
+
+                            if ($ineligible->isNotEmpty()) {
+                                Notification::make()
+                                    ->danger()
+                                    ->title('Some Cards Cannot Be Activated')
+                                    ->body("{$ineligible->count()} selected card(s) belong to ineligible beneficiaries.")
+                                    ->send();
+
+                                return;
+                            }
+
+                            foreach ($records as $card) {
+                                $card->activate();
+                            }
+
+                            Notification::make()
+                                ->success()
+                                ->title('Cards Activated')
+                                ->send();
+                        }),
                 ]),
             ])
             ->defaultSort('created_at', 'desc');

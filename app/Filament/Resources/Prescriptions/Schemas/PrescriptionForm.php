@@ -13,6 +13,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 
 class PrescriptionForm
@@ -40,7 +41,7 @@ class PrescriptionForm
                                 ->preload()
                                 ->native(false)
                                 ->optionsLimit(50)
-                                ->getOptionLabelFromRecordUsing(fn(Illness $record): string => "{$record->name} — {$record->category?->label()}")
+                                ->getOptionLabelFromRecordUsing(fn (Illness $record): string => "{$record->name} — {$record->category?->label()}")
                                 ->createOptionForm([
                                     Section::make('New Illness')
                                         ->schema([
@@ -109,27 +110,50 @@ class PrescriptionForm
                                 ])
                                 ->required()
                                 ->live()
+                                ->afterStateUpdated(
+                                    fn (Set $set) => $set('prescribable_id', null)
+                                )
                                 ->native(false)
                                 ->default(Orphan::class)
                                 ->selectablePlaceholder(false),
 
                             Select::make('prescribable_id')
                                 ->label('Patient Name')
-                                ->placeholder('Select category first')
-                                ->options(function (Get $get) {
+                                ->placeholder('Select patient')
+                                ->options(function (Get $get): array {
                                     $type = $get('prescribable_type');
-                                    if (!$type) return [];
 
-                                    return $type::query()
-                                        ->orderBy('first_name')
+                                    if (! $type) {
+                                        return [];
+                                    }
+
+                                    $query = $type::query()
+                                        ->orderBy('first_name');
+
+                                    return $query
                                         ->get()
-                                        ->mapWithKeys(fn($patient) => [
-                                            $patient->id => "{$patient->full_name} ({$patient->zone?->name})"
-                                        ]);
+                                        ->mapWithKeys(function ($patient): array {
+                                            $name = $patient->full_name
+                                                ?: trim(collect([
+                                                    $patient->first_name,
+                                                    $patient->middle_name,
+                                                    $patient->last_name,
+                                                ])->filter()->implode(' '))
+                                                    ?: 'Unnamed beneficiary';
+
+                                            $zone = $patient->zone?->name;
+
+                                            return [
+                                                $patient->id => $zone
+                                                    ? "{$name} ({$zone})"
+                                                    : $name,
+                                            ];
+                                        })
+                                        ->all();
                                 })
                                 ->searchable()
                                 ->required()
-                                ->hidden(fn(Get $get) => !$get('prescribable_type'))
+                                ->hidden(fn (Get $get): bool => ! $get('prescribable_type'))
                                 ->native(false)
                                 ->searchPrompt('Search patients by name...')
                                 ->noSearchResultsMessage('No patients found.'),
@@ -197,8 +221,7 @@ class PrescriptionForm
                                 ->dehydrated(false)
                                 ->placeholder('Auto-calculated')
                                 ->live()
-                                ->default(fn(Get $get) =>
-                                number_format(
+                                ->default(fn (Get $get) => number_format(
                                     (float) ($get('lab_test_cost') ?? 0) + (float) ($get('drug_cost') ?? 0),
                                     2
                                 )

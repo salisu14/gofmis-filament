@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\Gender;
+use App\Enums\OrphanStatus;
 use App\Events\OrphanBecameIneligible;
 use App\Models\Orphan;
 use App\Models\Scopes\EligibleOrphanScope;
@@ -15,7 +16,7 @@ class OrphanEligibilityService
      */
     public function isEligible(Orphan $orphan): bool
     {
-        if (! $orphan->is_eligible || $orphan->status === Orphan::STATUS_ARCHIVED) {
+        if (! $orphan->is_eligible || $orphan->status === OrphanStatus::ARCHIVED) {
             return false;
         }
 
@@ -46,7 +47,7 @@ class OrphanEligibilityService
     {
         return Orphan::withoutGlobalScope(EligibleOrphanScope::class)
             ->where('is_eligible', true)
-            ->where('status', '!=', Orphan::STATUS_ARCHIVED)
+            ->where('status', '!=', OrphanStatus::ARCHIVED)
             ->where(function ($query) {
                 $query->where(function ($query) {
                     // Males must be under 18
@@ -70,7 +71,7 @@ class OrphanEligibilityService
             ->whereDate('birth_date', '<=', now()->subYears(18)->toDateString())
             ->where(function ($query) {
                 $query->where('is_eligible', true)
-                    ->orWhere('status', '!=', Orphan::STATUS_ARCHIVED);
+                    ->orWhere('status', '!=', OrphanStatus::ARCHIVED);
             })
             ->get()
             ->each(function ($orphan) {
@@ -82,7 +83,7 @@ class OrphanEligibilityService
             ->where('is_married', true)
             ->where(function ($query) {
                 $query->where('is_eligible', true)
-                    ->orWhere('status', '!=', Orphan::STATUS_ARCHIVED);
+                    ->orWhere('status', '!=', OrphanStatus::ARCHIVED);
             })
             ->get()
             ->each(function ($orphan) {

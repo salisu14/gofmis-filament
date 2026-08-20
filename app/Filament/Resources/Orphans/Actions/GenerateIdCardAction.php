@@ -4,6 +4,7 @@
 
 namespace App\Filament\Resources\Orphans\Actions;
 
+use App\Enums\OrphanStatus;
 use App\Filament\Resources\IdCards\IdCardResource;
 use App\Models\Orphan;
 use App\Services\IdCardGenerationService;
@@ -28,8 +29,9 @@ class GenerateIdCardAction extends Action
             ->modalHeading('Generate ID Card')
             ->modalDescription('This will create a new ID card for this orphan.')
             ->modalSubmitActionLabel('Generate')
-            ->visible(fn(Orphan $record): bool => $record->is_eligible &&
-                !$record->idCards()->where('status', 'active')->exists()
+            ->visible(fn (Orphan $record): bool => $record->status === OrphanStatus::ACTIVE
+                && $record->is_eligible
+                && ! $record->idCards()->whereIn('status', ['draft', 'active'])->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>', now()))->exists()
             )
             ->action(function (Orphan $record) {
                 try {

@@ -18,6 +18,7 @@ class Prescription extends Model
 
     protected $fillable = [
         'doctor_name',
+        'illness',
         'illness_id',        // ← normalized reference
         'lab_test_cost',
         'drug_cost',
@@ -25,7 +26,7 @@ class Prescription extends Model
         'note',
         'prescribable_id',
         'prescribable_type',
-        'user_id'
+        'user_id',
     ];
 
     protected $casts = [

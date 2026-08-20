@@ -21,7 +21,7 @@ class IdCardInfolist
                             ->copyable(),
                         TextEntry::make('status')
                             ->badge()
-                            ->color(fn(string $state): string => match ($state) {
+                            ->color(fn (string $state): string => match ($state) {
                                 'draft' => 'gray',
                                 'active' => 'success',
                                 'revoked' => 'danger',
@@ -34,12 +34,21 @@ class IdCardInfolist
                     ->columns(3)
                     ->schema([
                         TextEntry::make('cardable.full_name')
-                            ->label('Name'),
+                            ->label('Name')
+                            ->placeholder('N/A'),
+
+                        TextEntry::make('cardable.reg_no')
+                            ->label('Reg. No')
+                            ->placeholder('N/A'),
+
+                        TextEntry::make('cardable.zone.name')
+                            ->label('Zone')
+                            ->placeholder('N/A'),
+
                         TextEntry::make('cardable.nin')
                             ->label('NIN')
-                            ->formatStateUsing(fn(?string $state) => $state ? substr($state, -4) : 'N/A'),
-                        TextEntry::make('cardable.reg_no')
-                            ->label('Reg. No'),
+                            ->formatStateUsing(fn (?string $state) => $state ? substr($state, -4) : 'N/A'),
+
                         TextEntry::make('cardable.gender')
                             ->label('Gender'),
                         TextEntry::make('cardable.zone.name')
@@ -69,6 +78,7 @@ class IdCardInfolist
                             ->label('Verification URL')
                             ->formatStateUsing(function (IdCard $record) {
                                 $url = app(\App\Services\QRCodeService::class)->generateVerificationUrl($record);
+
                                 return $url;
                             })
                             ->copyable(),

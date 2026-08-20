@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\OrphanEducation\Schemas;
 
+use App\Models\Orphan;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -32,8 +33,29 @@ class OrphanEducationForm
                         Grid::make(2)->schema([
                             Select::make('orphan_id')
                                 ->label('Student')
-                                ->relationship('orphan', 'full_name')
-                                ->searchable()
+                                ->relationship(
+                                    name: 'orphan',
+                                    titleAttribute: 'full_name',
+                                    modifyQueryUsing: fn ($query, $operation, $record) => $query
+                                        ->when($operation === 'create', fn ($q) => $q->eligible())
+                                        ->when($record?->orphan_id, fn ($q) => $q->orWhere('id', $record->orphan_id))
+                                        ->orderBy('full_name')
+                                )
+                                ->getOptionLabelFromRecordUsing(
+                                    fn (Orphan $record): string => $record->full_name
+                                        ?: trim(collect([
+                                            $record->first_name,
+                                            $record->middle_name,
+                                            $record->last_name,
+                                        ])->filter()->implode(' '))
+                                            ?: 'Unnamed orphan'
+                                )
+                                ->searchable([
+                                    'full_name',
+                                    'first_name',
+                                    'middle_name',
+                                    'last_name',
+                                ])
                                 ->preload()
                                 ->required()
                                 ->disabledOn('edit'),
@@ -93,8 +115,8 @@ class OrphanEducationForm
                                 ->label('Sponsorship Amount')
                                 ->numeric()
                                 ->prefix('₦')
-                                ->visible(fn(Get $get) => $get('is_fee_supported'))
-                                ->required(fn(Get $get) => $get('is_fee_supported')),
+                                ->visible(fn (Get $get) => $get('is_fee_supported'))
+                                ->required(fn (Get $get) => $get('is_fee_supported')),
                         ])->columns(2),
                     ]),
 

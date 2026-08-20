@@ -1,16 +1,17 @@
 <?php
+
 // app/Services/IdCardGenerationService.php
 
 namespace App\Services;
 
+use App\Enums\OrphanStatus;
+use App\Jobs\GenerateIdCardPdfJob;
 use App\Models\IdCard;
 use App\Models\IdCardTemplate;
-use App\Jobs\GenerateIdCardPdfJob;
 use App\Models\Orphan;
 use App\Models\Widow;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class IdCardGenerationService
 {
@@ -27,7 +28,43 @@ class IdCardGenerationService
         bool $queuePdf = true,
     ): IdCard {
         return DB::transaction(function () use ($beneficiary, $template, $queuePdf) {
+            $beneficiaryClass = get_class($beneficiary);
+
+            // Lock beneficiary row for transaction safety
+            $beneficiary = $beneficiaryClass::where('id', $beneficiary->id)->lockForUpdate()->first();
+
+            if (! $beneficiary) {
+                throw new \RuntimeException('Beneficiary not found.');
+            }
+
             $type = $beneficiary instanceof Widow ? 'widow' : 'orphan';
+
+            // Verify eligibility
+            $isOrphanActive = $beneficiary instanceof Orphan && ($beneficiary->status === OrphanStatus::ACTIVE || $beneficiary->status === OrphanStatus::ACTIVE->value);
+            $isWidowOrphanEligible = (bool) $beneficiary->is_eligible;
+
+            if (! $isWidowOrphanEligible || ($beneficiary instanceof Orphan && ! $isOrphanActive)) {
+                throw ValidationException::withMessages([
+                    'card' => 'Cannot generate an ID card for an ineligible or inactive beneficiary.',
+                ]);
+            }
+
+            // Check for existing open (draft or active) non-expired card
+            $existingCard = IdCard::where('cardable_type', $beneficiaryClass)
+                ->where('cardable_id', $beneficiary->id)
+                ->whereIn('status', ['draft', 'active'])
+                ->where(function ($q) {
+                    $q->whereNull('expires_at')
+                        ->orWhere('expires_at', '>', now());
+                })
+                ->lockForUpdate()
+                ->first();
+
+            if ($existingCard) {
+                throw ValidationException::withMessages([
+                    'card' => "Beneficiary already has an active or draft ID card ({$existingCard->card_number}).",
+                ]);
+            }
 
             $template ??= IdCardTemplate::defaultForType($type);
 
@@ -39,7 +76,7 @@ class IdCardGenerationService
             $cardNumber = $this->generateCardNumber($type);
 
             $idCard = IdCard::create([
-                'cardable_type' => get_class($beneficiary),
+                'cardable_type' => $beneficiaryClass,
                 'cardable_id' => $beneficiary->id,
                 'template_id' => $template->id,
                 'card_number' => $cardNumber,
@@ -79,7 +116,7 @@ class IdCardGenerationService
                 ->where('status', 'active')
                 ->exists();
 
-            if (!$existingCard) {
+            if (! $existingCard) {
                 $cards[] = $this->generateCard($beneficiary);
             }
         }

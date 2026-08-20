@@ -5,7 +5,6 @@ namespace App\Filament\Resources\Widows\Tables;
 use App\Filament\Exports\WidowExporter;
 use App\Filament\Resources\IdCards\IdCardResource;
 use App\Filament\Resources\Widows\Actions\GenerateIdCardAction;
-use App\Models\Deceased;
 use App\Models\Widow;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
@@ -125,26 +124,26 @@ class WidowsTable
                         ->label('View ID Card')
                         ->icon('heroicon-o-eye')
                         ->color('info')
-                        ->url(fn(Widow $record) => $record->idCards()->where('status', 'active')->first()
+                        ->url(fn (Widow $record) => $record->idCards()->whereIn('status', ['draft', 'active'])->latest()->first()
                             ? IdCardResource::getUrl('view', [
-                                'record' => $record->idCards()->where('status', 'active')->first()
+                                'record' => $record->idCards()->whereIn('status', ['draft', 'active'])->latest()->first(),
                             ])
                             : null
                         )
                         ->openUrlInNewTab()
-                        ->visible(fn(Widow $record): bool => $record->idCards()->where('status', 'active')->exists()
+                        ->visible(fn (Widow $record): bool => $record->idCards()->whereIn('status', ['draft', 'active'])->exists()
                         ),
 
                     Action::make('print_card')
                         ->label('Print Card')
                         ->icon('heroicon-o-printer')
                         ->color('success')
-                        ->url(fn(Widow $record) => ($card = $record->idCards()->where('status', 'active')->first())
+                        ->url(fn (Widow $record) => ($card = $record->idCards()->whereIn('status', ['draft', 'active'])->latest()->first())
                             ? route('id-cards.download', ['idCard' => $card])
                             : null
                         )
                         ->openUrlInNewTab()
-                        ->visible(fn(Widow $record): bool => $record->idCards()->where('status', 'active')->exists()
+                        ->visible(fn (Widow $record): bool => $record->idCards()->whereIn('status', ['draft', 'active'])->exists()
                         ),
 
                     Action::make('markAsMarried')
@@ -155,7 +154,7 @@ class WidowsTable
                         ->modalHeading('Mark as Married')
                         ->modalDescription('This will revoke all benefits and eligibility. This action cannot be undone.')
                         ->modalSubmitActionLabel('Yes, Mark as Married')
-                        ->visible(fn($record) => !$record->is_married)
+                        ->visible(fn ($record) => ! $record->is_married)
                         ->schema([
                             DatePicker::make('married_at')
                                 ->label('Marriage Date')
@@ -183,7 +182,7 @@ class WidowsTable
                         }),
 
                     DeleteAction::make(),
-                ])
+                ]),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
@@ -200,7 +199,7 @@ class WidowsTable
                         ->modalDescription('This will revoke benefits for all selected beneficiaries.')
                         ->action(function ($records) {
                             foreach ($records as $record) {
-                                if (!$record->is_married) {
+                                if (! $record->is_married) {
                                     $record->markAsMarried();
                                 }
                             }

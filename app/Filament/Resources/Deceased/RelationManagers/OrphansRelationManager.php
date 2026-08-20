@@ -3,7 +3,8 @@
 namespace App\Filament\Resources\Deceased\RelationManagers;
 
 use App\Enums\IllnessCategory;
-use App\Filament\Resources\Deceased\DeceasedResource;
+use App\Enums\OrphanStatus;
+use App\Filament\Resources\Orphans\OrphanResource;
 use App\Models\Illness;
 use App\Models\Medication;
 use App\Models\Orphan;
@@ -30,6 +31,7 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Filament\Tables;
+use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Support\Facades\Schema as DatabaseSchema;
 
@@ -37,7 +39,7 @@ class OrphansRelationManager extends RelationManager
 {
     protected static string $relationship = 'orphans';
 
-    protected static ?string $relatedResource = DeceasedResource::class;
+    protected static ?string $relatedResource = OrphanResource::class;
 
     protected static ?string $recordTitleAttribute = 'full_name';
 
@@ -245,15 +247,14 @@ class OrphansRelationManager extends RelationManager
                     ->boolean()
                     ->alignCenter(),
 
-                Tables\Columns\TextColumn::make('status')
+                TextColumn::make('status')
                     ->badge()
-                    ->color(fn (string $state): string => match ($state) {
-                        'active', 'approved' => 'success',
-                        'pending', 'pending_review' => 'warning',
-                        'inactive', 'rejected' => 'danger',
-                        Orphan::STATUS_ARCHIVED => 'gray',
-                        default => 'gray',
-                    }),
+                    ->formatStateUsing(
+                        fn (OrphanStatus $state): string => $state->label()
+                    )
+                    ->color(
+                        fn (OrphanStatus $state): string => $state->color()
+                    ),
             ])
             ->headerActions([
                 CreateAction::make()
@@ -393,7 +394,7 @@ class OrphansRelationManager extends RelationManager
 
                             $prescription = filled($row['id'] ?? null)
                                 ? $record->prescriptions()->whereKey($row['id'])->first()
-                                : new Prescription();
+                                : new Prescription;
 
                             if (! $prescription) {
                                 continue;

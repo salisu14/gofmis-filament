@@ -24,10 +24,10 @@ class IdCardForm
                             ->types([
                                 Type::make(Widow::class)
                                     ->titleAttribute('full_name')
-                                    ->modifyOptionsQueryUsing(fn($query) => $query->where('is_eligible', true)),
+                                    ->modifyOptionsQueryUsing(fn ($query) => $query->where('is_eligible', true)),
                                 Type::make(Orphan::class)
                                     ->titleAttribute('full_name')
-                                    ->modifyOptionsQueryUsing(fn($query) => $query->where('is_eligible', true)),
+                                    ->modifyOptionsQueryUsing(fn ($query) => $query->eligible()),
                             ])
                             ->required()
                             ->searchable()
@@ -40,7 +40,7 @@ class IdCardForm
                                 ->orderBy('name')
                                 ->get()
                                 ->mapWithKeys(fn ($template) => [
-                                    $template->id => "{$template->name} (".ucfirst($template->type).")",
+                                    $template->id => "{$template->name} (".ucfirst($template->type).')',
                                 ]))
                             ->searchable()
                             ->preload()
@@ -60,17 +60,6 @@ class IdCardForm
 
                         DateTimePicker::make('expires_at')
                             ->default(now()->addYears(2)),
-
-                        Select::make('status')
-                            ->options([
-                                'draft' => 'Draft',
-                                'active' => 'Active',
-                                'revoked' => 'Revoked',
-                                'expired' => 'Expired',
-                            ])
-                            ->required()
-                            ->visibleOn('create')
-                            ->default('draft'),
                     ]),
             ]);
     }

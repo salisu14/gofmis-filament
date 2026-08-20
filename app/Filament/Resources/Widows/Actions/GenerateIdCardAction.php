@@ -2,7 +2,6 @@
 
 // app/Filament/Resources/Widows/Actions/GenerateIdCardAction.php
 
-
 namespace App\Filament\Resources\Widows\Actions;
 
 use App\Filament\Resources\IdCards\IdCardResource;
@@ -29,8 +28,8 @@ class GenerateIdCardAction extends Action
             ->modalHeading('Generate ID Card')
             ->modalDescription('This will create a new ID card for this widow.')
             ->modalSubmitActionLabel('Generate')
-            ->visible(fn(Widow $record): bool => $record->is_eligible &&
-                !$record->idCards()->where('status', 'active')->exists()
+            ->visible(fn (Widow $record): bool => $record->is_eligible
+                && ! $record->idCards()->whereIn('status', ['draft', 'active'])->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>', now()))->exists()
             )
             ->action(function (Widow $record) {
                 try {

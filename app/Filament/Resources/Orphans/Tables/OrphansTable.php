@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Orphans\Tables;
 
 use App\Enums\Gender;
+use App\Enums\OrphanStatus;
 use App\Enums\VulnerabilityStatus;
 use App\Filament\Exports\OrphanExporter;
 use App\Filament\Resources\IdCards\IdCardResource;
@@ -13,6 +14,7 @@ use App\Models\InterventionType;
 use App\Models\Orphan;
 use App\Models\OrphanClass;
 use App\Models\Zone;
+use App\Services\OrphanStatusService;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
@@ -97,13 +99,12 @@ class OrphansTable
                     ->searchable(),
                 TextColumn::make('status')
                     ->badge()
-                    ->color(fn (string $state): string => match ($state) {
-                        'active' => 'success',
-                        'pending' => 'warning',
-                        'inactive' => 'danger',
-                        Orphan::STATUS_ARCHIVED => 'gray',
-                        default => 'gray',
-                    }),
+                    ->formatStateUsing(
+                        fn (OrphanStatus $state): string => $state->label()
+                    )
+                    ->color(
+                        fn (OrphanStatus $state): string => $state->color()
+                    ),
                 IconColumn::make('is_eligible')
                     ->label('Eligible')
                     ->boolean()
@@ -207,12 +208,15 @@ class OrphansTable
                     ->preload(),
 
                 SelectFilter::make('status')
-                    ->options([
-                        'active' => 'Active',
-                        'pending' => 'Pending',
-                        'inactive' => 'Inactive',
-                        Orphan::STATUS_ARCHIVED => 'Archived',
-                    ]),
+                    ->options(
+                        collect(OrphanStatus::cases())
+                            ->mapWithKeys(
+                                fn (OrphanStatus $status): array => [
+                                    $status->value => $status->label(),
+                                ]
+                            )
+                            ->all()
+                    ),
             ], layout: FiltersLayout::Modal)
             ->deferFilters(false)
             ->filtersFormColumns(3)
@@ -221,6 +225,75 @@ class OrphansTable
                     ViewAction::make(),
                     EditAction::make(),
 
+                    Action::make('approve')
+                        ->label('Approve')
+                        ->icon('heroicon-o-check-circle')
+                        ->color('success')
+                        ->requiresConfirmation()
+                        ->visible(
+                            fn (Orphan $record): bool => $record->status === OrphanStatus::PENDING_REVIEW
+                        )
+                        ->action(function (Orphan $record): void {
+                            try {
+                                app(OrphanStatusService::class)
+                                    ->approve($record, auth()->user());
+
+                                Notification::make()
+                                    ->success()
+                                    ->title('Orphan Approved')
+                                    ->body("{$record->full_name} is now active and eligible.")
+                                    ->send();
+                            } catch (\Throwable $e) {
+                                report($e);
+
+                                Notification::make()
+                                    ->danger()
+                                    ->title('Approval Failed')
+                                    ->body($e->getMessage())
+                                    ->send();
+                            }
+                        }),
+
+                    Action::make('reject')
+                        ->label('Reject')
+                        ->icon('heroicon-o-x-circle')
+                        ->color('danger')
+                        ->schema([
+                            Textarea::make('reason')
+                                ->label('Reason for Rejection')
+                                ->required()
+                                ->rows(3),
+                        ])
+                        ->visible(
+                            fn (Orphan $record): bool => $record->status === OrphanStatus::PENDING_REVIEW
+                        )
+                        ->action(function (
+                            Orphan $record,
+                            array $data,
+                        ): void {
+                            try {
+                                app(OrphanStatusService::class)
+                                    ->reject(
+                                        $record,
+                                        auth()->user(),
+                                        $data['reason']
+                                    );
+
+                                Notification::make()
+                                    ->success()
+                                    ->title('Orphan Rejected')
+                                    ->send();
+                            } catch (\Throwable $e) {
+                                report($e);
+
+                                Notification::make()
+                                    ->danger()
+                                    ->title('Rejection Failed')
+                                    ->body($e->getMessage())
+                                    ->send();
+                            }
+                        }),
+
                     // ID Card Actions
                     GenerateIdCardAction::make(),
 
@@ -228,26 +301,26 @@ class OrphansTable
                         ->label('View ID Card')
                         ->icon('heroicon-o-eye')
                         ->color('info')
-                        ->url(fn (Orphan $record) => $record->idCards()->where('status', 'active')->first()
+                        ->url(fn (Orphan $record) => $record->idCards()->whereIn('status', ['draft', 'active'])->latest()->first()
                             ? IdCardResource::getUrl('view', [
-                                'record' => $record->idCards()->where('status', 'active')->first(),
+                                'record' => $record->idCards()->whereIn('status', ['draft', 'active'])->latest()->first(),
                             ])
                             : null
                         )
                         ->openUrlInNewTab()
-                        ->visible(fn (Orphan $record): bool => $record->idCards()->where('status', 'active')->exists()
+                        ->visible(fn (Orphan $record): bool => $record->idCards()->whereIn('status', ['draft', 'active'])->exists()
                         ),
 
                     Action::make('print_card')
                         ->label('Print Card')
                         ->icon('heroicon-o-printer')
                         ->color('success')
-                        ->url(fn (Orphan $record) => ($card = $record->idCards()->where('status', 'active')->first())
+                        ->url(fn (Orphan $record) => ($card = $record->idCards()->whereIn('status', ['draft', 'active'])->latest()->first())
                             ? route('id-cards.download', ['idCard' => $card])
                             : null
                         )
                         ->openUrlInNewTab()
-                        ->visible(fn (Orphan $record): bool => $record->idCards()->where('status', 'active')->exists()
+                        ->visible(fn (Orphan $record): bool => $record->idCards()->whereIn('status', ['draft', 'active'])->exists()
                         ),
 
                     Action::make('markAsMarried')

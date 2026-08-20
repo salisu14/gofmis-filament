@@ -30,13 +30,13 @@ class ProjectForm
 
                         Select::make('type')
                             ->options(collect(ProjectType::cases())
-                                ->mapWithKeys(fn($t) => [$t->value => $t->label()]))
+                                ->mapWithKeys(fn ($t) => [$t->value => $t->label()]))
                             ->required()
                             ->native(false),
 
                         Select::make('status')
                             ->options(collect(ProjectStatus::cases())
-                                ->mapWithKeys(fn($s) => [$s->value => $s->label()]))
+                                ->mapWithKeys(fn ($s) => [$s->value => $s->label()]))
                             ->default(ProjectStatus::PLANNING->value)
                             ->required()
                             ->native(false),
@@ -47,16 +47,38 @@ class ProjectForm
                             ->searchable()->required(),
 
                         Select::make('deceased_id')
-                            ->label('Beneficiary Family')
-                            ->options(Deceased::pluck('full_name', 'id'))
-                            ->searchable()->nullable(),
+                            ->label('Beneficiary Family (Deceased)')
+                            ->relationship(
+                                name: 'deceased',
+                                titleAttribute: 'id',
+                                modifyQueryUsing: fn ($query) => $query
+                                    ->orderBy('first_name')
+                                    ->orderBy('last_name')
+                            )
+                            ->getOptionLabelFromRecordUsing(
+                                fn (Deceased $record): string => $record->full_name
+                                    ?: trim(collect([
+                                        $record->first_name,
+                                        $record->middle_name,
+                                        $record->last_name,
+                                    ])->filter()->implode(' '))
+                                        ?: 'Unnamed deceased record'
+                            )
+                            ->searchable([
+                                'full_name',
+                                'first_name',
+                                'middle_name',
+                                'last_name',
+                            ])
+                            ->preload()
+                            ->nullable(),
 
                         Select::make('coordinator_id')
                             ->label('Project Coordinator')
                             ->relationship(
                                 name: 'coordinator',
                                 titleAttribute: 'name',
-                                modifyQueryUsing: fn($query) => $query->role('coordinator')
+                                modifyQueryUsing: fn ($query) => $query->role('coordinator')
                             )
                             ->searchable()
                             ->preload()

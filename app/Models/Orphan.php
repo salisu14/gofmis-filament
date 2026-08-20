@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\Gender;
+use App\Enums\OrphanStatus;
 use App\Models\Scopes\EligibleOrphanScope;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
@@ -16,8 +17,6 @@ use Illuminate\Support\Facades\Storage;
 class Orphan extends Model
 {
     use HasUuids, SoftDeletes;
-
-    public const STATUS_ARCHIVED = 'archived';
 
     protected $table = 'orphans';
 
@@ -46,6 +45,7 @@ class Orphan extends Model
 
     protected $casts = [
         'gender' => Gender::class,
+        'status' => OrphanStatus::class,
         'birth_date' => 'date',
         'is_eligible' => 'boolean',
         'is_married' => 'boolean',
@@ -71,7 +71,7 @@ class Orphan extends Model
             'is_married' => true,
             'married_at' => $marriedAt ?? now(),
             'is_eligible' => false,
-            'status' => self::STATUS_ARCHIVED,
+            'status' => OrphanStatus::ARCHIVED,
             'rejection_reason' => $notes ?? 'Archived: female orphan is married.',
         ]);
 
@@ -89,7 +89,7 @@ class Orphan extends Model
     {
         $this->update([
             'is_eligible' => false,
-            'status' => self::STATUS_ARCHIVED,
+            'status' => OrphanStatus::ARCHIVED,
             'rejection_reason' => $this->archiveReasonText($reason),
         ]);
 
@@ -189,9 +189,9 @@ class Orphan extends Model
 
     public function scopeEligible($query)
     {
-        return $query
-            ->where('is_eligible', true)
-            ->where('status', '!=', self::STATUS_ARCHIVED);
+        (new EligibleOrphanScope)->apply($query, $query->getModel());
+
+        return $query;
     }
 
     public function isEligibleForIntervention(): bool
@@ -205,8 +205,7 @@ class Orphan extends Model
 
     public static function getNonEligibleOrphans()
     {
-        return Orphan::withoutGlobalScope(EligibleOrphanScope::class)
-            ->where('is_eligible', false)
+        return Orphan::where('is_eligible', false)
             ->where('is_married', true)
             ->get();
     }
@@ -214,8 +213,6 @@ class Orphan extends Model
     protected static function booted(): void
     {
         parent::booted();
-
-        static::addGlobalScope(new EligibleOrphanScope);
 
         static::addGlobalScope('zone', function ($query) {
             $user = auth()->user();
@@ -248,7 +245,7 @@ class Orphan extends Model
                 ($gender === Gender::FEMALE && $model->is_married)
             ) {
                 $model->is_eligible = false;
-                $model->status = self::STATUS_ARCHIVED;
+                $model->status = OrphanStatus::ARCHIVED;
 
                 if (! $model->rejection_reason) {
                     $model->rejection_reason = $gender === Gender::MALE
@@ -258,12 +255,15 @@ class Orphan extends Model
             }
         });
 
-        static::creating(function ($model) {
+        static::creating(function (Orphan $model) {
             $model->full_name = trim(implode(' ', array_filter([
                 $model->first_name,
                 $model->middle_name,
                 $model->last_name,
             ])));
+
+            $model->status ??= OrphanStatus::PENDING_REVIEW;
+            $model->is_eligible ??= false;
         });
 
         static::updating(function ($model) {
@@ -282,7 +282,7 @@ class Orphan extends Model
             }
 
             if (
-                $orphan->status === self::STATUS_ARCHIVED &&
+                $orphan->status === OrphanStatus::ARCHIVED &&
                 $orphan->wasChanged(['status', 'is_eligible', 'is_married'])
             ) {
                 $orphan->revokeActiveBenefits($orphan->rejection_reason ?? 'Orphan is no longer eligible for benefits.');

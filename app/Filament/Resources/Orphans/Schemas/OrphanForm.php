@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Orphans\Schemas;
 
+use App\Models\Deceased;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
@@ -79,8 +80,29 @@ class OrphanForm
 
                         Select::make('deceased_id')
                             ->label('Deceased')
-                            ->relationship('deceased', 'full_name')
-                            ->searchable()
+                            ->relationship(
+                                name: 'deceased',
+                                titleAttribute: 'id',
+                                modifyQueryUsing: fn ($query) => $query
+                                    ->orderBy('first_name')
+                                    ->orderBy('last_name')
+                            )
+                            ->getOptionLabelFromRecordUsing(
+                                fn (Deceased $record): string => trim(
+                                    collect([
+                                        $record->first_name,
+                                        $record->middle_name,
+                                        $record->last_name,
+                                    ])
+                                        ->filter(fn ($value) => filled($value))
+                                        ->implode(' ')
+                                ) ?: 'Unnamed deceased record'
+                            )
+                            ->searchable([
+                                'first_name',
+                                'middle_name',
+                                'last_name',
+                            ])
                             ->preload()
                             ->required(),
                     ]),

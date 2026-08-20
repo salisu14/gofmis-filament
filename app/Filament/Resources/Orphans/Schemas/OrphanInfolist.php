@@ -2,7 +2,7 @@
 
 namespace App\Filament\Resources\Orphans\Schemas;
 
-use App\Models\Orphan;
+use App\Enums\OrphanStatus;
 use Carbon\Carbon;
 use Filament\Infolists\Components\IconEntry;
 use Filament\Infolists\Components\ImageEntry;
@@ -51,11 +51,11 @@ class OrphanInfolist
                             ->boolean(),
                         TextEntry::make('status')
                             ->badge()
-                            ->color(fn (string $state): string => match ($state) {
-                                'active' => 'success',
-                                'pending' => 'warning',
-                                'inactive' => 'danger',
-                                Orphan::STATUS_ARCHIVED => 'gray',
+                            ->color(fn (OrphanStatus $state): string => match ($state) {
+                                OrphanStatus::ACTIVE->value => 'success',
+                                OrphanStatus::PENDING_REVIEW->value => 'warning',
+                                OrphanStatus::REJECTED->value => 'danger',
+                                OrphanStatus::ARCHIVED->value => 'gray',
                                 default => 'gray',
                             }),
                         TextEntry::make('nin')
