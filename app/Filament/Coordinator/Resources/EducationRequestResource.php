@@ -1,4 +1,5 @@
 <?php
+
 // app/Filament/Coordinator/Resources/EducationRequestResource.php
 
 namespace App\Filament\Coordinator\Resources;
@@ -27,11 +28,17 @@ use Illuminate\Database\Eloquent\Relations\Relation;
 class EducationRequestResource extends Resource
 {
     protected static ?string $model = InterventionRequest::class;
+
     protected static string|null|\BackedEnum $navigationIcon = 'heroicon-o-academic-cap';
+
     protected static ?string $navigationLabel = 'Education Requests';
+
     protected static ?string $modelLabel = 'Education Request';
+
     protected static ?string $pluralModelLabel = 'Education Requests';
+
     protected static string|null|\UnitEnum $navigationGroup = 'Intervention Requests';
+
     protected static ?int $navigationSort = 3;
 
     public static function getEloquentQuery(): Builder
@@ -51,8 +58,7 @@ class EducationRequestResource extends Resource
             return $query->whereRaw('1 = 0');
         }
 
-        return $query->whereHas('orphan', fn(Builder $q) => $q->whereHas('deceased', fn($q2) =>
-        $q2->where('zone_id', $zoneId)
+        return $query->whereHas('orphan', fn (Builder $q) => $q->whereHas('deceased', fn ($q2) => $q2->where('zone_id', $zoneId)
         ));
     }
 
@@ -82,7 +88,9 @@ class EducationRequestResource extends Resource
     public static function canEdit($record): bool
     {
         $user = auth()->user();
-        if ($user?->hasAnyRole(['admin', 'super_admin'])) return true;
+        if ($user?->hasAnyRole(['admin', 'super_admin'])) {
+            return true;
+        }
 
         // ✅ FIXED: Use coordinatedZone for zone comparison
         $zoneId = $user?->coordinatedZone?->id;
@@ -111,14 +119,25 @@ class EducationRequestResource extends Resource
                             ->relationship(
                                 'orphan',
                                 'full_name',
-                                function (Builder|Relation|null $query) use ($zoneId) {
-                                    if (!$query) {
+                                function (Builder|Relation|null $query) {
+                                    if (! $query) {
                                         return null;
                                     }
 
-                                    return $query
-                                        ->whereHas('deceased', fn($q) => $q->where('zone_id', $zoneId))
-                                        ->where('is_eligible', true);
+                                    $user = auth()->user();
+                                    $zoneId = $user?->coordinatedZone?->id;
+
+                                    if (! $user?->hasAnyRole(['admin', 'super_admin'])) {
+                                        if (! $zoneId) {
+                                            return $query->whereRaw('1 = 0');
+                                        }
+
+                                        return $query
+                                            ->whereHas('deceased', fn ($q) => $q->where('zone_id', $zoneId))
+                                            ->where('is_eligible', true);
+                                    }
+
+                                    return $query->where('is_eligible', true);
                                 }
                             )
                             ->searchable()
@@ -131,7 +150,7 @@ class EducationRequestResource extends Resource
                     ->schema([
                         Select::make('intervention_type_id')
                             ->label('Education Support Type')
-                            ->options(fn() => \App\Models\InterventionType::query()
+                            ->options(fn () => \App\Models\InterventionType::query()
                                 ->whereRaw('LOWER(name) LIKE ?', ['%education%'])
                                 ->pluck('name', 'id'))
                             ->required()
@@ -253,19 +272,19 @@ class EducationRequestResource extends Resource
                     ->query(function (Builder $query) {
                         $zoneId = auth()->user()?->coordinatedZone?->id;
                         if ($zoneId) {
-                            $query->whereHas('orphan.deceased', fn($q) => $q->where('zone_id', $zoneId));
+                            $query->whereHas('orphan.deceased', fn ($q) => $q->where('zone_id', $zoneId));
                         }
                     })
                     ->default(),
 
                 Tables\Filters\Filter::make('this_month')
                     ->label('This Month')
-                    ->query(fn($q) => $q->whereMonth('request_date', now()->month)),
+                    ->query(fn ($q) => $q->whereMonth('request_date', now()->month)),
             ])
             ->recordActions([
                 ViewAction::make(),
                 EditAction::make()
-                    ->visible(fn($record) => $record->status === 'pending'),
+                    ->visible(fn ($record) => $record->status === 'pending'),
             ])
             ->defaultSort('request_date', 'desc');
     }

@@ -16,6 +16,7 @@ use Filament\Actions\BulkActionGroup;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\Hidden;
+use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -122,17 +123,29 @@ class LoanRequestResource extends Resource
                             ->relationship(
                                 'widow',
                                 'full_name',
-                                fn (Builder $query) => $query
-                                    ->whereHas('deceased', fn ($q) => $q->where('zone_id', $zoneId))
-                                    ->where('is_eligible', true)
-                                    ->where('is_married', false)
-                                    ->whereDoesntHave('widowLoans', fn ($q) => $q
-                                        ->whereIn('status', array_column(WidowLoanStatus::activeStatuses(), 'value'))
-                                        ->orWhere(fn ($q2) => $q2
-                                            ->where('status', WidowLoanStatus::WRITTEN_OFF->value)
-                                            ->where('reapplication_allowed', false)
-                                        )
-                                    )
+                                function (Builder $query) {
+                                    $user = auth()->user();
+                                    $zoneId = $user?->coordinatedZone?->id;
+
+                                    if (! $user?->hasAnyRole(['admin', 'super_admin'])) {
+                                        if (! $zoneId) {
+                                            return $query->whereRaw('1 = 0');
+                                        }
+
+                                        $query->whereHas('deceased', fn ($q) => $q->where('zone_id', $zoneId));
+                                    }
+
+                                    return $query
+                                        ->where('is_eligible', true)
+                                        ->where('is_married', false)
+                                        ->whereDoesntHave('widowLoans', fn ($q) => $q
+                                            ->whereIn('status', array_column(WidowLoanStatus::activeStatuses(), 'value'))
+                                            ->orWhere(fn ($q2) => $q2
+                                                ->where('status', WidowLoanStatus::WRITTEN_OFF->value)
+                                                ->where('reapplication_allowed', false)
+                                            )
+                                        );
+                                }
                             )
                             ->searchable()
                             ->preload()
@@ -156,7 +169,7 @@ class LoanRequestResource extends Resource
                             ->helperText('Only eligible widows without active loans are shown'),
                     ]),
 
-                \Filament\Forms\Components\Section::make('Previous Loan Write-Off')
+                Section::make('Previous Loan Write-Off')
                     ->description('Important notice regarding the beneficiary\'s loan history.')
                     ->icon('heroicon-m-exclamation-triangle')
                     ->visible(function ($get) {
@@ -169,7 +182,7 @@ class LoanRequestResource extends Resource
                         return $widow && $widow->widowLoans()->where('status', WidowLoanStatus::WRITTEN_OFF)->exists();
                     })
                     ->schema([
-                        \Filament\Forms\Components\Placeholder::make('write_off_details')
+                        Placeholder::make('write_off_details')
                             ->label('')
                             ->content(function ($get) {
                                 $widowId = $get('widow_id');

@@ -1,4 +1,5 @@
 <?php
+
 // app/Filament/Coordinator/Resources/WelfareRequestResource.php
 
 namespace App\Filament\Coordinator\Resources;
@@ -15,14 +16,13 @@ use Filament\Actions\Action;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\Hidden;
-use Filament\Forms\Components\KeyValue;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Section;
-use Filament\Schemas\Components\Utilities\Set;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -31,11 +31,17 @@ use Illuminate\Database\Eloquent\Builder;
 class WelfareRequestResource extends Resource
 {
     protected static ?string $model = WelfareBeneficiary::class;
+
     protected static string|null|\BackedEnum $navigationIcon = 'heroicon-o-gift';
+
     protected static ?string $navigationLabel = 'Welfare Requests';
+
     protected static ?string $modelLabel = 'Welfare Request';
+
     protected static ?string $pluralModelLabel = 'Welfare Requests';
+
     protected static string|null|\UnitEnum $navigationGroup = 'Intervention Requests';
+
     protected static ?int $navigationSort = 4;
 
     public static function getEloquentQuery(): Builder
@@ -54,7 +60,7 @@ class WelfareRequestResource extends Resource
             return $query->whereRaw('1 = 0');
         }
 
-        return $query->whereHas('deceased', fn(Builder $q) => $q->where('zone_id', $zoneId));
+        return $query->whereHas('deceased', fn (Builder $q) => $q->where('zone_id', $zoneId));
     }
 
     public static function canCreate(): bool
@@ -83,7 +89,9 @@ class WelfareRequestResource extends Resource
     public static function canEdit($record): bool
     {
         $user = auth()->user();
-        if ($user?->hasAnyRole(['admin', 'super_admin'])) return true;
+        if ($user?->hasAnyRole(['admin', 'super_admin'])) {
+            return true;
+        }
 
         // ✅ FIXED: Use coordinatedZone for zone comparison
         $zoneId = $user?->coordinatedZone?->id;
@@ -103,87 +111,103 @@ class WelfareRequestResource extends Resource
         // ✅ FIXED: Use coordinatedZone instead of zone_id
         $zoneId = $user?->coordinatedZone?->id;
 
-        // Get active/open welfare packages
-        $activePackages = WelfarePackage::active()->orWhere->open()->get();
-
         return $schema
             ->schema([
                 Section::make('Package Selection')
                     ->schema([
                         Select::make('welfare_package_id')
                             ->label('Welfare Package')
-                            ->options(fn() => WelfarePackage::whereIn('status', ['open', 'active'])
-                                ->pluck('name', 'id'))
-                            ->searchable()
-                            ->preload()
-                            ->required()
-                            ->live()
-                            ->afterStateUpdated(function (Set $set, ?string $state) {
-                                if (!$state) return;
-
-                                $package = WelfarePackage::find($state);
-                                if ($package) {
-                                    $set('package_description', $package->description);
-                                    $set('package_period', $package->start_date?->format('M d, Y') . ' - ' . $package->end_date?->format('M d, Y'));
-                                }
-                            }),
+                            ->options(fn () => WelfarePackage::open()->pluck('name', 'id')->toArray())
+                            ->required(),
 
                         Placeholder::make('package_description')
                             ->label('Package Description')
-                            ->content(fn($state) => $state ?? 'Select a package to see details'),
+                            ->content(function (Get $get) {
+                                $packageId = $get('welfare_package_id');
+                                if (is_array($packageId)) {
+                                    $packageId = reset($packageId);
+                                }
+                                if (! $packageId || ! is_string($packageId)) {
+                                    return 'Select a package to see details';
+                                }
+
+                                return WelfarePackage::find($packageId)?->description ?? 'Select a package to see details';
+                            }),
 
                         Placeholder::make('package_period')
                             ->label('Distribution Period')
-                            ->content(fn($state) => $state ?? 'N/A'),
+                            ->content(function (Get $get) {
+                                $packageId = $get('welfare_package_id');
+                                if (is_array($packageId)) {
+                                    $packageId = reset($packageId);
+                                }
+                                if (! $packageId || ! is_string($packageId)) {
+                                    return 'N/A';
+                                }
+
+                                $package = WelfarePackage::find($packageId);
+                                if (! $package) {
+                                    return 'N/A';
+                                }
+
+                                return ($package->start_date?->format('M d, Y') ?? 'N/A').' - '.($package->end_date?->format('M d, Y') ?? 'N/A');
+                            }),
                     ]),
 
                 Section::make('Beneficiary Family')
                     ->schema([
                         Select::make('deceased_id')
                             ->label('Family Head (Deceased)')
-                            ->relationship(
-                                'deceased',
-                                'full_name',
-                                fn(Builder $query) => $query->where('zone_id', $zoneId)
-                            )
-                            ->searchable()
-                            ->preload()
-                            ->required()
-                            ->live()
-                            ->afterStateUpdated(function (Set $set, ?string $state) {
-                                if (!$state) return;
+                            ->options(function () {
+                                $user = auth()->user();
+                                $zoneId = $user?->coordinatedZone?->id;
 
-                                $deceased = Deceased::find($state);
-                                if ($deceased) {
-                                    $set('family_info', "Orphans: {$deceased->orphans()->count()}, Widows: {$deceased->widows()->count()}");
+                                $query = Deceased::query();
+                                if (! $user?->hasAnyRole(['admin', 'super_admin'])) {
+                                    if (! $zoneId) {
+                                        return [];
+                                    }
+
+                                    $query->where('zone_id', $zoneId);
                                 }
-                            }),
+
+                                return $query->pluck('full_name', 'id')->toArray();
+                            })
+                            ->required(),
 
                         Placeholder::make('family_info')
                             ->label('Family Summary')
-                            ->content(fn($state) => $state ?? 'Select a family to see summary'),
+                            ->content(function (Get $get) {
+                                $deceasedId = $get('deceased_id');
+                                if (is_array($deceasedId)) {
+                                    $deceasedId = reset($deceasedId);
+                                }
+                                if (! $deceasedId || ! is_string($deceasedId)) {
+                                    return 'Select a family to see summary';
+                                }
+
+                                $deceased = Deceased::find($deceasedId);
+                                if (! $deceased) {
+                                    return 'Select a family to see summary';
+                                }
+
+                                return "Orphans: {$deceased->orphans()->count()}, Widows: {$deceased->widows()->count()}";
+                            }),
                     ]),
 
                 Section::make('Request Details')
                     ->schema([
-                        Textarea::make('reason')
-                            ->label('Reason/Justification')
-                            ->required()
+                        Textarea::make('collection_notes')
+                            ->label('Reason / Justification')
                             ->rows(3)
                             ->placeholder('Explain why this family needs welfare support...'),
-
-                        KeyValue::make('additional_info')
-                            ->label('Additional Information')
-                            ->keyLabel('Field')
-                            ->valueLabel('Value')
-                            ->helperText('Any extra details about the request'),
                     ]),
 
                 Hidden::make('status')
                     ->default(BeneficiaryStatus::PENDING->value),
 
                 Hidden::make('suggested_by')
-                    ->default($user->id),
+                    ->default(fn () => auth()->id()),
             ]);
     }
 
@@ -250,20 +274,20 @@ class WelfareRequestResource extends Resource
                     ->query(function (Builder $query) {
                         $zoneId = auth()->user()?->coordinatedZone?->id;
                         if ($zoneId) {
-                            $query->whereHas('deceased', fn($q) => $q->where('zone_id', $zoneId));
+                            $query->whereHas('deceased', fn ($q) => $q->where('zone_id', $zoneId));
                         }
                     })
                     ->default(),
 
                 Tables\Filters\Filter::make('not_collected')
                     ->label('Not Yet Collected')
-                    ->query(fn($q) => $q->approved()->notCollected()),
+                    ->query(fn ($q) => $q->approved()->notCollected()),
             ])
             ->recordActions([
                 ViewAction::make(),
 
                 EditAction::make()
-                    ->visible(fn($record) => $record->status === BeneficiaryStatus::PENDING),
+                    ->visible(fn ($record) => $record->status === BeneficiaryStatus::PENDING),
 
                 Action::make('mark_collected')
                     ->label('Mark Collected')
@@ -272,7 +296,7 @@ class WelfareRequestResource extends Resource
                     ->requiresConfirmation()
                     ->modalHeading('Confirm Collection')
                     ->modalDescription('Mark this welfare item as collected?')
-                    ->visible(fn($record) => $record->canBeCollected())
+                    ->visible(fn ($record) => $record->canBeCollected())
                     ->action(function (WelfareBeneficiary $record) {
                         $record->markAsCollected('Collected by beneficiary', auth()->id());
 

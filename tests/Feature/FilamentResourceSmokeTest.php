@@ -150,6 +150,21 @@ test('admin panel education and project resources render without errors', functi
 test('coordinator panel resources render without errors', function () {
     Filament::setCurrentPanel(Filament::getPanel('coordinator'));
 
+    // Loan Requests
+    Livewire::test(\App\Filament\Coordinator\Resources\LoanRequestResource\Pages\ListLoanRequests::class)->assertSuccessful();
+    Livewire::test(\App\Filament\Coordinator\Resources\LoanRequestResource\Pages\CreateLoanRequest::class)->assertSuccessful();
+    Livewire::test(\App\Filament\Coordinator\Resources\LoanRequestResource\Pages\ViewLoanRequest::class, ['record' => $this->loan->getRouteKey()])->assertSuccessful();
+    Livewire::test(\App\Filament\Coordinator\Resources\LoanRequestResource\Pages\EditLoanRequest::class, ['record' => $this->loan->getRouteKey()])->assertSuccessful();
+
+    // Healthcare Requests
+    Livewire::test(\App\Filament\Coordinator\Resources\HealthcareRequestResource\Pages\ListHealthcareRequests::class)->assertSuccessful();
+    Livewire::test(\App\Filament\Coordinator\Resources\HealthcareRequestResource\Pages\CreateHealthcareRequest::class)->assertSuccessful();
+
+    // Welfare Requests
+    Livewire::test(\App\Filament\Coordinator\Resources\WelfareRequestResource\Pages\ListWelfareRequests::class)->assertSuccessful();
+    Livewire::test(\App\Filament\Coordinator\Resources\WelfareRequestResource\Pages\CreateWelfareRequest::class)->assertSuccessful();
+
+    // Core Coordinator Resources
     Livewire::test(\App\Filament\Coordinator\Resources\DeceasedResource\Pages\ListDeceaseds::class)->assertSuccessful();
     Livewire::test(\App\Filament\Coordinator\Resources\OrphanResource\Pages\ListOrphans::class)->assertSuccessful();
     Livewire::test(\App\Filament\Coordinator\Resources\WidowResource\Pages\ListWidows::class)->assertSuccessful();

@@ -1,10 +1,11 @@
 <?php
+
 // app/Filament\Coordinator\Resources\WelfareRequestResource/Pages/EditWelfareRequest.php
 
 namespace App\Filament\Coordinator\Resources\WelfareRequestResource\Pages;
 
-use App\Filament\Coordinator\Resources\WelfareRequestResource;
 use App\Enums\BeneficiaryStatus;
+use App\Filament\Coordinator\Resources\WelfareRequestResource;
 use Filament\Actions;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
@@ -18,8 +19,21 @@ class EditWelfareRequest extends EditRecord
         return [
             Actions\ViewAction::make(),
             Actions\DeleteAction::make()
-                ->visible(fn() => auth()->user()?->hasAnyRole(['admin', 'super_admin'])),
+                ->visible(fn () => auth()->user()?->hasAnyRole(['admin', 'super_admin'])),
         ];
+    }
+
+    protected function mutateFormDataBeforeSave(array $data): array
+    {
+        if (isset($data['welfare_package_id']) && is_array($data['welfare_package_id'])) {
+            $data['welfare_package_id'] = reset($data['welfare_package_id']);
+        }
+
+        if (isset($data['deceased_id']) && is_array($data['deceased_id'])) {
+            $data['deceased_id'] = reset($data['deceased_id']);
+        }
+
+        return $data;
     }
 
     protected function beforeSave(): void

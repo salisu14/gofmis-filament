@@ -147,12 +147,14 @@ class HealthcareRequestResource extends Resource
 
                         Select::make('prescribable_id')
                             ->label('Patient')
-                            ->options(function (Get $get) use ($user, $zoneId) {
+                            ->options(function (Get $get) {
                                 $type = $get('prescribable_type');
                                 if (! $type) {
                                     return [];
                                 }
 
+                                $user = auth()->user();
+                                $zoneId = $user?->coordinatedZone?->id;
                                 $isAdmin = $user?->hasAnyRole(['admin', 'super_admin']);
 
                                 if ($type === Orphan::class) {
@@ -187,12 +189,14 @@ class HealthcareRequestResource extends Resource
                             ->preload()
                             ->required()
                             ->native(false)
-                            ->getSearchResultsUsing(function (string $search, Get $get) use ($user, $zoneId) {
+                            ->getSearchResultsUsing(function (string $search, Get $get) {
                                 $type = $get('prescribable_type');
                                 if (! $type) {
                                     return [];
                                 }
 
+                                $user = auth()->user();
+                                $zoneId = $user?->coordinatedZone?->id;
                                 $isAdmin = $user?->hasAnyRole(['admin', 'super_admin']);
 
                                 if ($type === Orphan::class) {
@@ -236,11 +240,14 @@ class HealthcareRequestResource extends Resource
                                 return [];
                             })
                             ->rules([
-                                function (Get $get) use ($user, $zoneId) {
-                                    return function (string $attribute, $value, \Closure $fail) use ($get, $user, $zoneId) {
+                                function (Get $get) {
+                                    return function (string $attribute, $value, \Closure $fail) use ($get) {
                                         if (! $value) {
                                             return;
                                         }
+
+                                        $user = auth()->user();
+                                        $zoneId = $user?->coordinatedZone?->id;
 
                                         $type = $get('prescribable_type');
                                         if (! $type || ! in_array($type, [Orphan::class, Widow::class], true)) {
@@ -350,7 +357,7 @@ class HealthcareRequestResource extends Resource
                     ]),
 
                 Hidden::make('user_id')
-                    ->default($user->id),
+                    ->default(fn () => auth()->id()),
             ]);
     }
 
