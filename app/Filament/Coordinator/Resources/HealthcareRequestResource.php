@@ -1,4 +1,5 @@
 <?php
+
 // app/Filament/Coordinator/Resources/HealthcareRequestResource.php
 
 namespace App\Filament\Coordinator\Resources;
@@ -32,11 +33,17 @@ use Illuminate\Database\Eloquent\Builder;
 class HealthcareRequestResource extends Resource
 {
     protected static ?string $model = Prescription::class;
+
     protected static string|null|\BackedEnum $navigationIcon = 'heroicon-o-heart';
+
     protected static ?string $navigationLabel = 'Healthcare Requests';
+
     protected static ?string $modelLabel = 'Healthcare Request';
+
     protected static ?string $pluralModelLabel = 'Healthcare Requests';
+
     protected static string|null|\UnitEnum $navigationGroup = 'Intervention Requests';
+
     protected static ?int $navigationSort = 2;
 
     public static function getEloquentQuery(): Builder
@@ -95,7 +102,9 @@ class HealthcareRequestResource extends Resource
     public static function canEdit($record): bool
     {
         $user = auth()->user();
-        if ($user?->hasAnyRole(['admin', 'super_admin'])) return true;
+        if ($user?->hasAnyRole(['admin', 'super_admin'])) {
+            return true;
+        }
 
         return $record->created_at->diffInDays(now()) <= 7 && $user?->managesZone(static::recordZoneId($record));
     }
@@ -131,58 +140,137 @@ class HealthcareRequestResource extends Resource
                             ])
                             ->required()
                             ->live()
+                            ->afterStateUpdated(fn (Set $set) => $set('prescribable_id', null))
                             ->native(false)
                             ->default(Orphan::class)
                             ->selectablePlaceholder(false),
 
                         Select::make('prescribable_id')
                             ->label('Patient')
-                            ->options(function (Get $get) use ($zoneId) {
-                                $type = $get('prescribable_type'); // ← FIXED: was 'patient_type'
-                                if (!$type) return [];
-
-                                if ($type === Orphan::class) {
-                                    return Orphan::whereHas('deceased', fn($q) => $q->where('zone_id', $zoneId))
-                                        ->where('is_eligible', true)
-                                        ->get()
-                                        ->mapWithKeys(fn($o) => [$o->id => "{$o->full_name} ({$o->reg_no})"]);
+                            ->options(function (Get $get) use ($user, $zoneId) {
+                                $type = $get('prescribable_type');
+                                if (! $type) {
+                                    return [];
                                 }
 
-                                return Widow::whereHas('deceased', fn($q) => $q->where('zone_id', $zoneId))
-                                    ->where('is_eligible', true)
-                                    ->get()
-                                    ->mapWithKeys(fn($w) => [$w->id => "{$w->full_name} ({$w->reg_no})"]);
+                                $isAdmin = $user?->hasAnyRole(['admin', 'super_admin']);
+
+                                if ($type === Orphan::class) {
+                                    $query = Orphan::query()->where('is_eligible', true);
+                                    if (! $isAdmin) {
+                                        if (! $zoneId) {
+                                            return [];
+                                        }
+                                        $query->whereHas('deceased', fn ($q) => $q->where('zone_id', $zoneId));
+                                    }
+
+                                    return $query->get()
+                                        ->mapWithKeys(fn ($o) => [$o->id => "{$o->full_name} ({$o->reg_no})"]);
+                                }
+
+                                if ($type === Widow::class) {
+                                    $query = Widow::query()->where('is_eligible', true);
+                                    if (! $isAdmin) {
+                                        if (! $zoneId) {
+                                            return [];
+                                        }
+                                        $query->whereHas('deceased', fn ($q) => $q->where('zone_id', $zoneId));
+                                    }
+
+                                    return $query->get()
+                                        ->mapWithKeys(fn ($w) => [$w->id => "{$w->full_name} ({$w->reg_no})"]);
+                                }
+
+                                return [];
                             })
                             ->searchable()
                             ->preload()
                             ->required()
                             ->native(false)
-                            ->getSearchResultsUsing(function (string $search, Get $get) use ($zoneId) {
+                            ->getSearchResultsUsing(function (string $search, Get $get) use ($user, $zoneId) {
                                 $type = $get('prescribable_type');
-                                if (!$type) return [];
-
-                                if ($type === Orphan::class) {
-                                    return Orphan::whereHas('deceased', fn($q) => $q->where('zone_id', $zoneId))
-                                        ->where('is_eligible', true)
-                                        ->where(function ($q) use ($search) {
-                                            $q->where('full_name', 'ilike', "%{$search}%")
-                                                ->orWhere('reg_no', 'ilike', "%{$search}%");
-                                        })
-                                        ->limit(50)
-                                        ->get()
-                                        ->mapWithKeys(fn($o) => [$o->id => "{$o->full_name} ({$o->reg_no})"]);
+                                if (! $type) {
+                                    return [];
                                 }
 
-                                return Widow::whereHas('deceased', fn($q) => $q->where('zone_id', $zoneId))
-                                    ->where('is_eligible', true)
-                                    ->where(function ($q) use ($search) {
-                                        $q->where('full_name', 'ilike', "%{$search}%")
-                                            ->orWhere('reg_no', 'ilike', "%{$search}%");
-                                    })
-                                    ->limit(50)
-                                    ->get()
-                                    ->mapWithKeys(fn($w) => [$w->id => "{$w->full_name} ({$w->reg_no})"]);
-                            }),
+                                $isAdmin = $user?->hasAnyRole(['admin', 'super_admin']);
+
+                                if ($type === Orphan::class) {
+                                    $query = Orphan::query()
+                                        ->where('is_eligible', true)
+                                        ->where(function ($q) use ($search) {
+                                            $q->where('full_name', 'like', "%{$search}%")
+                                                ->orWhere('reg_no', 'like', "%{$search}%");
+                                        });
+
+                                    if (! $isAdmin) {
+                                        if (! $zoneId) {
+                                            return [];
+                                        }
+                                        $query->whereHas('deceased', fn ($q) => $q->where('zone_id', $zoneId));
+                                    }
+
+                                    return $query->limit(50)->get()
+                                        ->mapWithKeys(fn ($o) => [$o->id => "{$o->full_name} ({$o->reg_no})"]);
+                                }
+
+                                if ($type === Widow::class) {
+                                    $query = Widow::query()
+                                        ->where('is_eligible', true)
+                                        ->where(function ($q) use ($search) {
+                                            $q->where('full_name', 'like', "%{$search}%")
+                                                ->orWhere('reg_no', 'like', "%{$search}%");
+                                        });
+
+                                    if (! $isAdmin) {
+                                        if (! $zoneId) {
+                                            return [];
+                                        }
+                                        $query->whereHas('deceased', fn ($q) => $q->where('zone_id', $zoneId));
+                                    }
+
+                                    return $query->limit(50)->get()
+                                        ->mapWithKeys(fn ($w) => [$w->id => "{$w->full_name} ({$w->reg_no})"]);
+                                }
+
+                                return [];
+                            })
+                            ->rules([
+                                function (Get $get) use ($user, $zoneId) {
+                                    return function (string $attribute, $value, \Closure $fail) use ($get, $user, $zoneId) {
+                                        if (! $value) {
+                                            return;
+                                        }
+
+                                        $type = $get('prescribable_type');
+                                        if (! $type || ! in_array($type, [Orphan::class, Widow::class], true)) {
+                                            $fail('The selected patient category is invalid.');
+
+                                            return;
+                                        }
+
+                                        $model = $type::find($value);
+                                        if (! $model) {
+                                            $fail('The selected patient does not exist.');
+
+                                            return;
+                                        }
+
+                                        if (! $model->is_eligible) {
+                                            $fail('The selected patient is not eligible for healthcare requests.');
+
+                                            return;
+                                        }
+
+                                        if (! $user?->hasAnyRole(['admin', 'super_admin'])) {
+                                            $patientZoneId = $model->deceased?->zone_id;
+                                            if (! $patientZoneId || $patientZoneId !== $zoneId) {
+                                                $fail('You are not authorized to create a healthcare request for a beneficiary outside your assigned zone.');
+                                            }
+                                        }
+                                    };
+                                },
+                            ]),
                     ]),
 
                 Section::make('Prescription Details')
@@ -201,7 +289,7 @@ class HealthcareRequestResource extends Resource
                             ->preload()
                             ->required()
                             ->native(false)
-                            ->getOptionLabelFromRecordUsing(fn(Illness $record) => "{$record->name} (" . ($record->category?->label() ?? 'Other') . ")")
+                            ->getOptionLabelFromRecordUsing(fn (Illness $record) => "{$record->name} (".($record->category?->label() ?? 'Other').')')
                             ->createOptionForm([
                                 TextInput::make('name')
                                     ->required()
@@ -219,8 +307,7 @@ class HealthcareRequestResource extends Resource
                             ->prefix('₦')
                             ->default(0)
                             ->live()
-                            ->afterStateUpdated(fn(Set $set, Get $get) =>
-                            $set('total_cost', (float) ($get('lab_test_cost') ?? 0) + (float) ($get('drug_cost') ?? 0))
+                            ->afterStateUpdated(fn (Set $set, Get $get) => $set('total_cost', (float) ($get('lab_test_cost') ?? 0) + (float) ($get('drug_cost') ?? 0))
                             ),
 
                         TextInput::make('drug_cost')
@@ -229,8 +316,7 @@ class HealthcareRequestResource extends Resource
                             ->prefix('₦')
                             ->default(0)
                             ->live()
-                            ->afterStateUpdated(fn(Set $set, Get $get) =>
-                            $set('total_cost', (float) ($get('lab_test_cost') ?? 0) + (float) ($get('drug_cost') ?? 0))
+                            ->afterStateUpdated(fn (Set $set, Get $get) => $set('total_cost', (float) ($get('lab_test_cost') ?? 0) + (float) ($get('drug_cost') ?? 0))
                             ),
 
                         TextInput::make('total_cost')
@@ -240,8 +326,7 @@ class HealthcareRequestResource extends Resource
                             ->dehydrated(false)
                             ->placeholder('Auto-calculated')
                             ->live()
-                            ->default(fn(Get $get) =>
-                            number_format(
+                            ->default(fn (Get $get) => number_format(
                                 (float) ($get('lab_test_cost') ?? 0) + (float) ($get('drug_cost') ?? 0),
                                 2
                             )
@@ -281,7 +366,7 @@ class HealthcareRequestResource extends Resource
                 Tables\Columns\TextColumn::make('prescribable_type')
                     ->label('Type')
                     ->badge()
-                    ->formatStateUsing(fn($state) => class_basename($state))
+                    ->formatStateUsing(fn ($state) => class_basename($state))
                     ->colors([
                         'info' => Orphan::class,
                         'warning' => Widow::class,
@@ -299,7 +384,7 @@ class HealthcareRequestResource extends Resource
 
                 Tables\Columns\TextColumn::make('total_cost')
                     ->money('NGN')
-                    ->state(fn(Prescription $record) => $record->total_cost)
+                    ->state(fn (Prescription $record) => $record->total_cost)
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('prescription_date')
@@ -327,16 +412,18 @@ class HealthcareRequestResource extends Resource
                     ->label('My Zone Only')
                     ->query(function (Builder $query) {
                         $zoneId = auth()->user()?->coordinatedZone?->id;
-                        if (!$zoneId) return;
+                        if (! $zoneId) {
+                            return;
+                        }
 
                         $query->where(function (Builder $q) use ($zoneId) {
                             $q->whereHas('prescribable', function (Builder $q2) use ($zoneId) {
                                 $q2->where(function (Builder $q3) use ($zoneId) {
                                     $q3->where('prescribable_type', Orphan::class)
-                                        ->whereHas('deceased', fn($q4) => $q4->where('zone_id', $zoneId));
+                                        ->whereHas('deceased', fn ($q4) => $q4->where('zone_id', $zoneId));
                                 })->orWhere(function (Builder $q3) use ($zoneId) {
                                     $q3->where('prescribable_type', Widow::class)
-                                        ->whereHas('deceased', fn($q4) => $q4->where('zone_id', $zoneId));
+                                        ->whereHas('deceased', fn ($q4) => $q4->where('zone_id', $zoneId));
                                 });
                             });
                         });
@@ -345,12 +432,12 @@ class HealthcareRequestResource extends Resource
 
                 Tables\Filters\Filter::make('this_month')
                     ->label('This Month')
-                    ->query(fn($q) => $q->whereMonth('prescription_date', now()->month)),
+                    ->query(fn ($q) => $q->whereMonth('prescription_date', now()->month)),
             ])
             ->recordActions([
                 ViewAction::make(),
                 EditAction::make()
-                    ->visible(fn($record) => $record->created_at->diffInDays(now()) <= 7),
+                    ->visible(fn ($record) => $record->created_at->diffInDays(now()) <= 7),
             ])
             ->defaultSort('prescription_date', 'desc');
     }
