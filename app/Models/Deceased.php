@@ -51,6 +51,21 @@ class Deceased extends Model
         'vulnerability_status' => VulnerabilityStatus::class,
     ];
 
+    public function getDisplayNameAttribute(): string
+    {
+        return $this->full_name
+            ?: trim(
+                collect([
+                    $this->first_name,
+                    $this->middle_name,
+                    $this->last_name,
+                ])
+                    ->filter()
+                    ->implode(' ')
+            )
+                ?: 'Unnamed deceased record';
+    }
+
     public function zone(): BelongsTo
     {
         return $this->belongsTo(Zone::class);

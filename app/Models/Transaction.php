@@ -5,8 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -57,7 +57,7 @@ class Transaction extends Model
     public function isInternalTransfer(): bool
     {
         // A transfer is internal if both accounts share the same top-level parent
-        if (!$this->destination_bank_account_id || !$this->bank_account_id) {
+        if (! $this->destination_bank_account_id || ! $this->bank_account_id) {
             return false;
         }
 
@@ -87,7 +87,7 @@ class Transaction extends Model
         });
 
         static::created(function (Transaction $transaction) {
-            if (!$transaction->is_system) {
+            if (! $transaction->is_system) {
                 $transaction->postToBank();
             }
         });
@@ -110,7 +110,7 @@ class Transaction extends Model
         });
 
         static::deleted(function (Transaction $transaction) {
-            if (!$transaction->is_system) {
+            if (! $transaction->is_system) {
                 $transaction->reverseBankPosting(
                     $transaction->bank_account_id,
                     $transaction->destination_bank_account_id,
@@ -121,14 +121,48 @@ class Transaction extends Model
         });
     }
 
-    public function isCreditType(?string $type = null): bool
+    public static function getCreditTypes(): array
     {
-        return in_array($type ?? $this->type, [
+        return [
             'deposit',
+            'credit',
             'loan_repayment',
             'imprest_replenishment_reversal',
             'imprest_expense_void',
-        ], true);
+            'education_fee_payment_void',
+        ];
+    }
+
+    public static function getDebitTypes(): array
+    {
+        return [
+            'withdrawal',
+            'debit',
+            'transfer',
+            'loan_disbursement',
+            'imprest_funding',
+            'imprest_replenishment',
+            'imprest_expense',
+            'education_fee_payment',
+            'intervention',
+        ];
+    }
+
+    public function isCreditType(?string $type = null): bool
+    {
+        return in_array($type ?? $this->type, static::getCreditTypes(), true);
+    }
+
+    public function isDebitType(?string $type = null): bool
+    {
+        return in_array($type ?? $this->type, static::getDebitTypes(), true);
+    }
+
+    public function isRecognizedType(?string $type = null): bool
+    {
+        $targetType = $type ?? $this->type;
+
+        return $this->isCreditType($targetType) || $this->isDebitType($targetType);
     }
 
     public static function generateReference(?string $type = null): string

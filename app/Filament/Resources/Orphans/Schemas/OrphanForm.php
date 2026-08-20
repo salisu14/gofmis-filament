@@ -16,96 +16,99 @@ use Filament\Schemas\Schema;
 
 class OrphanForm
 {
-    public static function configure(Schema $schema): Schema
+    public static function configure(Schema $schema, bool $includeDeceased = true): Schema
     {
+        $personalSchema = [
+            Grid::make(3)->schema([
+                TextInput::make('first_name')
+                    ->required()
+                    ->maxLength(100),
+                TextInput::make('middle_name')
+                    ->maxLength(100),
+                TextInput::make('last_name')
+                    ->required()
+                    ->maxLength(100),
+            ]),
+
+            Grid::make(3)->schema([
+                Select::make('gender')
+                    ->label('Gender')
+                    ->options(\App\Enums\Gender::class)
+                    ->required()
+                    ->native(false),
+
+                TextInput::make('nin')
+                    ->label('NIN')
+                    ->unique(ignoreRecord: true)
+                    ->placeholder('11-digit NIN')
+                    ->maxLength(11)
+                    ->required(),
+
+                TextInput::make('reg_no')
+                    ->label('Registration Number')
+                    ->placeholder('Auto-generated on creation')
+                    ->disabled()
+                    ->dehydrated(false),
+            ]),
+
+            Grid::make(2)->schema([
+                DatePicker::make('birth_date')
+                    ->label('Date of Birth')
+                    ->required()
+                    ->native(false)
+                    ->displayFormat('d/m/Y')
+                    ->live()
+                    ->afterStateUpdated(function ($state, $set) {
+                        if ($state) {
+                            $set('age', \Carbon\Carbon::parse($state)->age);
+                        }
+                    }),
+
+                TextInput::make('age')
+                    ->label('Calculated Age')
+                    ->numeric()
+                    ->readOnly()
+                    ->dehydrated(false)
+                    ->helperText('Auto-calculated from birth date.'),
+            ]),
+        ];
+
+        if ($includeDeceased) {
+            $personalSchema[] = Select::make('deceased_id')
+                ->label('Deceased')
+                ->relationship(
+                    name: 'deceased',
+                    titleAttribute: 'id',
+                    modifyQueryUsing: fn ($query) => $query
+                        ->orderBy('first_name')
+                        ->orderBy('last_name')
+                )
+                ->getOptionLabelFromRecordUsing(
+                    fn (Deceased $record): string => trim(
+                        collect([
+                            $record->first_name,
+                            $record->middle_name,
+                            $record->last_name,
+                        ])
+                            ->filter(fn ($value) => filled($value))
+                            ->implode(' ')
+                    ) ?: 'Unnamed deceased record'
+                )
+                ->searchable([
+                    'first_name',
+                    'middle_name',
+                    'last_name',
+                ])
+                ->preload()
+                ->required();
+        }
+
         return $schema
             ->components([
                 Section::make('Personal Information')
                     ->description('Primary identification and demographic details.')
                     ->icon('heroicon-m-user-circle')
-                    ->schema([
-                        Grid::make(3)->schema([
-                            TextInput::make('first_name')
-                                ->required()
-                                ->maxLength(100),
-                            TextInput::make('middle_name')
-                                ->maxLength(100),
-                            TextInput::make('last_name')
-                                ->required()
-                                ->maxLength(100),
-                        ]),
-
-                        Grid::make(3)->schema([
-                            // ADDED: Gender Field
-                            Select::make('gender')
-                                ->label('Gender')
-                                ->options(\App\Enums\Gender::class)
-                                ->required()
-                                ->native(false),
-
-                            TextInput::make('nin')
-                                ->label('NIN')
-                                ->unique(ignoreRecord: true)
-                                ->placeholder('11-digit NIN')
-                                ->maxLength(11)
-                                ->required(),
-
-                            TextInput::make('reg_no')
-                                ->label('Registration Number')
-                                ->placeholder('Auto-generated on creation')
-                                ->disabled()
-                                ->dehydrated(false),
-                        ]),
-
-                        Grid::make(2)->schema([
-                            DatePicker::make('birth_date')
-                                ->label('Date of Birth')
-                                ->required()
-                                ->native(false)
-                                ->displayFormat('d/m/Y')
-                                ->live()
-                                ->afterStateUpdated(function ($state, $set) {
-                                    if ($state) {
-                                        $set('age', \Carbon\Carbon::parse($state)->age);
-                                    }
-                                }),
-
-                            TextInput::make('age')
-                                ->label('Calculated Age')
-                                ->numeric()
-                                ->readOnly()
-                                ->dehydrated(false) // Don't save manually
-                                ->helperText('Auto-calculated from birth date.'),
-                        ]),
-
-                        Select::make('deceased_id')
-                            ->label('Deceased')
-                            ->relationship(
-                                name: 'deceased',
-                                titleAttribute: 'id',
-                                modifyQueryUsing: fn ($query) => $query
-                                    ->orderBy('first_name')
-                                    ->orderBy('last_name')
-                            )
-                            ->getOptionLabelFromRecordUsing(
-                                fn (Deceased $record): string => trim(
-                                    collect([
-                                        $record->first_name,
-                                        $record->middle_name,
-                                        $record->last_name,
-                                    ])
-                                        ->filter(fn ($value) => filled($value))
-                                        ->implode(' ')
-                                ) ?: 'Unnamed deceased record'
-                            )
-                            ->searchable([
-                                'first_name',
-                                'middle_name',
-                                'last_name',
-                            ])
-                            ->preload()
-                            ->required(),
-                    ]),
+                    ->schema($personalSchema),
 
                 Section::make('Status & Skills')
                     ->icon('heroicon-m-briefcase')

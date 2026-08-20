@@ -20,6 +20,7 @@ class WidowLoanService
      *
      * We do NOT generate the repayment schedule here. The schedule is anchored
      * to the actual disbursement date, so it is generated inside disburseLoan().
+     *
      * @throws \Throwable
      */
     public function createLoan(CreateWidowLoanData $data): WidowLoan
@@ -131,10 +132,10 @@ class WidowLoanService
         if ($available < $required) {
             throw new InsufficientBankBalanceException(
                 'Insufficient funds in the disbursement account. Available: ₦'
-                . number_format($available, 2)
-                . ', Required: ₦'
-                . number_format($required, 2)
-                . '.'
+                .number_format($available, 2)
+                .', Required: ₦'
+                .number_format($required, 2)
+                .'.'
             );
         }
     }
@@ -225,7 +226,6 @@ class WidowLoanService
 
             $disbursedAt = now();
 
-
             // Update loan status
             $loan->update([
                 'status' => WidowLoanStatus::DISBURSED,
@@ -284,6 +284,7 @@ class WidowLoanService
      *  3. Create a WidowLoanRepayment record.
      *  4. Create a Transaction record (no hardcoded journal lines).
      *  5. Call refreshBalance() once to recalculate totals and sync schedule flags.
+     *
      * @throws \Throwable
      */
     public function recordRepayment(RecordWidowLoanRepaymentData $data): WidowLoanRepayment
@@ -300,9 +301,9 @@ class WidowLoanService
             $remainingBalance = (float) $loan->outstanding_balance;
 
             if ((float) $data->amount > $remainingBalance) {
-                throw new \RuntimeException(
-                    'Repayment amount exceeds the outstanding balance of ₦'.number_format($remainingBalance, 2).'.'
-                );
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'amount' => 'Repayment amount exceeds the outstanding balance of ₦'.number_format($remainingBalance, 2).'.',
+                ]);
             }
 
             $bankAccountId = $data->bankAccountId ?: ($loan->repayment_bank_id ?: $loan->bank_account_id);

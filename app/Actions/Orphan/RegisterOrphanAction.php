@@ -63,7 +63,8 @@ class RegisterOrphanAction
                 'child_sequence' => $registrationData['child_sequence'],
                 'has_birth_cert' => $data->hasBirthCert,
                 'birth_certificate_path' => $birthCertificatePath,
-                'status' => 'draft',
+                'status' => \App\Enums\OrphanStatus::PENDING_REVIEW,
+                'is_eligible' => false,
             ]);
 
             // EDUCATION
@@ -115,12 +116,9 @@ class RegisterOrphanAction
                 }
             }
 
-            // ELIGIBILITY
-            $isEligible = $this->eligibilityService->isEligible($orphan);
-
             $orphan->update([
-                'is_eligible' => $isEligible,
-                'status' => $isEligible ? 'approved' : 'pending_review',
+                'is_eligible' => false,
+                'status' => \App\Enums\OrphanStatus::PENDING_REVIEW,
             ]);
 
             return $orphan;
