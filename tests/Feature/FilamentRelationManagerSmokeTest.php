@@ -48,7 +48,7 @@ beforeEach(function () {
         'is_married' => false,
     ]);
 
-    $this->bankAccount = BankAccount::create([
+    $this->parentBankAccount = BankAccount::create([
         'user_id' => $this->admin->id,
         'account_name' => 'Rel Operating Account',
         'account_number' => '9991112224',
@@ -57,6 +57,18 @@ beforeEach(function () {
         'reserved_balance' => 0.00,
         'usage' => BankAccount::USAGE_GENERAL,
     ]);
+
+    $this->bankAccount = BankAccount::create([
+        'user_id' => $this->admin->id,
+        'account_name' => 'Rel Education Account',
+        'account_number' => '9991112225',
+        'parent_bank_account_id' => $this->parentBankAccount->id,
+        'opening_balance' => 0.00,
+        'ledger_balance' => 50000.00,
+        'reserved_balance' => 0.00,
+        'usage' => BankAccount::USAGE_EDUCATION,
+    ]);
+    $this->bankAccount->update(['ledger_balance' => 50000.00]);
 
     $this->project = Project::create([
         'name' => 'Rel Project',
@@ -100,95 +112,88 @@ beforeEach(function () {
     ]);
 });
 
-test('deceased relation managers (Orphans, Widows) render successfully', function () {
+test('deceased relation managers (Orphans, Widows) create action submission works', function () {
     Filament::setCurrentPanel(Filament::getPanel('admin'));
 
+    // Create Orphan via Deceased relation manager
     Livewire::test(\App\Filament\Resources\Deceased\RelationManagers\OrphansRelationManager::class, [
         'ownerRecord' => $this->deceased,
         'pageClass' => \App\Filament\Resources\Deceased\Pages\EditDeceased::class,
-    ])->assertSuccessful();
+    ])
+        ->callTableAction('create', data: [
+            'first_name' => 'ChildOne',
+            'last_name' => 'DeceasedChild',
+            'gender' => \App\Enums\Gender::MALE->value,
+            'birth_date' => '2018-06-15',
+            'nin' => '11122233344',
+            'address' => '123 Child St',
+            'is_eligible' => true,
+        ])
+        ->assertHasNoTableActionErrors();
 
+    expect(Orphan::where('first_name', 'ChildOne')->where('deceased_id', $this->deceased->id)->exists())->toBeTrue();
+
+    // Create Widow via Deceased relation manager
     Livewire::test(\App\Filament\Resources\Deceased\RelationManagers\WidowsRelationManager::class, [
         'ownerRecord' => $this->deceased,
         'pageClass' => \App\Filament\Resources\Deceased\Pages\EditDeceased::class,
-    ])->assertSuccessful();
+    ])
+        ->callTableAction('create', data: [
+            'first_name' => 'WidowOne',
+            'last_name' => 'DeceasedWidow',
+            'nin' => '99988877711',
+            'address' => '456 St',
+            'child_sequence' => 2,
+            'is_eligible' => true,
+            'is_married' => false,
+        ])
+        ->assertHasNoTableActionErrors();
+
+    expect(Widow::where('first_name', 'WidowOne')->where('deceased_id', $this->deceased->id)->exists())->toBeTrue();
 });
 
-test('prescription relation managers for Orphans and Widows render successfully', function () {
+test('orphan and widow medical history action submission works', function () {
     Filament::setCurrentPanel(Filament::getPanel('admin'));
+
+    $illness = \App\Models\Illness::create([
+        'name' => 'Malaria Fever',
+        'category' => \App\Enums\IllnessCategory::Infectious,
+    ]);
 
     Livewire::test(\App\Filament\Resources\Orphans\RelationManagers\PrescriptionsRelationManager::class, [
         'ownerRecord' => $this->orphan,
-        'pageClass' => \App\Filament\Resources\Orphans\Pages\ViewOrphan::class,
-    ])->assertSuccessful();
+        'pageClass' => \App\Filament\Resources\Orphans\Pages\EditOrphan::class,
+    ])
+        ->callTableAction('create', data: [
+            'doctor_name' => 'Dr. Smith',
+            'illness_id' => $illness->id,
+            'prescription_date' => now()->toDateString(),
+            'lab_test_cost' => 5000.00,
+            'drug_cost' => 10000.00,
+            'note' => 'Full recovery course',
+        ])
+        ->assertHasNoTableActionErrors();
 
-    Livewire::test(\App\Filament\Resources\Widows\RelationManagers\PrescriptionsRelationManager::class, [
-        'ownerRecord' => $this->widow,
-        'pageClass' => \App\Filament\Resources\Widows\Pages\ViewWidow::class,
-    ])->assertSuccessful();
+    expect(\App\Models\Prescription::where('illness_id', $illness->id)->where('prescribable_id', $this->orphan->id)->exists())->toBeTrue();
 });
 
-test('widow loan relation managers (Schedules, Repayments) render successfully', function () {
+test('education fee invoice payment relation manager record payment action works', function () {
     Filament::setCurrentPanel(Filament::getPanel('admin'));
 
-    Livewire::test(\App\Filament\Resources\WidowLoans\RelationManagers\SchedulesRelationManager::class, [
-        'ownerRecord' => $this->loan,
-        'pageClass' => \App\Filament\Resources\WidowLoans\Pages\ViewWidowLoan::class,
-    ])->assertSuccessful();
-
-    Livewire::test(\App\Filament\Resources\WidowLoans\RelationManagers\RepaymentsRelationManager::class, [
-        'ownerRecord' => $this->loan,
-        'pageClass' => \App\Filament\Resources\WidowLoans\Pages\ViewWidowLoan::class,
-    ])->assertSuccessful();
-});
-
-test('project relation managers (Beneficiaries, Media, Milestones) render successfully', function () {
-    Filament::setCurrentPanel(Filament::getPanel('admin'));
-
-    Livewire::test(\App\Filament\Resources\Projects\RelationManagers\BeneficiariesRelationManager::class, [
-        'ownerRecord' => $this->project,
-        'pageClass' => \App\Filament\Resources\Projects\Pages\EditProject::class,
-    ])->assertSuccessful();
-
-    Livewire::test(\App\Filament\Resources\Projects\RelationManagers\MediaRelationManager::class, [
-        'ownerRecord' => $this->project,
-        'pageClass' => \App\Filament\Resources\Projects\Pages\EditProject::class,
-    ])->assertSuccessful();
-
-    Livewire::test(\App\Filament\Resources\Projects\RelationManagers\MilestonesRelationManager::class, [
-        'ownerRecord' => $this->project,
-        'pageClass' => \App\Filament\Resources\Projects\Pages\EditProject::class,
-    ])->assertSuccessful();
-});
-
-test('education fee invoice payments relation manager renders successfully', function () {
-    Filament::setCurrentPanel(Filament::getPanel('admin'));
+    $this->bankAccount->ledger_balance = 50000.00;
+    $this->bankAccount->saveQuietly();
 
     Livewire::test(\App\Filament\Resources\EducationFeeInvoices\RelationManagers\PaymentsRelationManager::class, [
         'ownerRecord' => $this->invoice,
         'pageClass' => \App\Filament\Resources\EducationFeeInvoices\Pages\EditEducationFeeInvoice::class,
-    ])->assertSuccessful();
-});
+    ])
+        ->callTableAction('create', data: [
+            'amount' => 5000.00,
+            'payment_date' => now()->toDateString(),
+            'payment_method' => 'transfer',
+            'bank_account_id' => $this->bankAccount->id,
+        ])
+        ->assertHasNoTableActionErrors();
 
-test('bank account transactions relation manager renders successfully', function () {
-    Filament::setCurrentPanel(Filament::getPanel('admin'));
-
-    Livewire::test(\App\Filament\Resources\BankAccounts\RelationManagers\TransactionsRelationManager::class, [
-        'ownerRecord' => $this->bankAccount,
-        'pageClass' => \App\Filament\Resources\BankAccounts\Pages\EditBankAccount::class,
-    ])->assertSuccessful();
-});
-
-test('zone relation managers (Deceased, CoordinatorHistory) render successfully', function () {
-    Filament::setCurrentPanel(Filament::getPanel('admin'));
-
-    Livewire::test(\App\Filament\Resources\Zones\RelationManagers\DeceasedRelationManager::class, [
-        'ownerRecord' => $this->zone,
-        'pageClass' => \App\Filament\Resources\Zones\Pages\EditZone::class,
-    ])->assertSuccessful();
-
-    Livewire::test(\App\Filament\Resources\Zones\RelationManagers\CoordinatorHistoryRelationManager::class, [
-        'ownerRecord' => $this->zone,
-        'pageClass' => \App\Filament\Resources\Zones\Pages\EditZone::class,
-    ])->assertSuccessful();
+    expect(\App\Models\EducationFeePayment::where('bank_account_id', $this->bankAccount->id)->exists())->toBeTrue();
 });

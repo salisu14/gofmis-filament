@@ -41,7 +41,11 @@ class PrescriptionForm
                             ->preload()
                             ->native(false)
                             ->optionsLimit(50)
-                            ->getOptionLabelFromRecordUsing(fn (Illness $record): string => "{$record->name} — {$record->category?->label()}")
+                            ->getOptionLabelFromRecordUsing(function (Illness $record): string {
+                                $categoryLabel = $record->category instanceof IllnessCategory ? $record->category->label() : ($record->category ?? 'General');
+
+                                return "{$record->name} — {$categoryLabel}";
+                            })
                             ->createOptionForm([
                                 Section::make('New Illness')
                                     ->schema([
