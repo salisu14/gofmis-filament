@@ -34,6 +34,15 @@ class WelfareBeneficiary extends Model
         'collected_at' => 'datetime',
     ];
 
+    protected static function booted(): void
+    {
+        static::deleting(function (WelfareBeneficiary $model) {
+            if (! $model->isPending()) {
+                throw new \DomainException('Processed or collected welfare allocation records cannot be deleted.');
+            }
+        });
+    }
+
     // Relationships
     public function welfarePackage(): BelongsTo
     {
@@ -121,6 +130,7 @@ class WelfareBeneficiary extends Model
     {
         return $this->collection_status === CollectionStatus::NOT_COLLECTED;
     }
+
     public function canBeCollected(): bool
     {
         return $this->status === BeneficiaryStatus::APPROVED
@@ -139,7 +149,7 @@ class WelfareBeneficiary extends Model
 
     public function markAsCollected(?string $notes = null, ?string $collectedBy = null): bool
     {
-        if (!$this->canBeCollected()) {
+        if (! $this->canBeCollected()) {
             return false;
         }
 
@@ -153,7 +163,7 @@ class WelfareBeneficiary extends Model
 
     public function markAsApproved(?string $approvedBy = null): bool
     {
-        if (!$this->canBeApproved()) {
+        if (! $this->canBeApproved()) {
             return false;
         }
 
@@ -165,7 +175,7 @@ class WelfareBeneficiary extends Model
 
     public function markAsRejected(string $reason, ?string $rejectedBy = null): bool
     {
-        if (!$this->canBeRejected()) {
+        if (! $this->canBeRejected()) {
             return false;
         }
 

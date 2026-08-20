@@ -17,7 +17,7 @@ class BeneficiaryService
      */
     public function suggestBeneficiary(WelfarePackage $package, string $deceasedId, ?string $suggestedBy = null): WelfareBeneficiary
     {
-        if (!$package->isOpen()) {
+        if (! $package->isOpen()) {
             throw new RuntimeException('Can only suggest beneficiaries for open packages.');
         }
 
@@ -38,39 +38,51 @@ class BeneficiaryService
 
     public function approveBeneficiary(WelfareBeneficiary $beneficiary, ?string $approvedBy = null): WelfareBeneficiary
     {
-        if (!$beneficiary->canBeApproved()) {
-            throw new RuntimeException('This beneficiary cannot be approved.');
-        }
+        return DB::transaction(function () use ($beneficiary, $approvedBy) {
+            $locked = WelfareBeneficiary::where('id', $beneficiary->id)->lockForUpdate()->first();
 
-        $beneficiary->markAsApproved($approvedBy);
+            if (! $locked || ! $locked->canBeApproved()) {
+                throw new RuntimeException('This beneficiary cannot be approved.');
+            }
 
-        return $beneficiary->fresh();
+            $locked->markAsApproved($approvedBy);
+
+            return $locked->fresh();
+        });
     }
 
     public function rejectBeneficiary(WelfareBeneficiary $beneficiary, string $reason, ?string $rejectedBy = null): WelfareBeneficiary
     {
-        if (!$beneficiary->canBeRejected()) {
-            throw new RuntimeException('This beneficiary cannot be rejected.');
-        }
-
         if (empty($reason)) {
             throw new InvalidArgumentException('Rejection reason is required.');
         }
 
-        $beneficiary->markAsRejected($reason, $rejectedBy);
+        return DB::transaction(function () use ($beneficiary, $reason, $rejectedBy) {
+            $locked = WelfareBeneficiary::where('id', $beneficiary->id)->lockForUpdate()->first();
 
-        return $beneficiary->fresh();
+            if (! $locked || ! $locked->canBeRejected()) {
+                throw new RuntimeException('This beneficiary cannot be rejected.');
+            }
+
+            $locked->markAsRejected($reason, $rejectedBy);
+
+            return $locked->fresh();
+        });
     }
 
     public function collectPackage(WelfareBeneficiary $beneficiary, ?string $notes = null, ?string $collectedBy = null): WelfareBeneficiary
     {
-        if (!$beneficiary->canBeCollected()) {
-            throw new RuntimeException('This package cannot be collected. Ensure beneficiary is approved and not already collected.');
-        }
+        return DB::transaction(function () use ($beneficiary, $notes, $collectedBy) {
+            $locked = WelfareBeneficiary::where('id', $beneficiary->id)->lockForUpdate()->first();
 
-        $beneficiary->markAsCollected($notes, $collectedBy);
+            if (! $locked || ! $locked->canBeCollected()) {
+                throw new RuntimeException('This package cannot be collected. Ensure beneficiary is approved and not already collected.');
+            }
 
-        return $beneficiary->fresh();
+            $locked->markAsCollected($notes, $collectedBy);
+
+            return $locked->fresh();
+        });
     }
 
     public function bulkApprove(array $beneficiaryIds, ?string $approvedBy = null): int
@@ -108,7 +120,7 @@ class BeneficiaryService
             'package_name' => $package->name,
             'package_period' => "{$package->start_date->format('M d, Y')} - {$package->end_date->format('M d, Y')}",
             'deceased_name' => $deceased->name ?? 'N/A',
-            'items' => $package->items->map(fn($item) => [
+            'items' => $package->items->map(fn ($item) => [
                 'item_name' => $item->item->name ?? 'N/A',
                 'category' => $item->category->name ?? 'N/A',
                 'quantity' => $item->quantity_per_family,

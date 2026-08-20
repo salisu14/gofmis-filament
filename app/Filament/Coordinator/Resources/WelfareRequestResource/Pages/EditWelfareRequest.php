@@ -14,12 +14,21 @@ class EditWelfareRequest extends EditRecord
 {
     protected static string $resource = WelfareRequestResource::class;
 
+    public function mount(int|string $record): void
+    {
+        parent::mount($record);
+
+        if ($this->getRecord()->status !== BeneficiaryStatus::PENDING) {
+            abort(403, 'Only pending welfare requests can be edited.');
+        }
+    }
+
     protected function getHeaderActions(): array
     {
         return [
             Actions\ViewAction::make(),
             Actions\DeleteAction::make()
-                ->visible(fn () => auth()->user()?->hasAnyRole(['admin', 'super_admin'])),
+                ->visible(fn () => auth()->user()?->hasAnyRole(['admin', 'super_admin']) && $this->getRecord()->status === BeneficiaryStatus::PENDING),
         ];
     }
 

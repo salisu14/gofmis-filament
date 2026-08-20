@@ -83,7 +83,13 @@ class WelfareRequestResource extends Resource
             return true;
         }
 
-        return $user->managesZone($record->deceased?->zone_id);
+        $zoneId = $record->deceased?->zone_id;
+
+        if (! $zoneId) {
+            return false;
+        }
+
+        return $user->managesZone($zoneId);
     }
 
     public static function canEdit($record): bool
@@ -93,16 +99,19 @@ class WelfareRequestResource extends Resource
             return true;
         }
 
-        // ✅ FIXED: Use coordinatedZone for zone comparison
-        $zoneId = $user?->coordinatedZone?->id;
+        $zoneId = $record->deceased?->zone_id;
+
+        if (! $zoneId) {
+            return false;
+        }
 
         return $record->status === BeneficiaryStatus::PENDING &&
-            $user?->managesZone($record->deceased?->zone_id);
+            $user?->managesZone($zoneId);
     }
 
     public static function canDelete($record): bool
     {
-        return auth()->user()?->hasAnyRole(['admin', 'super_admin']) ?? false;
+        return $record?->isPending() && (auth()->user()?->hasAnyRole(['admin', 'super_admin']) ?? false);
     }
 
     public static function form(Schema $schema): Schema
@@ -118,6 +127,17 @@ class WelfareRequestResource extends Resource
                         Select::make('welfare_package_id')
                             ->label('Welfare Package')
                             ->options(fn () => WelfarePackage::open()->pluck('name', 'id')->toArray())
+                            ->rules([
+                                fn () => function (string $attribute, $value, \Closure $fail) {
+                                    if (! $value) {
+                                        return;
+                                    }
+                                    $package = WelfarePackage::find($value);
+                                    if (! $package || ! $package->isOpen()) {
+                                        $fail('The selected welfare package is closed or invalid.');
+                                    }
+                                },
+                            ])
                             ->required(),
 
                         Placeholder::make('package_description')
@@ -173,6 +193,29 @@ class WelfareRequestResource extends Resource
 
                                 return $query->pluck('full_name', 'id')->toArray();
                             })
+                            ->rules([
+                                fn () => function (string $attribute, $value, \Closure $fail) {
+                                    if (! $value) {
+                                        return;
+                                    }
+                                    $user = auth()->user();
+                                    $isAdmin = $user?->hasAnyRole(['admin', 'super_admin']);
+                                    $deceased = Deceased::find($value);
+
+                                    if (! $deceased) {
+                                        $fail('The selected family head does not exist.');
+
+                                        return;
+                                    }
+
+                                    if (! $isAdmin) {
+                                        $zoneId = $user?->coordinatedZone?->id;
+                                        if (! $zoneId || $deceased->zone_id !== $zoneId) {
+                                            $fail('You are not authorized to create a welfare request for a beneficiary outside your assigned zone.');
+                                        }
+                                    }
+                                },
+                            ])
                             ->required(),
 
                         Placeholder::make('family_info')
@@ -298,7 +341,7 @@ class WelfareRequestResource extends Resource
                     ->modalDescription('Mark this welfare item as collected?')
                     ->visible(fn ($record) => $record->canBeCollected())
                     ->action(function (WelfareBeneficiary $record) {
-                        $record->markAsCollected('Collected by beneficiary', auth()->id());
+                        app(\App\Services\BeneficiaryService::class)->collectPackage($record, 'Collected by beneficiary', auth()->id());
 
                         Notification::make()
                             ->title('Marked as Collected')
