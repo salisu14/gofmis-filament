@@ -3,9 +3,7 @@
 use App\Enums\Gender;
 use App\Enums\IllnessCategory;
 use App\Enums\OrphanStatus;
-use App\Filament\Resources\Orphans\OrphanResource;
 use App\Filament\Resources\Prescriptions\Pages\CreatePrescription;
-use App\Filament\Resources\Prescriptions\PrescriptionResource;
 use App\Models\Deceased;
 use App\Models\IdCard;
 use App\Models\IdCardTemplate;
@@ -138,12 +136,46 @@ test('3. standalone orphan prescription create succeeds', function () {
     ]);
 });
 
-test('4 & 5. orphan and widow relation manager header action redirects to canonical prescription create page', function () {
-    $orphanUrl = PrescriptionResource::getUrl('create').'?prescribable_type='.urlencode(Orphan::class).'&prescribable_id='.$this->orphan->id;
-    $widowUrl = PrescriptionResource::getUrl('create').'?prescribable_type='.urlencode(Widow::class).'&prescribable_id='.$this->widow->id;
+test('4 & 5. orphan and widow relation manager inline CreateAction creates prescription bound to owner record', function () {
+    Livewire::test(\App\Filament\Resources\Orphans\RelationManagers\PrescriptionsRelationManager::class, [
+        'ownerRecord' => $this->orphan,
+        'pageClass' => \App\Filament\Resources\Orphans\Pages\EditOrphan::class,
+    ])
+        ->callTableAction('create', data: [
+            'doctor_name' => 'Dr. Inline Orphan',
+            'illness_id' => $this->illness->id,
+            'prescription_date' => now()->toDateString(),
+            'lab_test_cost' => 500,
+            'drug_cost' => 1000,
+        ])
+        ->assertHasNoTableActionErrors();
 
-    expect($orphanUrl)->toContain('prescribable_type=App%5CModels%5COrphan')
-        ->and($widowUrl)->toContain('prescribable_type=App%5CModels%5CWidow');
+    $this->assertDatabaseHas('prescriptions', [
+        'doctor_name' => 'Dr. Inline Orphan',
+        'prescribable_type' => Orphan::class,
+        'prescribable_id' => $this->orphan->id,
+        'illness_id' => $this->illness->id,
+    ]);
+
+    Livewire::test(\App\Filament\Resources\Widows\RelationManagers\PrescriptionsRelationManager::class, [
+        'ownerRecord' => $this->widow,
+        'pageClass' => \App\Filament\Resources\Widows\Pages\EditWidow::class,
+    ])
+        ->callTableAction('create', data: [
+            'doctor_name' => 'Dr. Inline Widow',
+            'illness_id' => $this->illness->id,
+            'prescription_date' => now()->toDateString(),
+            'lab_test_cost' => 800,
+            'drug_cost' => 1200,
+        ])
+        ->assertHasNoTableActionErrors();
+
+    $this->assertDatabaseHas('prescriptions', [
+        'doctor_name' => 'Dr. Inline Widow',
+        'prescribable_type' => Widow::class,
+        'prescribable_id' => $this->widow->id,
+        'illness_id' => $this->illness->id,
+    ]);
 });
 
 test('6 & 7. required illness relationship is persisted and legacy illness column does not cause NOT NULL failure', function () {
@@ -251,10 +283,28 @@ test('14 & 15. no runtime orphan creation path writes raw draft or approved stri
         ->and($actionFile)->not->toContain("'status' => 'approved'");
 });
 
-test('16 & 17. Deceased -> Add Orphan opens canonical creation flow with prefilled deceased_id', function () {
-    $createUrl = OrphanResource::getUrl('create').'?deceased_id='.$this->deceased->id;
+test('16 & 17. Deceased -> Add Orphan relation manager inline CreateAction creates orphan bound to owner deceased record with canonical status', function () {
+    Livewire::test(\App\Filament\Resources\Deceased\RelationManagers\OrphansRelationManager::class, [
+        'ownerRecord' => $this->deceased,
+        'pageClass' => \App\Filament\Resources\Deceased\Pages\EditDeceased::class,
+    ])
+        ->callTableAction('create', data: [
+            'first_name' => 'Inline',
+            'last_name' => 'Orphan',
+            'gender' => Gender::MALE->value,
+            'birth_date' => now()->subYears(8)->toDateString(),
+            'nin' => '98765432101',
+            'address' => '456 Modal Way',
+        ])
+        ->assertHasNoTableActionErrors();
 
-    expect($createUrl)->toContain("deceased_id={$this->deceased->id}");
+    $this->assertDatabaseHas('orphans', [
+        'first_name' => 'Inline',
+        'last_name' => 'Orphan',
+        'deceased_id' => $this->deceased->id,
+        'status' => OrphanStatus::PENDING_REVIEW,
+        'is_eligible' => false,
+    ]);
 });
 
 test('18 & 19. zone authorization scoping prevents attaching orphan outside coordinated zone', function () {
