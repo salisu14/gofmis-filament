@@ -68,6 +68,7 @@ class DeceasedForm
                                     DatePicker::make('date_of_birth')
                                         ->label('Date of Birth')
                                         ->maxDate('today')
+                                        ->live()
                                         ->native(false),
 
                                     TextInput::make('age')
@@ -75,7 +76,8 @@ class DeceasedForm
                                         ->numeric()
                                         ->minValue(0)
                                         ->suffix('Years')
-                                        ->helperText('Enter only when Date of Birth is unknown.'),
+                                        ->helperText('Enter only when Date of Birth is unknown.')
+                                        ->visible(fn ($get) => blank($get('date_of_birth'))),
                                 ])->columns(5),
 
                                 Select::make('vulnerability_status')

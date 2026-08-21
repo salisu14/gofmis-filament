@@ -737,3 +737,56 @@ it('orphan records are not destroyed when deceased is soft-deleted', function ()
         expect($o->deceased_id)->toBe($d->id);
     }
 });
+
+// 48. Admin and Coordinator View display identical derived age at death when DOB and DOD exist
+it('admin and coordinator view pages display identical derived age at death', function () {
+    $d = makeDeceased([
+        'zone_id' => $this->zone->id,
+        'date_of_birth' => '1980-05-10',
+        'date_of_death' => '2023-05-10',
+        'age' => 0, // database legacy age is 0
+    ]);
+
+    $this->actingAs($this->admin);
+    Livewire::test(ViewDeceased::class, ['record' => $d->id])
+        ->assertSuccessful()
+        ->assertSee('43 years');
+
+    $this->actingAs($this->coordinator);
+    Livewire::test(CoordinatorViewDeceased::class, ['record' => $d->id])
+        ->assertSuccessful()
+        ->assertSee('43 years');
+});
+
+// 49. Admin and Coordinator View display legacy age when DOB is unavailable
+it('admin and coordinator view pages display legacy age when DOB is unavailable', function () {
+    $d = makeDeceased([
+        'zone_id' => $this->zone->id,
+        'date_of_birth' => null,
+        'date_of_death' => null,
+        'age' => 65,
+    ]);
+
+    $this->actingAs($this->admin);
+    Livewire::test(ViewDeceased::class, ['record' => $d->id])
+        ->assertSuccessful()
+        ->assertSee('65 years');
+
+    $this->actingAs($this->coordinator);
+    Livewire::test(CoordinatorViewDeceased::class, ['record' => $d->id])
+        ->assertSuccessful()
+        ->assertSee('65 years');
+});
+
+// 50. Form age field is hidden when DOB is supplied and visible when DOB is blank
+it('form age field is hidden when date of birth is supplied', function () {
+    $this->actingAs($this->admin);
+
+    Livewire::test(CreateDeceased::class)
+        ->fillForm(['date_of_birth' => '1985-01-01'])
+        ->assertFormFieldIsHidden('age');
+
+    Livewire::test(CreateDeceased::class)
+        ->fillForm(['date_of_birth' => null])
+        ->assertFormFieldIsVisible('age');
+});

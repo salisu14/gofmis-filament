@@ -120,13 +120,15 @@ class DeceasedResource extends Resource
                             Forms\Components\DatePicker::make('date_of_birth')
                                 ->label('Date of Birth')
                                 ->maxDate('today')
+                                ->live()
                                 ->native(false),
 
                             Forms\Components\TextInput::make('age')
                                 ->label('Age at Death (if DOB unknown)')
                                 ->numeric()
                                 ->minValue(0)
-                                ->helperText('Enter only when Date of Birth is unknown.'),
+                                ->helperText('Enter only when Date of Birth is unknown.')
+                                ->visible(fn (Get $get) => blank($get('date_of_birth'))),
                         ])->columns(4),
                     ]),
 
@@ -301,6 +303,11 @@ class DeceasedResource extends Resource
                 Forms\Components\Hidden::make('registered_by')
                     ->default(auth()->id()),
             ]);
+    }
+
+    public static function infolist(Schema $schema): Schema
+    {
+        return \App\Filament\Resources\Deceased\Schemas\DeceasedInfolist::configure($schema);
     }
 
     /* -------------------------------------------------------------------------
