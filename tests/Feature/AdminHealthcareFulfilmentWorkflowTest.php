@@ -208,7 +208,7 @@ test('7. admin prescriptions table index renders cleanly without TypeError when 
         ->assertSuccessful()
         ->assertCanSeeTableRecords([$prescription])
         ->assertTableActionExists('markTreated')
-        ->assertTableActionExists('edit')
+        ->assertTableActionExists('edit_prescription')
         ->assertTableActionExists('view');
 });
 
@@ -236,10 +236,10 @@ test('8. action visibility rules on pending vs treated records', function () {
     $this->actingAs($this->admin);
 
     Livewire::test(\App\Filament\Resources\Prescriptions\Pages\ListPrescriptions::class)
-        ->assertTableActionVisible('edit', $pendingPrescription)
+        ->assertTableActionVisible('edit_prescription', $pendingPrescription)
         ->assertTableActionVisible('markTreated', $pendingPrescription)
         ->assertTableActionVisible('delete', $pendingPrescription)
-        ->assertTableActionHidden('edit', $treatedPrescription)
+        ->assertTableActionHidden('edit_prescription', $treatedPrescription)
         ->assertTableActionHidden('markTreated', $treatedPrescription)
         ->assertTableActionHidden('delete', $treatedPrescription);
 });

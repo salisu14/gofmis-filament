@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Prescriptions\Tables;
 
 use App\Enums\PrescriptionStatus;
 use App\Models\Prescription;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
@@ -97,28 +98,39 @@ class PrescriptionsTable
             ])
             ->recordActions([
                 ViewAction::make(),
-                EditAction::make()
-                    ->visible(fn (Prescription $record) => $record->isPending()),
                 \App\Filament\Actions\MarkHealthcareTreatedAction::make(),
-                \Filament\Actions\Action::make('preview_pdf')
-                    ->label('Preview PDF')
-                    ->icon('heroicon-o-eye')
-                    ->color('info')
-                    ->url(fn (Prescription $record): string => route('prescriptions.preview', ['prescription' => $record]))
-                    ->openUrlInNewTab(),
-                \Filament\Actions\Action::make('download_pdf')
-                    ->label('Download PDF')
-                    ->icon('heroicon-o-arrow-down-tray')
-                    ->url(fn (Prescription $record): string => route('prescriptions.download', ['prescription' => $record]))
-                    ->openUrlInNewTab(),
-                \Filament\Actions\Action::make('referral_pdf')
-                    ->label('Referral Form')
-                    ->icon('heroicon-o-document-text')
-                    ->color('warning')
-                    ->url(fn (Prescription $record): string => route('prescriptions.referral.preview', ['prescription' => $record]))
-                    ->openUrlInNewTab(),
-                DeleteAction::make()
-                    ->visible(fn (Prescription $record) => $record->isPending()),
+                ActionGroup::make([
+                    \Filament\Actions\Action::make('edit_prescription')
+                        ->label('Edit')
+                        ->icon('heroicon-m-pencil-square')
+                        ->url(fn (Prescription $record): string => \App\Filament\Resources\Prescriptions\PrescriptionResource::getUrl('edit', ['record' => $record]))
+                        ->hidden(fn (Prescription $record) => ! $record->isPending()),
+                    \Filament\Actions\Action::make('preview_pdf')
+                        ->label('Preview Prescription PDF')
+                        ->icon('heroicon-o-eye')
+                        ->color('info')
+                        ->url(fn (Prescription $record): string => route('prescriptions.preview', ['prescription' => $record]))
+                        ->openUrlInNewTab(),
+                    \Filament\Actions\Action::make('download_pdf')
+                        ->label('Download Prescription PDF')
+                        ->icon('heroicon-o-arrow-down-tray')
+                        ->url(fn (Prescription $record): string => route('prescriptions.download', ['prescription' => $record]))
+                        ->openUrlInNewTab(),
+                    \Filament\Actions\Action::make('preview_referral')
+                        ->label('Preview Referral Form')
+                        ->icon('heroicon-o-document-text')
+                        ->color('warning')
+                        ->url(fn (Prescription $record): string => route('prescriptions.referral.preview', ['prescription' => $record]))
+                        ->openUrlInNewTab(),
+                    \Filament\Actions\Action::make('download_referral')
+                        ->label('Download Referral Form')
+                        ->icon('heroicon-o-arrow-down-tray')
+                        ->color('warning')
+                        ->url(fn (Prescription $record): string => route('prescriptions.referral.download', ['prescription' => $record]))
+                        ->openUrlInNewTab(),
+                    DeleteAction::make()
+                        ->visible(fn (Prescription $record) => $record->isPending()),
+                ]),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

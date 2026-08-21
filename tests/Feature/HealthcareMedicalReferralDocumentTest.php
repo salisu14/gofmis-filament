@@ -48,6 +48,22 @@ class HealthcareMedicalReferralDocumentTest extends TestCase
 
         $this->seed(\Database\Seeders\RolesAndPermissionsSeeder::class);
 
+        \App\Models\CompanyInformation::query()->delete();
+        \App\Models\CompanyInformation::create([
+            'id' => 1,
+            'company_name' => 'Garko Orphans Foundation',
+            'display_name' => 'Garko Orphans Foundation',
+            'trading_name' => 'Garko Orphans Foundation',
+            'address_line_1' => 'Garko Kano Road',
+            'city' => 'Garko',
+            'state_province' => 'Kano',
+            'country_code' => 'NG',
+            'phone_no' => '+2348000000000',
+            'email' => 'info@garko.org',
+            'website' => 'https://garko.org',
+            'registration_no' => 'CAC/IT/12345',
+        ]);
+
         $this->zoneA = Zone::create(['name' => 'Zone Alpha', 'code' => 'ZA']);
         $this->zoneB = Zone::create(['name' => 'Zone Beta', 'code' => 'ZB']);
 
@@ -145,11 +161,27 @@ class HealthcareMedicalReferralDocumentTest extends TestCase
     {
         $this->actingAs($this->admin);
 
-        $response = $this->get(route('prescriptions.referral.preview', ['prescription' => $this->prescriptionOrphan]));
-        $response->assertStatus(200);
+        // Orphan Referral HTML verification
+        $orphanHtml = view('pdf.medical-referral-document', ['prescription' => $this->prescriptionOrphan])->render();
+        $this->assertStringContainsString('Kabiru Abba', $orphanHtml);
+        $this->assertStringContainsString('ORP-ZA-10', $orphanHtml);
+        $this->assertStringContainsString('Male', $orphanHtml);
+        $this->assertStringContainsString('Zone Alpha', $orphanHtml);
+        $this->assertStringContainsString($this->deceasedZoneA->guardian_name, $orphanHtml);
+        $this->assertStringContainsString('Severe lower right quadrant abdominal pain', $orphanHtml);
+        $this->assertStringContainsString('Acute Appendicitis', $orphanHtml);
+        $this->assertStringContainsString('Garko Orphans Foundation', $orphanHtml);
+        $this->assertStringContainsString('For Medical Officer Use Only', $orphanHtml);
 
-        $widowResponse = $this->get(route('prescriptions.referral.preview', ['prescription' => $this->prescriptionWidow]));
-        $widowResponse->assertStatus(200);
+        // Widow Referral HTML verification
+        $widowHtml = view('pdf.medical-referral-document', ['prescription' => $this->prescriptionWidow])->render();
+        $this->assertStringContainsString('Hauwa Abba', $widowHtml);
+        $this->assertStringContainsString('WID-ZA-10', $widowHtml);
+        $this->assertStringContainsString('Female', $widowHtml);
+        $this->assertStringContainsString('Zone Alpha', $widowHtml);
+        $this->assertStringContainsString('Routine surgical consultation', $widowHtml);
+        $this->assertStringContainsString('Acute Appendicitis', $widowHtml);
+        $this->assertStringContainsString('Garko Orphans Foundation', $widowHtml);
     }
 
     public function test_coordinator_can_access_own_zone_referral_document_and_cross_zone_is_rejected(): void
@@ -167,5 +199,18 @@ class HealthcareMedicalReferralDocumentTest extends TestCase
     {
         $response = $this->get(route('prescriptions.referral.preview', ['prescription' => $this->prescriptionOrphan]));
         $response->assertRedirect('/admin/login');
+    }
+
+    public function test_admin_can_render_prescriptions_list_page_with_correct_grouped_actions(): void
+    {
+        \Filament\Facades\Filament::setCurrentPanel(\Filament\Facades\Filament::getPanel('admin'));
+        $this->actingAs($this->admin);
+
+        \Livewire\Livewire::test(\App\Filament\Resources\Prescriptions\Pages\ListPrescriptions::class)
+            ->assertSuccessful()
+            ->assertTableActionExists('preview_referral')
+            ->assertTableActionExists('download_referral')
+            ->assertTableActionVisible('preview_referral', $this->prescriptionOrphan)
+            ->assertTableActionVisible('download_referral', $this->prescriptionOrphan);
     }
 }
