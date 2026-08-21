@@ -182,6 +182,12 @@ class InterventionRequest extends Model
 
     protected static function booted(): void
     {
+        static::deleting(function ($request) {
+            if (! in_array($request->status, ['pending', 'under_review'], true)) {
+                throw new \DomainException('Completed, fulfilled, or rejected intervention requests cannot be deleted.');
+            }
+        });
+
         static::updating(function ($request) {
             // Log who approved/rejected
             if ($request->isDirty('status') && in_array($request->status, ['approved', 'rejected'])) {

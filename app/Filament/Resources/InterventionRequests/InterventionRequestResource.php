@@ -20,6 +20,17 @@ class InterventionRequestResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
+    public static function canEdit($record): bool
+    {
+        return in_array($record->status, ['pending', 'under_review'], true);
+    }
+
+    public static function canDelete($record): bool
+    {
+        return in_array($record->status, ['pending', 'under_review'], true)
+            && (auth()->user()?->hasAnyRole(['admin', 'super_admin']) ?? false);
+    }
+
     public static function form(Schema $schema): Schema
     {
         return InterventionRequestForm::configure($schema);

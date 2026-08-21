@@ -2,12 +2,11 @@
 
 namespace App\Filament\Resources\Verifications\Tables;
 
-use App\Models\InterventionRequest;
-use Filament\Actions\Action;
+use App\Filament\Actions\ApproveInterventionRequestAction;
+use App\Filament\Actions\RejectInterventionRequestAction;
+use App\Filament\Actions\StartInterventionRequestReviewAction;
+use App\Filament\Actions\VerifyEducationRequestAction;
 use Filament\Actions\ViewAction;
-use Filament\Forms\Components\FileUpload;
-use Filament\Forms\Components\Textarea;
-use Filament\Notifications\Notification;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
@@ -47,6 +46,7 @@ class EducationVerificationsTable
                         'approved' => 'success',
                         'under_review' => 'info',
                         'rejected' => 'danger',
+                        'fulfilled' => 'success',
                         default => 'warning',
                     }),
 
@@ -79,83 +79,10 @@ class EducationVerificationsTable
             ])
             ->recordActions([
                 ViewAction::make(),
-
-                Action::make('verify')
-                    ->label('Verify')
-                    ->icon('heroicon-m-check-badge')
-                    ->color('info')
-                    ->visible(fn (InterventionRequest $record) => in_array($record->status, ['pending', 'under_review'], true) && $record->verification_status !== 'verified')
-                    ->modalHeading('Verify Education Request')
-                    ->modalDescription(fn (InterventionRequest $record) => "Record verification findings for {$record->orphan?->full_name}.")
-                    ->schema([
-                        Textarea::make('verification_notes')
-                            ->label('Verification Audit Notes')
-                            ->placeholder('e.g. Verified with school principal, receipt authenticity confirmed...')
-                            ->required()
-                            ->rows(4),
-
-                        FileUpload::make('verification_documents')
-                            ->label('Supporting Evidence')
-                            ->multiple()
-                            ->directory('education-verifications')
-                            ->disk('public')
-                            ->visibility('public')
-                            ->acceptedFileTypes(['application/pdf', 'image/*']),
-                    ])
-                    ->action(function (InterventionRequest $record, array $data) {
-                        $record->markVerified(auth()->id(), $data['verification_notes']);
-
-                        if (! empty($data['verification_documents'])) {
-                            $record->update(['verification_documents' => $data['verification_documents']]);
-                        }
-
-                        Notification::make()
-                            ->title('Request Verified')
-                            ->body("Education request for {$record->orphan?->full_name} has been marked as verified.")
-                            ->success()
-                            ->send();
-                    }),
-
-                Action::make('approve')
-                    ->label('Approve')
-                    ->icon('heroicon-m-check-circle')
-                    ->color('success')
-                    ->requiresConfirmation()
-                    ->modalHeading('Approve Education Request')
-                    ->modalDescription(fn (InterventionRequest $record) => "Approve education request for {$record->orphan?->full_name} (₦".number_format($record->requested_amount, 2).')?')
-                    ->visible(fn (InterventionRequest $record) => $record->canApproveRequest())
-                    ->action(function (InterventionRequest $record) {
-                        $record->approveRequest(auth()->id());
-
-                        Notification::make()
-                            ->title('Request Approved')
-                            ->body("Education request for {$record->orphan?->full_name} has been approved.")
-                            ->success()
-                            ->send();
-                    }),
-
-                Action::make('reject')
-                    ->label('Reject')
-                    ->icon('heroicon-m-x-circle')
-                    ->color('danger')
-                    ->requiresConfirmation()
-                    ->modalHeading('Confirm Rejection')
-                    ->schema([
-                        Textarea::make('rejection_reason')
-                            ->label('Rejection Reason')
-                            ->required()
-                            ->rows(3),
-                    ])
-                    ->visible(fn (InterventionRequest $record) => $record->canRejectRequest())
-                    ->action(function (InterventionRequest $record, array $data) {
-                        $record->rejectRequest($data['rejection_reason'], auth()->id());
-
-                        Notification::make()
-                            ->title('Request Rejected')
-                            ->body("Education request for {$record->orphan?->full_name} has been declined.")
-                            ->danger()
-                            ->send();
-                    }),
+                StartInterventionRequestReviewAction::make(),
+                VerifyEducationRequestAction::make(),
+                ApproveInterventionRequestAction::make(),
+                RejectInterventionRequestAction::make(),
             ])
             ->defaultSort('request_date', 'desc');
     }

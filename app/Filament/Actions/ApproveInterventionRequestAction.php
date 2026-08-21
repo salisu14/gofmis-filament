@@ -10,7 +10,7 @@ class ApproveInterventionRequestAction
 {
     public static function make(): Action
     {
-        return Action::make('approveRequest')
+        return Action::make('approve')
             ->label('Approve')
             ->icon('heroicon-m-check-circle')
             ->color('success')
@@ -20,8 +20,7 @@ class ApproveInterventionRequestAction
                 ? 'Approve this verified education intervention request.'
                 : 'Approve this intervention request for fulfillment.'
             )
-            ->visible(fn (InterventionRequest $record): bool =>
-                $record->canApproveRequest()
+            ->visible(fn (InterventionRequest $record): bool => $record->canApproveRequest()
                 && (auth()->user()?->hasAnyRole(['admin', 'super_admin'])
                     || auth()->user()?->can('verify_education_interventions')
                     || auth()->user()?->can('approve_healthcare_interventions')

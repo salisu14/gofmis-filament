@@ -185,3 +185,99 @@ test('6. rejection flow records reason and audit state', function () {
         ->and($request->verification_status)->toBe('failed')
         ->and($request->rejection_reason)->toBe('Duplicate request submitted for same term.');
 });
+
+test('7. start review transitions PENDING -> UNDER_REVIEW, records metadata, and cannot be re-executed', function () {
+    $request = InterventionRequest::create([
+        'orphan_id' => $this->orphan->id,
+        'intervention_type_id' => $this->supportType->id,
+        'request_date' => now(),
+        'requested_amount' => 35000,
+        'status' => 'pending',
+        'verification_status' => 'pending',
+    ]);
+
+    $this->actingAs($this->admin);
+
+    Livewire::test(\App\Filament\Resources\InterventionRequests\Pages\ListInterventionRequests::class)
+        ->callTableAction('startReview', $request)
+        ->assertHasNoTableActionErrors();
+
+    $request->refresh();
+    expect($request->status)->toBe('under_review')
+        ->and($request->reviewed_by)->toBe($this->admin->id)
+        ->and($request->reviewed_at)->not->toBeNull();
+
+    expect($request->canStartReview())->toBeFalse();
+
+    expect(fn () => $request->startReview($this->admin->id))
+        ->toThrow(RuntimeException::class, 'Only pending intervention requests can be moved to review.');
+});
+
+test('8. generic Intervention Requests table displays Verify Education action and stays synchronized with Education Verification screen', function () {
+    $request = InterventionRequest::create([
+        'orphan_id' => $this->orphan->id,
+        'intervention_type_id' => $this->supportType->id,
+        'request_date' => now(),
+        'requested_amount' => 35000,
+        'status' => 'under_review',
+        'verification_status' => 'pending',
+    ]);
+
+    $this->actingAs($this->admin);
+
+    // Verify action executed from generic Intervention Requests table
+    Livewire::test(\App\Filament\Resources\InterventionRequests\Pages\ListInterventionRequests::class)
+        ->callTableAction('verify', $request, [
+            'verification_notes' => 'Verified via generic intervention requests screen',
+        ])
+        ->assertHasNoTableActionErrors();
+
+    $request->refresh();
+    expect($request->verification_status)->toBe('verified')
+        ->and($request->verification_notes)->toBe('Verified via generic intervention requests screen');
+
+    // Synchronized state allows direct approval from generic screen
+    Livewire::test(\App\Filament\Resources\InterventionRequests\Pages\ListInterventionRequests::class)
+        ->callTableAction('approve', $request)
+        ->assertHasNoTableActionErrors();
+
+    expect($request->fresh()->status)->toBe('approved');
+});
+
+test('9. direct URL edit to terminal (fulfilled/rejected) education request is blocked on both admin and coordinator panels', function () {
+    $fulfilledRequest = InterventionRequest::create([
+        'orphan_id' => $this->orphan->id,
+        'intervention_type_id' => $this->supportType->id,
+        'request_date' => now(),
+        'requested_amount' => 35000,
+        'status' => 'fulfilled',
+        'verification_status' => 'verified',
+    ]);
+
+    $rejectedRequest = InterventionRequest::create([
+        'orphan_id' => $this->orphan->id,
+        'intervention_type_id' => $this->supportType->id,
+        'request_date' => now(),
+        'requested_amount' => 35000,
+        'status' => 'rejected',
+        'verification_status' => 'failed',
+    ]);
+
+    // Admin direct edit URL blocked
+    $this->actingAs($this->admin);
+    Livewire::test(\App\Filament\Resources\InterventionRequests\Pages\EditInterventionRequest::class, ['record' => $fulfilledRequest->getRouteKey()])
+        ->assertForbidden();
+
+    Livewire::test(\App\Filament\Resources\InterventionRequests\Pages\EditInterventionRequest::class, ['record' => $rejectedRequest->getRouteKey()])
+        ->assertForbidden();
+
+    // Coordinator direct edit URL blocked
+    Filament::setCurrentPanel(Filament::getPanel('coordinator'));
+    $this->actingAs($this->coordinator);
+
+    Livewire::test(\App\Filament\Coordinator\Resources\EducationRequestResource\Pages\EditEducationRequest::class, ['record' => $fulfilledRequest->getRouteKey()])
+        ->assertForbidden();
+
+    Livewire::test(\App\Filament\Coordinator\Resources\EducationRequestResource\Pages\EditEducationRequest::class, ['record' => $rejectedRequest->getRouteKey()])
+        ->assertForbidden();
+});

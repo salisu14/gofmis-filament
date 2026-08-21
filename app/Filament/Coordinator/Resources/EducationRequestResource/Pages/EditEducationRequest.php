@@ -13,6 +13,15 @@ class EditEducationRequest extends EditRecord
 {
     protected static string $resource = EducationRequestResource::class;
 
+    public function mount(int|string $record): void
+    {
+        parent::mount($record);
+
+        if ($this->getRecord()->status !== 'pending') {
+            abort(403, 'Only pending education requests can be edited.');
+        }
+    }
+
     protected function getHeaderActions(): array
     {
         return [

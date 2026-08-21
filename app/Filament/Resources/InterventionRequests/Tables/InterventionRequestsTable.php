@@ -5,6 +5,7 @@ namespace App\Filament\Resources\InterventionRequests\Tables;
 use App\Filament\Actions\ApproveInterventionRequestAction;
 use App\Filament\Actions\RejectInterventionRequestAction;
 use App\Filament\Actions\StartInterventionRequestReviewAction;
+use App\Filament\Actions\VerifyEducationRequestAction;
 use App\Models\InterventionRequest;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
@@ -37,17 +38,19 @@ class InterventionRequestsTable
 
                 TextColumn::make('status')
                     ->badge()
-                    ->color(fn(string $state): string => match ($state) {
+                    ->color(fn (string $state): string => match ($state) {
                         'fulfilled' => 'success',
                         'pending' => 'warning',
                         'rejected' => 'danger',
+                        'under_review' => 'info',
+                        'approved' => 'primary',
                         default => 'gray',
                     }),
 
                 TextColumn::make('verification_status')
                     ->label('Verified')
                     ->badge()
-                    ->color(fn($state) => match ($state) {
+                    ->color(fn ($state) => match ($state) {
                         'verified' => 'success',
                         'failed' => 'danger',
                         'in_progress' => 'info',
@@ -70,6 +73,7 @@ class InterventionRequestsTable
                     EditAction::make()
                         ->visible(fn (InterventionRequest $record): bool => in_array($record->status, ['pending', 'under_review'], true)),
                     StartInterventionRequestReviewAction::make(),
+                    VerifyEducationRequestAction::make(),
                     ApproveInterventionRequestAction::make(),
                     RejectInterventionRequestAction::make(),
                 ]),
