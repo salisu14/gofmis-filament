@@ -24,7 +24,7 @@ class SponsorshipResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
-//    protected static ?string $recordTitleAttribute = 'name';
+    //    protected static ?string $recordTitleAttribute = 'name';
 
     public static function form(Schema $schema): Schema
     {
@@ -56,6 +56,26 @@ class SponsorshipResource extends Resource
             'view' => ViewSponsorship::route('/{record}'),
             'edit' => EditSponsorship::route('/{record}/edit'),
         ];
+    }
+
+    public static function canEdit(\Illuminate\Database\Eloquent\Model $record): bool
+    {
+        /** @var Sponsorship $record */
+        if ($record->end_date && $record->end_date->lt(now()->startOfDay())) {
+            return false;
+        }
+
+        return parent::canEdit($record);
+    }
+
+    public static function canDelete(\Illuminate\Database\Eloquent\Model $record): bool
+    {
+        /** @var Sponsorship $record */
+        if ($record->allocations()->exists()) {
+            return false;
+        }
+
+        return parent::canDelete($record);
     }
 
     public static function getRecordRouteBindingEloquentQuery(): Builder

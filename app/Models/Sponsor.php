@@ -40,4 +40,13 @@ class Sponsor extends Model
     {
         return $this->hasMany(SponsorshipAllocation::class);
     }
+
+    protected static function booted(): void
+    {
+        static::deleting(function (Sponsor $sponsor) {
+            if ($sponsor->sponsorships()->exists() || $sponsor->allocations()->exists()) {
+                throw new \DomainException('Sponsors with historical sponsorship or allocation records cannot be deleted.');
+            }
+        });
+    }
 }
