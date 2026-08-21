@@ -49,7 +49,7 @@ class DeceasedTable
                     ->description(fn ($record) => "Reg: {$record->reg_no}"),
 
                 TextColumn::make('age_at_death')
-                    ->label('Age')
+                    ->label('Age at Death')
                     ->suffix(' years')
                     ->numeric()
                     ->toggleable()
@@ -61,25 +61,26 @@ class DeceasedTable
                     ->searchable(),
 
                 TextColumn::make('vulnerability_status')
+                    ->label('Vulnerability Status')
                     ->badge()
                     ->alignCenter()
                     ->sortable(),
 
                 TextColumn::make('zone.name')
-                    ->label('Location')
+                    ->label('Zone')
                     ->description(fn ($record) => $record->zone?->town?->name.', '.$record->zone?->town?->city?->name),
-
-                TextColumn::make('orphans_count')
-                    ->counts('orphans')
-                    ->label('Orphans')
-                    ->badge()
-                    ->color('info'),
 
                 TextColumn::make('widows_count')
                     ->counts('widows')
-                    ->label('Widows')
+                    ->label('Registered Widows')
                     ->badge()
                     ->color('warning'),
+
+                TextColumn::make('orphans_count')
+                    ->counts('orphans')
+                    ->label('Registered Orphans')
+                    ->badge()
+                    ->color('info'),
 
                 TextColumn::make('date_of_death')
                     ->label('Date of Death')
@@ -88,6 +89,7 @@ class DeceasedTable
                     ->toggleable(),
 
                 TextColumn::make('date_registered')
+                    ->label('Date Registered')
                     ->date()
                     ->sortable()
                     ->toggleable(),
@@ -102,16 +104,22 @@ class DeceasedTable
 
                 // B. Vulnerability status
                 SelectFilter::make('vulnerability_status')
+                    ->label('Vulnerability Status')
                     ->options(VulnerabilityStatus::class),
 
                 // C. Cause of death
                 SelectFilter::make('death_cause')
                     ->label('Cause of Death')
-                    ->options(fn () => Deceased::query()
-                        ->distinct()
-                        ->whereNotNull('death_cause')
-                        ->pluck('death_cause', 'death_cause')
-                        ->toArray())
+                    ->options(function () {
+                        $canonical = \App\Services\Deceased\CauseOfDeathCatalog::options();
+                        $dbValues = Deceased::query()
+                            ->distinct()
+                            ->whereNotNull('death_cause')
+                            ->pluck('death_cause', 'death_cause')
+                            ->toArray();
+
+                        return array_merge($canonical, $dbValues);
+                    })
                     ->searchable(),
 
                 // D. Date of death range (from/to)

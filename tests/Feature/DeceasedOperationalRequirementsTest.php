@@ -6,6 +6,7 @@ use App\Filament\Coordinator\Resources\DeceasedResource\Pages\CreateDeceased as 
 use App\Filament\Coordinator\Resources\DeceasedResource\Pages\ListDeceaseds as CoordinatorListDeceaseds;
 use App\Filament\Coordinator\Resources\DeceasedResource\Pages\ViewDeceased as CoordinatorViewDeceased;
 use App\Filament\Resources\Deceased\Pages\CreateDeceased;
+use App\Filament\Resources\Deceased\Pages\EditDeceased;
 use App\Filament\Resources\Deceased\Pages\ListDeceaseds;
 use App\Filament\Resources\Deceased\Pages\ViewDeceased;
 use App\Models\Deceased;
@@ -102,15 +103,170 @@ it('coordinator view renders for own-zone deceased', function () {
     Livewire::test(CoordinatorViewDeceased::class, ['record' => $d->id])->assertSuccessful();
 });
 
-// 7. Registration captures all Foundation fields
+// 7. Admin create requires number_of_widows_left and number_of_orphans_left
+it('admin create requires historical dependent counts', function () {
+    $this->actingAs($this->admin);
+
+    Livewire::test(CreateDeceased::class)
+        ->fillForm([
+            'first_name' => 'John',
+            'last_name' => 'Doe',
+            'vulnerability_status' => VulnerabilityStatus::A->value,
+            'zone_id' => $this->zone->id,
+            'guardian_name' => 'Guardian',
+            'date_registered' => now()->toDateString(),
+            'date_of_death' => now()->toDateString(),
+            'number_of_widows_left' => null,
+            'number_of_orphans_left' => null,
+        ])
+        ->call('create')
+        ->assertHasFormErrors(['number_of_widows_left', 'number_of_orphans_left']);
+});
+
+// 8. Coordinator create requires historical dependent counts
+it('coordinator create requires historical dependent counts', function () {
+    $this->actingAs($this->coordinator);
+
+    Livewire::test(CoordinatorCreateDeceased::class)
+        ->fillForm([
+            'first_name' => 'John',
+            'last_name' => 'Doe',
+            'vulnerability_status' => VulnerabilityStatus::A->value,
+            'guardian_name' => 'Guardian',
+            'date_registered' => now()->toDateString(),
+            'date_of_death' => now()->toDateString(),
+            'number_of_widows_left' => null,
+            'number_of_orphans_left' => null,
+        ])
+        ->call('create')
+        ->assertHasFormErrors(['number_of_widows_left', 'number_of_orphans_left']);
+});
+
+// 9. Explicit 0 is valid for historical counts
+it('accepts explicit zero for historical dependent counts', function () {
+    $this->actingAs($this->admin);
+
+    Livewire::test(CreateDeceased::class)
+        ->fillForm([
+            'first_name' => 'John',
+            'last_name' => 'Doe',
+            'nin' => '12345678901',
+            'vulnerability_status' => VulnerabilityStatus::A->value,
+            'zone_id' => $this->zone->id,
+            'guardian_name' => 'Guardian',
+            'guardian_phone' => '08012345678',
+            'date_registered' => now()->toDateString(),
+            'date_of_death' => now()->toDateString(),
+            'number_of_widows_left' => 0,
+            'number_of_orphans_left' => 0,
+            'address' => 'Address',
+        ])
+        ->call('create')
+        ->assertHasNoFormErrors(['number_of_widows_left', 'number_of_orphans_left']);
+});
+
+// 10. Negative historical counts are rejected
+it('rejects negative numbers for historical dependent counts', function () {
+    $this->actingAs($this->admin);
+
+    Livewire::test(CreateDeceased::class)
+        ->fillForm([
+            'number_of_widows_left' => -1,
+            'number_of_orphans_left' => -2,
+        ])
+        ->call('create')
+        ->assertHasFormErrors(['number_of_widows_left', 'number_of_orphans_left']);
+});
+
+// 11. Registration Number is auto-generated and immutable after creation
+it('registration number is auto-generated and immutable after creation', function () {
+    $d = makeDeceased(['zone_id' => $this->zone->id, 'reg_no' => 'DEC-99999']);
+
+    $this->actingAs($this->admin);
+
+    Livewire::test(EditDeceased::class, ['record' => $d->id])
+        ->assertFormFieldIsDisabled('reg_no');
+});
+
+// 12. No Gender field exists on Admin or Coordinator form
+it('asserts no Deceased Gender field exists on Admin or Coordinator forms', function () {
+    $this->actingAs($this->admin);
+    Livewire::test(CreateDeceased::class)->assertFormFieldDoesNotExist('gender');
+
+    $this->actingAs($this->coordinator);
+    Livewire::test(CoordinatorCreateDeceased::class)->assertFormFieldDoesNotExist('gender');
+});
+
+// 13. Physical Admin form labels and fields match Foundation requirements
+it('physical admin form contains exact business labels and fields', function () {
+    $this->actingAs($this->admin);
+
+    Livewire::test(CreateDeceased::class)
+        ->assertFormFieldExists('first_name')
+        ->assertFormFieldExists('middle_name')
+        ->assertFormFieldExists('last_name')
+        ->assertFormFieldExists('nin')
+        ->assertFormFieldExists('reg_no')
+        ->assertFormFieldExists('occupation')
+        ->assertFormFieldExists('date_of_birth')
+        ->assertFormFieldExists('age')
+        ->assertFormFieldExists('vulnerability_status')
+        ->assertFormFieldExists('date_registered')
+        ->assertFormFieldExists('date_of_death')
+        ->assertFormFieldExists('death_place')
+        ->assertFormFieldExists('death_cause')
+        ->assertFormFieldExists('number_of_widows_left')
+        ->assertFormFieldExists('number_of_orphans_left')
+        ->assertFormFieldExists('guardian_name')
+        ->assertFormFieldExists('guardian_phone')
+        ->assertFormFieldExists('address');
+});
+
+// 14. Physical Coordinator form labels and fields match Foundation requirements
+it('physical coordinator form contains exact business labels and fields', function () {
+    $this->actingAs($this->coordinator);
+
+    Livewire::test(CoordinatorCreateDeceased::class)
+        ->assertFormFieldExists('first_name')
+        ->assertFormFieldExists('middle_name')
+        ->assertFormFieldExists('last_name')
+        ->assertFormFieldExists('nin')
+        ->assertFormFieldExists('reg_no')
+        ->assertFormFieldExists('date_of_birth')
+        ->assertFormFieldExists('age')
+        ->assertFormFieldExists('date_registered')
+        ->assertFormFieldExists('date_of_death')
+        ->assertFormFieldExists('death_place')
+        ->assertFormFieldExists('death_cause')
+        ->assertFormFieldExists('occupation')
+        ->assertFormFieldExists('vulnerability_status')
+        ->assertFormFieldExists('number_of_widows_left')
+        ->assertFormFieldExists('number_of_orphans_left')
+        ->assertFormFieldExists('guardian_name')
+        ->assertFormFieldExists('guardian_phone')
+        ->assertFormFieldExists('address');
+});
+
+// 15. Cause of death "Other" reveals and requires specify field
+it('cause of death Other selection reveals and requires specify field', function () {
+    $this->actingAs($this->admin);
+
+    Livewire::test(CreateDeceased::class)
+        ->fillForm(['death_cause' => 'Other'])
+        ->assertFormFieldIsVisible('death_cause_other')
+        ->call('create')
+        ->assertHasFormErrors(['death_cause_other']);
+});
+
+// 16. Creates deceased with all supported Foundation fields
 it('creates deceased with all supported Foundation fields', function () {
     $d = makeDeceased([
         'zone_id' => $this->zone->id,
         'date_of_birth' => '1975-03-15',
         'date_of_death' => '2023-06-20',
         'date_registered' => '2023-06-22',
-        'death_cause' => 'Natural causes',
-        'death_place' => 'General Hospital',
+        'death_cause' => 'Natural Causes',
+        'death_place' => 'Hospital / Health Facility',
         'occupation' => 'Farmer',
         'number_of_orphans_left' => 3,
         'number_of_widows_left' => 1,
@@ -123,8 +279,8 @@ it('creates deceased with all supported Foundation fields', function () {
     expect($d->date_of_birth->format('Y-m-d'))->toBe('1975-03-15');
     expect($d->date_of_death->format('Y-m-d'))->toBe('2023-06-20');
     expect($d->date_registered->format('Y-m-d'))->toBe('2023-06-22');
-    expect($d->death_cause)->toBe('Natural causes');
-    expect($d->death_place)->toBe('General Hospital');
+    expect($d->death_cause)->toBe('Natural Causes');
+    expect($d->death_place)->toBe('Hospital / Health Facility');
     expect($d->occupation)->toBe('Farmer');
     expect($d->number_of_orphans_left)->toBe(3);
     expect($d->number_of_widows_left)->toBe(1);
@@ -132,7 +288,7 @@ it('creates deceased with all supported Foundation fields', function () {
     expect($d->zone_id)->toBe($this->zone->id);
 });
 
-// 8. Registration date and death date are distinct
+// 17. Date registered and Date of Death are separate
 it('date_registered and date_of_death are independent separate fields', function () {
     $d = makeDeceased(['date_registered' => '2023-06-22', 'date_of_death' => '2023-06-10']);
     $d->refresh();
@@ -141,7 +297,7 @@ it('date_registered and date_of_death are independent separate fields', function
     expect($d->date_registered->format('Y-m-d'))->not->toBe($d->date_of_death->format('Y-m-d'));
 });
 
-// 9. Future date_of_death rejected
+// 18. Future date_of_death rejected
 it('validates date of death cannot be in the future', function () {
     $this->actingAs($this->admin);
     Livewire::test(CreateDeceased::class)
@@ -162,7 +318,7 @@ it('validates date of death cannot be in the future', function () {
         ->assertHasFormErrors(['date_of_death']);
 });
 
-// 10. DOB after DOD rejected
+// 19. DOB after DOD rejected
 it('validates date of birth cannot be after date of death', function () {
     $this->actingAs($this->admin);
     Livewire::test(CreateDeceased::class)
@@ -184,38 +340,38 @@ it('validates date of birth cannot be after date of death', function () {
         ->assertHasFormErrors(['date_of_death']);
 });
 
-// 11. Exact age_at_death calculation
+// 20. Exact age_at_death calculation
 it('calculates age at death correctly when both dates are provided', function () {
     $d = makeDeceased(['date_of_birth' => '1980-06-15', 'date_of_death' => '2023-06-15']);
     expect($d->age_at_death)->toBe(43);
 });
 
-// 12. Birthday boundary — death before birthday in death year
+// 21. Birthday boundary — death before birthday in death year
 it('calculates correct age when death occurs before birthday in death year', function () {
     $d = makeDeceased(['date_of_birth' => '1980-12-31', 'date_of_death' => '2020-01-01']);
     expect($d->age_at_death)->toBe(39);
 });
 
-// 13. Missing DOB falls back to legacy age
+// 22. Missing DOB falls back to legacy age
 it('falls back to legacy age when date_of_birth is missing', function () {
     $d = makeDeceased(['age' => 55, 'date_of_birth' => null, 'date_of_death' => null]);
     expect($d->age_at_death)->toBe(55);
 });
 
-// 14. Missing DOD falls back to legacy age
+// 23. Missing DOD falls back to legacy age
 it('falls back to legacy age when date_of_death is missing but DOB is set', function () {
     $d = makeDeceased(['age' => 62, 'date_of_birth' => '1960-01-01', 'date_of_death' => null]);
     expect($d->age_at_death)->toBe(62);
 });
 
-// 15. Historical declared orphan count preserved
+// 24. Historical declared orphan count preserved
 it('preserves the declared orphan count recorded at registration', function () {
     $d = makeDeceased(['number_of_orphans_left' => 4]);
     $d->refresh();
     expect($d->number_of_orphans_left)->toBe(4);
 });
 
-// 16. Live registered orphan count calculated correctly
+// 25. Live registered orphan count calculated correctly
 it('live registered orphan count reflects actual linked orphan records', function () {
     $d = makeDeceased(['zone_id' => $this->zone->id, 'number_of_orphans_left' => 5]);
     foreach (range(1, 2) as $i) {
@@ -235,14 +391,14 @@ it('live registered orphan count reflects actual linked orphan records', functio
     expect($d->orphans()->count())->toBe(2);       // registered is 2
 });
 
-// 17. Historical declared widow count preserved
+// 26. Historical declared widow count preserved
 it('preserves the declared widow count recorded at registration', function () {
     $d = makeDeceased(['number_of_widows_left' => 2]);
     $d->refresh();
     expect($d->number_of_widows_left)->toBe(2);
 });
 
-// 18. Live registered widow count calculated correctly
+// 27. Live registered widow count calculated correctly
 it('live registered widow count reflects actual linked widow records', function () {
     $d = makeDeceased(['zone_id' => $this->zone->id, 'number_of_widows_left' => 3]);
     Widow::withoutGlobalScopes()->create([
@@ -260,7 +416,7 @@ it('live registered widow count reflects actual linked widow records', function 
     expect($d->widows()->count())->toBe(1);
 });
 
-// 19. Zone filter
+// 28. Zone filter
 it('zone filter restricts admin list to the selected zone', function () {
     $this->actingAs($this->admin);
     $a = makeDeceased(['zone_id' => $this->zone->id]);
@@ -272,7 +428,7 @@ it('zone filter restricts admin list to the selected zone', function () {
         ->assertCanNotSeeTableRecords([$b]);
 });
 
-// 20. Vulnerability filter
+// 29. Vulnerability filter
 it('vulnerability filter restricts results to selected status', function () {
     $this->actingAs($this->admin);
     $a = makeDeceased(['zone_id' => $this->zone->id, 'vulnerability_status' => VulnerabilityStatus::A]);
@@ -284,19 +440,19 @@ it('vulnerability filter restricts results to selected status', function () {
         ->assertCanNotSeeTableRecords([$c]);
 });
 
-// 21. Cause-of-death filter
+// 30. Cause-of-death filter
 it('cause of death filter restricts results to matching cause', function () {
     $this->actingAs($this->admin);
-    $d1 = makeDeceased(['zone_id' => $this->zone->id, 'death_cause' => 'Natural']);
-    $d2 = makeDeceased(['zone_id' => $this->zone->id, 'death_cause' => 'Accident']);
+    $d1 = makeDeceased(['zone_id' => $this->zone->id, 'death_cause' => 'Natural Causes']);
+    $d2 = makeDeceased(['zone_id' => $this->zone->id, 'death_cause' => 'Road Traffic Accident / Trauma']);
     Livewire::test(ListDeceaseds::class)
         ->loadTable()
-        ->filterTable('death_cause', 'Natural')
+        ->filterTable('death_cause', 'Natural Causes')
         ->assertCanSeeTableRecords([$d1])
         ->assertCanNotSeeTableRecords([$d2]);
 });
 
-// 22. Death-year filter
+// 31. Death-year filter
 it('death year filter restricts results to the selected year', function () {
     $this->actingAs($this->admin);
     $d2022 = makeDeceased(['zone_id' => $this->zone->id, 'date_of_death' => '2022-05-15']);
@@ -308,7 +464,7 @@ it('death year filter restricts results to the selected year', function () {
         ->assertCanNotSeeTableRecords([$d2023]);
 });
 
-// 23. Death-date range filter
+// 32. Death-date range filter
 it('death date range filter restricts to the given date range', function () {
     $this->actingAs($this->admin);
     $in = makeDeceased(['zone_id' => $this->zone->id, 'date_of_death' => '2023-06-15']);
@@ -320,7 +476,7 @@ it('death date range filter restricts to the given date range', function () {
         ->assertCanNotSeeTableRecords([$out]);
 });
 
-// 24. Registration-year filter
+// 33. Registration-year filter
 it('registration year filter restricts results to the selected year', function () {
     $this->actingAs($this->admin);
     $r2020 = makeDeceased(['zone_id' => $this->zone->id, 'date_registered' => '2020-03-01']);
@@ -332,7 +488,7 @@ it('registration year filter restricts results to the selected year', function (
         ->assertCanNotSeeTableRecords([$r2023]);
 });
 
-// 25. Declared orphan-count filter (uses number_of_orphans_left column)
+// 34. Declared orphan-count filter (uses number_of_orphans_left column)
 it('declared orphans filter uses historical number_of_orphans_left field', function () {
     $this->actingAs($this->admin);
     $high = makeDeceased(['zone_id' => $this->zone->id, 'number_of_orphans_left' => 5]);
@@ -344,7 +500,7 @@ it('declared orphans filter uses historical number_of_orphans_left field', funct
         ->assertCanNotSeeTableRecords([$low]);
 });
 
-// 26. Declared widow-count filter (uses number_of_widows_left column)
+// 35. Declared widow-count filter (uses number_of_widows_left column)
 it('declared widows filter uses historical number_of_widows_left field', function () {
     $this->actingAs($this->admin);
     $high = makeDeceased(['zone_id' => $this->zone->id, 'number_of_widows_left' => 3]);
@@ -356,7 +512,7 @@ it('declared widows filter uses historical number_of_widows_left field', functio
         ->assertCanNotSeeTableRecords([$low]);
 });
 
-// 27. Age-range filter (uses age column)
+// 36. Age-range filter (uses age column)
 it('age at death range filter restricts results correctly', function () {
     $this->actingAs($this->admin);
     $inRange = makeDeceased(['zone_id' => $this->zone->id, 'age' => 45]);
@@ -368,7 +524,7 @@ it('age at death range filter restricts results correctly', function () {
         ->assertCanNotSeeTableRecords([$outRange]);
 });
 
-// 28. Intervention filter — positive match
+// 37. Intervention filter — positive match
 it('has_intervention filter returns deceased whose orphans have approved intervention requests', function () {
     $this->actingAs($this->admin);
 
@@ -401,7 +557,7 @@ it('has_intervention filter returns deceased whose orphans have approved interve
         ->assertCanNotSeeTableRecords([$withoutIntervention]);
 });
 
-// 29. Intervention filter — negative match
+// 38. Intervention filter — negative match
 it('has_intervention filter set to false returns deceased without orphan interventions', function () {
     $this->actingAs($this->admin);
 
@@ -434,7 +590,7 @@ it('has_intervention filter set to false returns deceased without orphan interve
         ->assertCanNotSeeTableRecords([$withIntervention]);
 });
 
-// 30. Coordinator own-zone visibility
+// 39. Coordinator own-zone visibility
 it('coordinator can see own-zone deceased in the list', function () {
     $this->actingAs($this->coordinator);
     $own = makeDeceased(['zone_id' => $this->zone->id]);
@@ -443,7 +599,7 @@ it('coordinator can see own-zone deceased in the list', function () {
         ->assertCanSeeTableRecords([$own]);
 });
 
-// 31. Coordinator cross-zone row hidden
+// 40. Coordinator cross-zone row hidden
 it('coordinator cannot see other-zone deceased in the list', function () {
     $this->actingAs($this->coordinator);
     $other = makeDeceased(['zone_id' => $this->otherZone->id]);
@@ -452,7 +608,7 @@ it('coordinator cannot see other-zone deceased in the list', function () {
         ->assertCanNotSeeTableRecords([$other]);
 });
 
-// 32. Coordinator forged zone_id — form uses auth-derived default
+// 41. Coordinator forged zone_id — form uses auth-derived default
 it('coordinator form zone_id field is present and defaults to own zone', function () {
     $this->actingAs($this->coordinator);
     Livewire::test(CoordinatorCreateDeceased::class)
@@ -460,7 +616,7 @@ it('coordinator form zone_id field is present and defaults to own zone', functio
         ->assertFormFieldExists('zone_id');
 });
 
-// 33. Coordinator direct cross-zone view is rejected
+// 42. Coordinator direct cross-zone view is rejected
 it('coordinator cannot view a deceased in a different zone via direct URL', function () {
     $this->actingAs($this->coordinator);
     $otherZoneDeceased = makeDeceased(['zone_id' => $this->otherZone->id]);
@@ -473,7 +629,7 @@ it('coordinator cannot view a deceased in a different zone via direct URL', func
     }
 });
 
-// 34. Coordinator direct cross-zone edit is rejected
+// 43. Coordinator direct cross-zone edit is rejected
 it('coordinator cannot edit a deceased in a different zone', function () {
     $this->actingAs($this->coordinator);
     $otherZoneDeceased = makeDeceased(['zone_id' => $this->otherZone->id]);
@@ -481,7 +637,7 @@ it('coordinator cannot edit a deceased in a different zone', function () {
     expect($canEdit)->toBeFalse();
 });
 
-// 35. Deceased with linked history uses soft-delete only
+// 44. Deceased with linked history uses soft-delete only
 it('deceased with linked orphans uses soft delete and history remains accessible', function () {
     $d = makeDeceased(['zone_id' => $this->zone->id]);
     $orphan = Orphan::withoutGlobalScopes()->create([
@@ -511,7 +667,7 @@ it('deceased with linked orphans uses soft delete and history remains accessible
     expect($softDeleted->trashed())->toBeTrue();
 });
 
-// 36. Archived orphan history remains linked
+// 45. Archived orphan history remains linked
 it('archived orphan history remains linked after deceased soft delete', function () {
     $d = makeDeceased(['zone_id' => $this->zone->id]);
     $orphan = Orphan::withoutGlobalScopes()->create([
@@ -533,7 +689,7 @@ it('archived orphan history remains linked after deceased soft delete', function
     expect($orphan->status)->toBe(OrphanStatus::ARCHIVED);
 });
 
-// 37. Widow history remains linked after deceased soft delete
+// 46. Widow history remains linked after deceased soft delete
 it('widow history remains linked after deceased soft delete', function () {
     $d = makeDeceased(['zone_id' => $this->zone->id]);
     $widow = Widow::withoutGlobalScopes()->create([
@@ -554,7 +710,7 @@ it('widow history remains linked after deceased soft delete', function () {
     expect($widow->deceased_id)->toBe($d->id);
 });
 
-// 38. No cascading destruction: orphan records survive deceased soft-delete
+// 47. No cascading destruction: orphan records survive deceased soft-delete
 it('orphan records are not destroyed when deceased is soft-deleted', function () {
     $d = makeDeceased(['zone_id' => $this->zone->id]);
     $orphanIds = [];

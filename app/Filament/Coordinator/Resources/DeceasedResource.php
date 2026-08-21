@@ -91,9 +91,17 @@ class DeceasedResource extends Resource
                     ->icon('heroicon-m-user')
                     ->schema([
                         Grid::make(3)->schema([
-                            Forms\Components\TextInput::make('first_name')->required()->maxLength(100),
-                            Forms\Components\TextInput::make('middle_name')->maxLength(100),
-                            Forms\Components\TextInput::make('last_name')->required()->maxLength(100),
+                            Forms\Components\TextInput::make('first_name')
+                                ->label('First Name')
+                                ->required()
+                                ->maxLength(100),
+                            Forms\Components\TextInput::make('middle_name')
+                                ->label('Middle Name')
+                                ->maxLength(100),
+                            Forms\Components\TextInput::make('last_name')
+                                ->label('Last Name')
+                                ->required()
+                                ->maxLength(100),
                         ]),
 
                         Grid::make(3)->schema([
@@ -107,7 +115,7 @@ class DeceasedResource extends Resource
                                 ->label('Registration Number')
                                 ->placeholder('Auto-generated')
                                 ->disabled()
-                                ->dehydrated(false),
+                                ->dehydrated(),
 
                             Forms\Components\DatePicker::make('date_of_birth')
                                 ->label('Date of Birth')
@@ -115,9 +123,10 @@ class DeceasedResource extends Resource
                                 ->native(false),
 
                             Forms\Components\TextInput::make('age')
-                                ->label('Legacy Age')
+                                ->label('Age at Death (if DOB unknown)')
                                 ->numeric()
-                                ->helperText('Used if DOB is unknown.'),
+                                ->minValue(0)
+                                ->helperText('Enter only when Date of Birth is unknown.'),
                         ])->columns(4),
                     ]),
 
@@ -126,7 +135,7 @@ class DeceasedResource extends Resource
                     ->schema([
                         Grid::make(3)->schema([
                             Forms\Components\DatePicker::make('date_registered')
-                                ->label('Date of Registration')
+                                ->label('Date Registered')
                                 ->default(now())
                                 ->required()
                                 ->native(false),
@@ -135,24 +144,93 @@ class DeceasedResource extends Resource
                                 ->label('Date of Death')
                                 ->maxDate('today')
                                 ->afterOrEqual('date_of_birth')
+                                ->required()
                                 ->native(false),
 
-                            Forms\Components\TextInput::make('death_cause')
-                                ->label('Cause of Death')
-                                ->placeholder('e.g. Natural, Accident'),
-
-                            Forms\Components\TextInput::make('death_place')
+                            Forms\Components\Select::make('death_place')
                                 ->label('Place of Death')
-                                ->placeholder('Hospital or Home address'),
+                                ->options(\App\Services\Deceased\PlaceOfDeathCatalog::options())
+                                ->searchable()
+                                ->live()
+                                ->afterStateHydrated(function ($component, $state, $record, $set) {
+                                    if (! $record || ! $record->death_place) {
+                                        return;
+                                    }
+                                    $val = $record->death_place;
+                                    if (in_array($val, \App\Services\Deceased\PlaceOfDeathCatalog::CANONICAL_PLACES, true)) {
+                                        $set('death_place', $val);
+                                    } elseif (str_starts_with($val, 'Other — ')) {
+                                        $set('death_place', 'Other');
+                                        $set('death_place_other', substr($val, 8));
+                                    } else {
+                                        $set('death_place', 'Other');
+                                        $set('death_place_other', $val);
+                                    }
+                                })
+                                ->dehydrateStateUsing(function ($state, $get) {
+                                    if ($state === 'Other' && filled($get('death_place_other'))) {
+                                        $other = trim((string) $get('death_place_other'));
+
+                                        return str_starts_with($other, 'Other — ') ? $other : "Other — {$other}";
+                                    }
+
+                                    return $state;
+                                }),
+
+                            Forms\Components\Select::make('death_cause')
+                                ->label('Cause of Death')
+                                ->options(\App\Services\Deceased\CauseOfDeathCatalog::options())
+                                ->searchable()
+                                ->live()
+                                ->afterStateHydrated(function ($component, $state, $record, $set) {
+                                    if (! $record || ! $record->death_cause) {
+                                        return;
+                                    }
+                                    $val = $record->death_cause;
+                                    if (\App\Services\Deceased\CauseOfDeathCatalog::isCanonical($val)) {
+                                        $set('death_cause', $val);
+                                    } elseif (str_starts_with($val, 'Other — ')) {
+                                        $set('death_cause', 'Other');
+                                        $set('death_cause_other', substr($val, 8));
+                                    } else {
+                                        $set('death_cause', 'Other');
+                                        $set('death_cause_other', $val);
+                                    }
+                                })
+                                ->dehydrateStateUsing(function ($state, $get) {
+                                    if ($state === 'Other' && filled($get('death_cause_other'))) {
+                                        $other = trim((string) $get('death_cause_other'));
+
+                                        return str_starts_with($other, 'Other — ') ? $other : "Other — {$other}";
+                                    }
+
+                                    return $state;
+                                }),
+                        ]),
+
+                        Grid::make(2)->schema([
+                            Forms\Components\TextInput::make('death_place_other')
+                                ->label('Other Place of Death / Specify')
+                                ->placeholder('e.g. Murtala Muhammad Specialist Hospital')
+                                ->visible(fn (Get $get) => $get('death_place') === 'Other')
+                                ->required(fn (Get $get) => $get('death_place') === 'Other')
+                                ->dehydrated(false),
+
+                            Forms\Components\TextInput::make('death_cause_other')
+                                ->label('Other Cause of Death / Specify')
+                                ->placeholder('e.g. Industrial Injury')
+                                ->visible(fn (Get $get) => $get('death_cause') === 'Other')
+                                ->required(fn (Get $get) => $get('death_cause') === 'Other')
+                                ->dehydrated(false),
                         ]),
 
                         Grid::make(2)->schema([
                             Forms\Components\TextInput::make('occupation')
-                                ->label('Former Occupation')
+                                ->label('Occupation')
                                 ->placeholder('e.g. Farmer, Teacher'),
 
                             Forms\Components\Select::make('vulnerability_status')
-                                ->label('Vulnerability Level')
+                                ->label('Vulnerability Status')
                                 ->options(VulnerabilityStatus::class)
                                 ->required()
                                 ->native(false),
@@ -164,14 +242,16 @@ class DeceasedResource extends Resource
                     ->schema([
                         Grid::make(2)->schema([
                             Forms\Components\TextInput::make('number_of_widows_left')
-                                ->label('Widows Remaining')
+                                ->label('Widows Left at Registration')
                                 ->numeric()
+                                ->minValue(0)
                                 ->default(0)
                                 ->required(),
 
                             Forms\Components\TextInput::make('number_of_orphans_left')
-                                ->label('Orphans Remaining')
+                                ->label('Orphans Left at Registration')
                                 ->numeric()
+                                ->minValue(0)
                                 ->default(0)
                                 ->required(),
                         ]),
@@ -200,6 +280,7 @@ class DeceasedResource extends Resource
                         Grid::make(2)->schema([
                             Forms\Components\TextInput::make('guardian_name')
                                 ->label('Guardian Full Name')
+                                ->required()
                                 ->placeholder('Current caregiver name'),
 
                             Forms\Components\TextInput::make('guardian_phone')
@@ -209,9 +290,8 @@ class DeceasedResource extends Resource
                         ]),
 
                         Forms\Components\Textarea::make('address')
-                            ->label('Last Residential Address')
+                            ->label('Family Contact Address')
                             ->rows(3)
-                            ->required()
                             ->columnSpanFull(),
                     ]),
 
@@ -238,26 +318,27 @@ class DeceasedResource extends Resource
                     ->description(fn (Deceased $record) => "Reg: {$record->reg_no}"),
 
                 Tables\Columns\TextColumn::make('age_at_death')
-                    ->label('Age')
+                    ->label('Age at Death')
                     ->suffix(' years')
                     ->numeric()
                     ->toggleable()
                     ->state(fn (Deceased $record) => $record->age_at_death),
 
                 Tables\Columns\TextColumn::make('vulnerability_status')
+                    ->label('Vulnerability Status')
                     ->badge()
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('widows_count')
                     ->counts('widows')
-                    ->label('Widows')
+                    ->label('Registered Widows')
                     ->badge()
                     ->color('warning')
                     ->alignCenter(),
 
                 Tables\Columns\TextColumn::make('orphans_count')
                     ->counts('orphans')
-                    ->label('Orphans')
+                    ->label('Registered Orphans')
                     ->badge()
                     ->color('info')
                     ->alignCenter(),
@@ -274,7 +355,7 @@ class DeceasedResource extends Resource
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('date_registered')
-                    ->label('Registered')
+                    ->label('Date Registered')
                     ->date()
                     ->sortable(),
             ])
