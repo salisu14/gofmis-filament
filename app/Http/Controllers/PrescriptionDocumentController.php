@@ -55,6 +55,53 @@ class PrescriptionDocumentController extends Controller
         );
     }
 
+    public function referralPreview(Prescription $prescription): Response
+    {
+        $this->authorizeAccess($prescription);
+
+        $prescription->load([
+            'prescribable.deceased.zone',
+            'illnessModel',
+            'medications',
+            'user',
+            'treatedBy',
+        ]);
+
+        $pdf = Pdf::loadView('pdf.medical-referral-document', [
+            'prescription' => $prescription,
+        ])->setPaper('a4', 'portrait');
+
+        return response()->make($pdf->output(), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="medical-referral-'.$prescription->id.'.pdf"',
+        ]);
+    }
+
+    public function referralDownload(Prescription $prescription): Response
+    {
+        $this->authorizeAccess($prescription);
+
+        $prescription->load([
+            'prescribable.deceased.zone',
+            'illnessModel',
+            'medications',
+            'user',
+            'treatedBy',
+        ]);
+
+        $pdf = Pdf::loadView('pdf.medical-referral-document', [
+            'prescription' => $prescription,
+        ])->setPaper('a4', 'portrait');
+
+        $filename = 'medical-referral-'.strtolower(substr($prescription->id, 0, 8)).'.pdf';
+
+        return response()->streamDownload(
+            fn () => print ($pdf->output()),
+            $filename,
+            ['Content-Type' => 'application/pdf']
+        );
+    }
+
     protected function authorizeAccess(Prescription $prescription): void
     {
         $user = auth()->user();

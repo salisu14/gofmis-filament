@@ -111,6 +111,12 @@ class PrescriptionsTable
                     ->icon('heroicon-o-arrow-down-tray')
                     ->url(fn (Prescription $record): string => route('prescriptions.download', ['prescription' => $record]))
                     ->openUrlInNewTab(),
+                \Filament\Actions\Action::make('referral_pdf')
+                    ->label('Referral Form')
+                    ->icon('heroicon-o-document-text')
+                    ->color('warning')
+                    ->url(fn (Prescription $record): string => route('prescriptions.referral.preview', ['prescription' => $record]))
+                    ->openUrlInNewTab(),
                 DeleteAction::make()
                     ->visible(fn (Prescription $record) => $record->isPending()),
             ])

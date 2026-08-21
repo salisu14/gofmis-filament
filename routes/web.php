@@ -97,6 +97,14 @@ Route::get('/prescriptions/{prescription}/download', [\App\Http\Controllers\Pres
     ->name('prescriptions.download')
     ->middleware('auth');
 
+Route::get('/prescriptions/{prescription}/referral/preview', [\App\Http\Controllers\PrescriptionDocumentController::class, 'referralPreview'])
+    ->name('prescriptions.referral.preview')
+    ->middleware('auth');
+
+Route::get('/prescriptions/{prescription}/referral/download', [\App\Http\Controllers\PrescriptionDocumentController::class, 'referralDownload'])
+    ->name('prescriptions.referral.download')
+    ->middleware('auth');
+
 // Healthcare Period Report PDF Export Route
 Route::get('/admin/reports/prescription-report/pdf', [\App\Http\Controllers\PrescriptionReportController::class, 'exportPdf'])
     ->name('reports.prescription-report.pdf')

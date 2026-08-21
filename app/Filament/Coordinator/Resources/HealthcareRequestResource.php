@@ -516,6 +516,12 @@ class HealthcareRequestResource extends Resource
                     ->icon('heroicon-o-arrow-down-tray')
                     ->url(fn (Prescription $record): string => route('prescriptions.download', ['prescription' => $record]))
                     ->openUrlInNewTab(),
+                Action::make('referral_pdf')
+                    ->label('Referral Form')
+                    ->icon('heroicon-o-document-text')
+                    ->color('warning')
+                    ->url(fn (Prescription $record): string => route('prescriptions.referral.preview', ['prescription' => $record]))
+                    ->openUrlInNewTab(),
             ])
             ->defaultSort('prescription_date', 'desc');
     }
