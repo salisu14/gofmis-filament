@@ -108,6 +108,52 @@ class OrphanInfolist
                             ->columnSpanFull(),
                     ])->columns(4),
 
+                Section::make('ID Card Overview')
+                    ->icon('heroicon-m-identification')
+                    ->schema([
+                        TextEntry::make('latest_id_card_number')
+                            ->label('Card Number')
+                            ->getStateUsing(fn (\App\Models\Orphan $record) => $record->idCards()->latest()->first()?->card_number ?? 'No ID Card Issued')
+                            ->badge(),
+
+                        TextEntry::make('latest_id_card_status')
+                            ->label('Card Status')
+                            ->getStateUsing(fn (\App\Models\Orphan $record) => ucfirst($record->idCards()->latest()->first()?->status ?? 'Not Issued'))
+                            ->badge()
+                            ->color(fn (string $state): string => match (strtolower($state)) {
+                                'active' => 'success',
+                                'draft' => 'gray',
+                                'revoked' => 'danger',
+                                'expired' => 'warning',
+                                default => 'gray',
+                            }),
+
+                        TextEntry::make('latest_id_card_validity')
+                            ->label('Validity')
+                            ->getStateUsing(function (\App\Models\Orphan $record): string {
+                                $card = $record->idCards()->latest()->first();
+                                if (! $card) {
+                                    return 'N/A';
+                                }
+
+                                return $card->isActive() ? 'Valid' : 'Invalid / Inactive';
+                            })
+                            ->badge()
+                            ->color(fn (string $state): string => $state === 'Valid' ? 'success' : 'danger'),
+
+                        TextEntry::make('latest_id_card_issued_at')
+                            ->label('Issued At')
+                            ->getStateUsing(fn (\App\Models\Orphan $record) => $record->idCards()->latest()->first()?->issued_at)
+                            ->date('d M, Y')
+                            ->placeholder('N/A'),
+
+                        TextEntry::make('latest_id_card_expires_at')
+                            ->label('Expires At')
+                            ->getStateUsing(fn (\App\Models\Orphan $record) => $record->idCards()->latest()->first()?->expires_at)
+                            ->date('d M, Y')
+                            ->placeholder('N/A'),
+                    ])->columns(3),
+
                 Section::make('Sponsorship Overview')
                     ->icon('heroicon-m-heart')
                     ->schema([

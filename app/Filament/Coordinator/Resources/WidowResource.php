@@ -193,6 +193,11 @@ class WidowResource extends Resource
             ]);
     }
 
+    public static function infolist(Schema $schema): Schema
+    {
+        return \App\Filament\Resources\Widows\Schemas\WidowInfolist::configure($schema);
+    }
+
     /* -------------------------------------------------------------------------
      | TABLE CONFIGURATION
      ------------------------------------------------------------------------- */

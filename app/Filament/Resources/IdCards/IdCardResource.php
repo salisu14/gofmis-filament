@@ -23,8 +23,20 @@ class IdCardResource extends Resource
     protected static ?string $model = IdCard::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::Identification;
+
     protected static string|null|\UnitEnum $navigationGroup = 'ID Card Management';
+
     protected static ?int $navigationSort = 2;
+
+    public static function canEdit(Model $record): bool
+    {
+        return $record instanceof IdCard && $record->status === 'draft';
+    }
+
+    public static function canDelete(Model $record): bool
+    {
+        return $record instanceof IdCard && $record->status === 'draft';
+    }
 
     public static function form(Schema $schema): Schema
     {

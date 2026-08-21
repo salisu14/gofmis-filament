@@ -81,15 +81,26 @@ class QRCodeService
             return ['valid' => false, 'message' => 'Card not found'];
         }
 
+        if ($idCard->status === 'draft') {
+            return ['valid' => false, 'message' => 'This card is in draft status and not yet active'];
+        }
+
         if ($idCard->status === 'revoked') {
             return [
                 'valid' => false,
-                'message' => 'This card has been revoked: '.$idCard->revocation_reason,
+                'message' => 'This card has been revoked: '.($idCard->revocation_reason ?: 'No reason provided'),
             ];
         }
 
         if ($idCard->status === 'expired' || ($idCard->expires_at && $idCard->expires_at->isPast())) {
             return ['valid' => false, 'message' => 'This card has expired'];
+        }
+
+        if (! $idCard->beneficiaryIsEligible()) {
+            return [
+                'valid' => false,
+                'message' => 'The beneficiary associated with this ID card is no longer active or eligible',
+            ];
         }
 
         $cardable = $idCard->cardable;
