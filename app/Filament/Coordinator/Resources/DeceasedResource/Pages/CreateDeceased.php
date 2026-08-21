@@ -36,11 +36,14 @@ class CreateDeceased extends CreateRecord
             numberOfOrphansLeft: $data['number_of_orphans_left'] ?? 0,
             numberOfWidowsLeft: $data['number_of_widows_left'] ?? 0,
             guardianName: $data['guardian_name'] ?? null,
-            guardianPhone: $data['guardian_phone'] ?? null, // ✅ add
+            guardianPhone: $data['guardian_phone'] ?? null,
             hasDeathCert: $data['has_death_cert'] ?? false,
             deathCertUrl: $data['death_cert_url'] ?? null,
-            age: $data['age'] ?? null, // ✅ add
+            age: $data['age'] ?? null,
             zoneId: $data['zone_id'] ?? null,
+            dateRegistered: isset($data['date_registered']) ? (string) $data['date_registered'] : null,
+            dateOfBirth: isset($data['date_of_birth']) ? (string) $data['date_of_birth'] : null,
+            dateOfDeath: isset($data['date_of_death']) ? (string) $data['date_of_death'] : null,
         );
 
         // 2. Resolve the action from the container and execute

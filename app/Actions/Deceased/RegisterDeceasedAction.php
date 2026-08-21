@@ -28,12 +28,14 @@ class RegisterDeceasedAction
             'number_of_orphans_left' => $data->numberOfOrphansLeft,
             'number_of_widows_left' => $data->numberOfWidowsLeft,
             'guardian_name' => $data->guardianName,
-            'guardian_phone' => $data->guardianPhone, // ✅ FIXED
+            'guardian_phone' => $data->guardianPhone,
             'has_death_cert' => $data->hasDeathCert,
             'death_cert_url' => $data->deathCertUrl,
-            'age' => $data->age, // ✅ FIXED
-            'zone_id' => $data->zoneId, // ✅ FIXED
-            'date_registered' => now(),
+            'age' => $data->age,
+            'zone_id' => $data->zoneId,
+            'date_registered' => $data->dateRegistered ?? now()->toDateString(),
+            'date_of_birth' => $data->dateOfBirth,
+            'date_of_death' => $data->dateOfDeath,
         ]);
     }
 }

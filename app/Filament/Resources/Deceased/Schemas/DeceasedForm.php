@@ -48,17 +48,23 @@ class DeceasedForm
                                         ->label('Registration No')
                                         ->unique(ignoreRecord: true)
                                         // Lock the field if the record already exists in the database
-                                        ->disabled(fn(?Deceased $record) => $record !== null)
+                                        ->disabled(fn (?Deceased $record) => $record !== null)
                                         // Ensure the value is still sent to the database during creation
                                         ->dehydrated()
                                         ->extraInputAttributes(['style' => 'text-transform: uppercase'])
                                         ->helperText('The reg no cannot be changed once the Deceased is created.'),
 
                                     TextInput::make('occupation'),
+                                    DatePicker::make('date_of_birth')
+                                        ->label('Date of Birth')
+                                        ->maxDate('today')
+                                        ->native(false),
                                     TextInput::make('age')
+                                        ->label('Legacy Age')
                                         ->numeric()
-                                        ->suffix('Years'),
-                                ])->columns(4),
+                                        ->suffix('Years')
+                                        ->helperText('Used if DOB is unknown.'),
+                                ])->columns(5),
 
                                 Select::make('vulnerability_status')
                                     ->options(VulnerabilityStatus::class)
@@ -72,9 +78,14 @@ class DeceasedForm
                                 Group::make()->schema([
                                     DatePicker::make('date_registered')
                                         ->default(now()),
+                                    DatePicker::make('date_of_death')
+                                        ->label('Date of Death')
+                                        ->maxDate('today')
+                                        ->afterOrEqual('date_of_birth')
+                                        ->native(false),
                                     TextInput::make('death_place'),
                                     TextInput::make('death_cause'),
-                                ])->columns(3),
+                                ])->columns(4),
 
                                 Section::make('Death Certificate')
                                     ->compact()
@@ -84,7 +95,7 @@ class DeceasedForm
                                             ->reactive(),
                                         FileUpload::make('death_cert_url')
                                             ->label('Certificate Scan')
-                                            ->visible(fn($get) => $get('has_death_cert'))
+                                            ->visible(fn ($get) => $get('has_death_cert'))
                                             ->directory('death-certs'),
                                     ])->columns(2),
                             ]),
@@ -99,27 +110,27 @@ class DeceasedForm
                                         ->searchable()
                                         ->reactive()
                                         ->dehydrated(false)
-                                        ->afterStateUpdated(fn($set) => $set('city_id', null)),
+                                        ->afterStateUpdated(fn ($set) => $set('city_id', null)),
 
                                     Select::make('city_id')
                                         ->label('City')
-                                        ->options(fn($get) => City::where('state_id', $get('state_id'))->pluck('name', 'id'))
+                                        ->options(fn ($get) => City::where('state_id', $get('state_id'))->pluck('name', 'id'))
                                         ->searchable()
                                         ->reactive()
                                         ->dehydrated(false)
-                                        ->afterStateUpdated(fn($set) => $set('town_id', null)),
+                                        ->afterStateUpdated(fn ($set) => $set('town_id', null)),
 
                                     Select::make('town_id')
                                         ->label('Town')
-                                        ->options(fn($get) => Town::where('city_id', $get('city_id'))->pluck('name', 'id'))
+                                        ->options(fn ($get) => Town::where('city_id', $get('city_id'))->pluck('name', 'id'))
                                         ->searchable()
                                         ->reactive()
                                         ->dehydrated(false)
-                                        ->afterStateUpdated(fn($set) => $set('zone_id', null)),
+                                        ->afterStateUpdated(fn ($set) => $set('zone_id', null)),
 
                                     Select::make('zone_id')
                                         ->label('Zone')
-                                        ->options(fn($get) => Zone::where('town_id', $get('town_id'))->pluck('name', 'id'))
+                                        ->options(fn ($get) => Zone::where('town_id', $get('town_id'))->pluck('name', 'id'))
                                         ->searchable()
                                         ->required()
                                         ->relationship('zone', 'name')
@@ -150,7 +161,7 @@ class DeceasedForm
                                     ->numeric()
                                     ->default(0),
                             ])->columns(2),
-                    ])->columnSpanFull()
+                    ])->columnSpanFull(),
             ]);
     }
 }

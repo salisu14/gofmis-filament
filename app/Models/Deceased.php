@@ -40,12 +40,16 @@ class Deceased extends Model
         'guardian_phone',
         'zone_id', // ✅ IMPORTANT
         'full_name',
+        'date_of_birth',
+        'date_of_death',
     ];
 
     protected $casts = [
         'has_death_cert' => 'boolean',
         'age' => 'integer',
         'date_registered' => 'date',
+        'date_of_birth' => 'date',
+        'date_of_death' => 'date',
         'number_of_orphans_left' => 'integer',
         'number_of_widows_left' => 'integer',
         'vulnerability_status' => VulnerabilityStatus::class,
@@ -64,6 +68,16 @@ class Deceased extends Model
                     ->implode(' ')
             )
                 ?: 'Unnamed deceased record';
+    }
+
+    public function getAgeAtDeathAttribute(): ?int
+    {
+        if ($this->date_of_birth && $this->date_of_death) {
+            return $this->date_of_birth->diffInYears($this->date_of_death);
+        }
+
+        // Fallback to legacy age if dates are missing
+        return $this->age ?: null;
     }
 
     public function zone(): BelongsTo

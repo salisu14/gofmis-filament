@@ -109,11 +109,16 @@ class DeceasedResource extends Resource
                                 ->disabled()
                                 ->dehydrated(false),
 
+                            Forms\Components\DatePicker::make('date_of_birth')
+                                ->label('Date of Birth')
+                                ->maxDate('today')
+                                ->native(false),
+
                             Forms\Components\TextInput::make('age')
-                                ->label('Age at Passing')
+                                ->label('Legacy Age')
                                 ->numeric()
-                                ->required(),
-                        ]),
+                                ->helperText('Used if DOB is unknown.'),
+                        ])->columns(4),
                     ]),
 
                 Section::make('Circumstances & Profession')
@@ -124,6 +129,12 @@ class DeceasedResource extends Resource
                                 ->label('Date of Registration')
                                 ->default(now())
                                 ->required()
+                                ->native(false),
+
+                            Forms\Components\DatePicker::make('date_of_death')
+                                ->label('Date of Death')
+                                ->maxDate('today')
+                                ->afterOrEqual('date_of_birth')
                                 ->native(false),
 
                             Forms\Components\TextInput::make('death_cause')
@@ -226,6 +237,13 @@ class DeceasedResource extends Resource
                     ->weight('bold')
                     ->description(fn (Deceased $record) => "Reg: {$record->reg_no}"),
 
+                Tables\Columns\TextColumn::make('age_at_death')
+                    ->label('Age')
+                    ->suffix(' years')
+                    ->numeric()
+                    ->toggleable()
+                    ->state(fn (Deceased $record) => $record->age_at_death),
+
                 Tables\Columns\TextColumn::make('vulnerability_status')
                     ->badge()
                     ->sortable(),
@@ -248,6 +266,12 @@ class DeceasedResource extends Resource
                     ->label('Cert')
                     ->boolean()
                     ->alignCenter(),
+
+                Tables\Columns\TextColumn::make('date_of_death')
+                    ->label('Date of Death')
+                    ->date()
+                    ->sortable()
+                    ->toggleable(),
 
                 Tables\Columns\TextColumn::make('date_registered')
                     ->label('Registered')
