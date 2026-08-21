@@ -258,6 +258,11 @@ class OrphanResource extends Resource
             ]);
     }
 
+    public static function infolist(Schema $schema): Schema
+    {
+        return \App\Filament\Resources\Orphans\Schemas\OrphanInfolist::configure($schema);
+    }
+
     /* -------------------------------------------------------------------------
      | TABLE CONFIGURATION
      ------------------------------------------------------------------------- */
@@ -265,6 +270,7 @@ class OrphanResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(fn (Builder $query) => $query->with(['activeSponsorships.sponsor']))
             ->columns([
                 Tables\Columns\ImageColumn::make('picture_url')
                     ->label('')
@@ -292,6 +298,13 @@ class OrphanResource extends Resource
                     ->state(fn ($record) => $record->birth_date?->age)
                     ->sortable('birth_date')
                     ->alignCenter(),
+
+                Tables\Columns\TextColumn::make('sponsorship_status')
+                    ->label('Sponsorship')
+                    ->state(fn (Orphan $record): string => $record->hasActiveSponsorship() ? 'Sponsored' : 'Not Sponsored')
+                    ->badge()
+                    ->color(fn (string $state): string => $state === 'Sponsored' ? 'success' : 'gray')
+                    ->toggleable(),
 
                 Tables\Columns\TextColumn::make('status')
                     ->badge()

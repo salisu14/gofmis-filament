@@ -45,6 +45,7 @@ class OrphansTable
     public static function configure(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(fn (Builder $query) => $query->with(['activeSponsorships.sponsor']))
             ->persistFiltersInSession()
             ->persistSortInSession()
             ->deferLoading()
@@ -89,6 +90,12 @@ class OrphansTable
                     ->state(fn ($record) => $record->birth_date?->age)
                     ->sortable('birth_date')
                     ->alignCenter(),
+                TextColumn::make('sponsorship_status')
+                    ->label('Sponsorship')
+                    ->state(fn (Orphan $record): string => $record->hasActiveSponsorship() ? 'Sponsored' : 'Not Sponsored')
+                    ->badge()
+                    ->color(fn (string $state): string => $state === 'Sponsored' ? 'success' : 'gray')
+                    ->toggleable(),
                 TextColumn::make('deceased.full_name')
                     ->label('Parent')
                     ->searchable()

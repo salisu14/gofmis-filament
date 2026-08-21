@@ -107,6 +107,69 @@ class OrphanInfolist
                         TextEntry::make('address')
                             ->columnSpanFull(),
                     ])->columns(4),
+
+                Section::make('Sponsorship Overview')
+                    ->icon('heroicon-m-heart')
+                    ->schema([
+                        TextEntry::make('sponsorship_status')
+                            ->label('Sponsorship Status')
+                            ->getStateUsing(fn (\App\Models\Orphan $record): string => $record->hasActiveSponsorship() ? 'Active' : 'Not Sponsored')
+                            ->badge()
+                            ->color(fn (string $state): string => $state === 'Active' ? 'success' : 'gray'),
+
+                        TextEntry::make('active_sponsor_name')
+                            ->label('Sponsor Name')
+                            ->getStateUsing(fn (\App\Models\Orphan $record) => $record->activeSponsorships()->first()?->sponsor_name ?? '—')
+                            ->visible(fn (\App\Models\Orphan $record) => $record->hasActiveSponsorship()),
+
+                        TextEntry::make('active_sponsor_type')
+                            ->label('Sponsor Category')
+                            ->getStateUsing(fn (\App\Models\Orphan $record) => $record->activeSponsorships()->first()?->sponsor?->type?->getLabel() ?? '—')
+                            ->badge()
+                            ->visible(fn (\App\Models\Orphan $record) => $record->hasActiveSponsorship()),
+
+                        TextEntry::make('active_sponsor_amount')
+                            ->label('Amount Committed')
+                            ->getStateUsing(fn (\App\Models\Orphan $record) => $record->activeSponsorships()->first()?->amount_committed)
+                            ->money('NGN')
+                            ->visible(fn (\App\Models\Orphan $record) => $record->hasActiveSponsorship()),
+
+                        TextEntry::make('active_sponsor_start')
+                            ->label('Effective Start')
+                            ->getStateUsing(fn (\App\Models\Orphan $record) => $record->activeSponsorships()->first()?->start_date)
+                            ->date('d M, Y')
+                            ->visible(fn (\App\Models\Orphan $record) => $record->hasActiveSponsorship()),
+
+                        TextEntry::make('active_sponsor_end')
+                            ->label('Expiry Date')
+                            ->getStateUsing(fn (\App\Models\Orphan $record) => $record->activeSponsorships()->first()?->end_date ? $record->activeSponsorships()->first()?->end_date->format('d M, Y') : 'Ongoing')
+                            ->visible(fn (\App\Models\Orphan $record) => $record->hasActiveSponsorship()),
+
+                        TextEntry::make('active_sponsor_notes')
+                            ->label('Terms / Purpose')
+                            ->getStateUsing(fn (\App\Models\Orphan $record) => $record->activeSponsorships()->first()?->notes)
+                            ->visible(fn (\App\Models\Orphan $record) => $record->hasActiveSponsorship() && ! empty($record->activeSponsorships()->first()?->notes))
+                            ->columnSpanFull(),
+                    ])->columns(3),
+
+                Section::make('Historical Sponsorships')
+                    ->icon('heroicon-m-clock')
+                    ->collapsible()
+                    ->collapsed()
+                    ->visible(fn (\App\Models\Orphan $record) => $record->sponsorships()->whereDate('end_date', '<', now()->startOfDay())->exists())
+                    ->schema([
+                        TextEntry::make('historical_sponsorship_records')
+                            ->label('Past Sponsorship Records')
+                            ->getStateUsing(function (\App\Models\Orphan $record): string {
+                                $past = $record->sponsorships()->whereDate('end_date', '<', now()->startOfDay())->get();
+                                if ($past->isEmpty()) {
+                                    return 'No past sponsorships recorded.';
+                                }
+
+                                return $past->map(fn ($s) => "• {$s->sponsor_name} — ₦".number_format((float) $s->amount_committed, 2)." ({$s->start_date?->format('d/m/Y')} to {$s->end_date?->format('d/m/Y')})")->implode("\n");
+                            })
+                            ->columnSpanFull(),
+                    ]),
             ]);
     }
 }

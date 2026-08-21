@@ -192,7 +192,11 @@ class EducationRequestResource extends Resource
                                 $freq = ucfirst($education->fee_frequency ?? 'termly');
                                 $supported = $education->is_fee_supported ? 'Yes (₦'.number_format($education->support_amount, 2).')' : 'No';
 
-                                return "School: {$institutionName} | Level: {$level} | Fee: {$fee} ({$freq}) | Fee Supported: {$supported}";
+                                $sponsorshipText = $orphan->hasActiveSponsorship()
+                                    ? 'Sponsorship: Active ('.($orphan->activeSponsorships()->first()?->sponsor_name ?? 'Sponsor').')'
+                                    : 'Sponsorship: Not Sponsored';
+
+                                return "School: {$institutionName} | Level: {$level} | Fee: {$fee} ({$freq}) | Fee Supported: {$supported} | {$sponsorshipText}";
                             }),
                     ]),
 

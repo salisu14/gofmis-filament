@@ -175,6 +175,10 @@ class Orphan extends Model
 
     public function hasActiveSponsorship(): bool
     {
+        if ($this->relationLoaded('activeSponsorships')) {
+            return $this->activeSponsorships->isNotEmpty();
+        }
+
         return $this->activeSponsorships()->exists();
     }
 
