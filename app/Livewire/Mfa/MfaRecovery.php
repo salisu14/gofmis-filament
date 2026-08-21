@@ -17,17 +17,33 @@ class MfaRecovery extends Component
         $user = Auth::user();
 
         if (! $user) {
-            return redirect()->to('/admin/login');
+            $intended = session()->get('url.intended', '');
+            $referer = request()->header('Referer', '');
+
+            if (str_contains($intended, '/coordinator') || str_contains($referer, '/coordinator')) {
+                return redirect()->route('filament.coordinator.auth.login');
+            }
+            if (str_contains($intended, '/imprest') || str_contains($referer, '/imprest')) {
+                return redirect()->route('filament.imprest.auth.login');
+            }
+
+            return redirect()->route('filament.admin.auth.login');
         }
+
+        $defaultUrl = match (true) {
+            $user->hasRole('coordinator') => '/coordinator',
+            $user->hasAnyRole(['custodian', 'auditor']) => '/imprest',
+            default => '/admin',
+        };
 
         // If they don't even have MFA enabled/required, let them pass
         if (! $user->isMfaRequired() && ! $user->twoFactorAuthEnabled()) {
-            return redirect()->to('/admin');
+            return redirect()->intended($defaultUrl);
         }
 
-        // If already verified, redirect to dashboard
+        // If already verified, redirect to dashboard or intended page
         if ($user->isMfaVerifiedInSession()) {
-            return redirect()->to('/admin');
+            return redirect()->intended($defaultUrl);
         }
     }
 
@@ -36,7 +52,17 @@ class MfaRecovery extends Component
         $user = Auth::user();
 
         if (! $user) {
-            return redirect()->to('/admin/login');
+            $intended = session()->get('url.intended', '');
+            $referer = request()->header('Referer', '');
+
+            if (str_contains($intended, '/coordinator') || str_contains($referer, '/coordinator')) {
+                return redirect()->route('filament.coordinator.auth.login');
+            }
+            if (str_contains($intended, '/imprest') || str_contains($referer, '/imprest')) {
+                return redirect()->route('filament.imprest.auth.login');
+            }
+
+            return redirect()->route('filament.admin.auth.login');
         }
 
         $this->validate([
@@ -70,15 +96,14 @@ class MfaRecovery extends Component
                 $user
             );
 
-            // Redirect based on panel / roles
-            if ($user->hasRole('coordinator')) {
-                return redirect()->to('/coordinator');
-            }
-            if ($user->hasAnyRole(['custodian', 'auditor'])) {
-                return redirect()->to('/imprest');
-            }
+            // Redirect based on panel / roles or intended destination
+            $defaultUrl = match (true) {
+                $user->hasRole('coordinator') => '/coordinator',
+                $user->hasAnyRole(['custodian', 'auditor']) => '/imprest',
+                default => '/admin',
+            };
 
-            return redirect()->to('/admin');
+            return redirect()->intended($defaultUrl);
         }
 
         RateLimiter::hit($limiterKey, $decaySeconds);

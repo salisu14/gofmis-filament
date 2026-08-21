@@ -19,7 +19,13 @@ class EnsureMfaVerified
                 $request->session()->invalidate();
                 $request->session()->regenerateToken();
 
-                return redirect()->to('/admin/login')
+                $loginUrl = match (true) {
+                    $request->is('coordinator*') || $user->hasRole('coordinator') => route('filament.coordinator.auth.login'),
+                    $request->is('imprest*') || $user->hasAnyRole(['custodian', 'auditor']) => route('filament.imprest.auth.login'),
+                    default => route('filament.admin.auth.login'),
+                };
+
+                return redirect()->to($loginUrl)
                     ->withErrors(['email' => 'Your account has been deactivated, suspended, or locked.']);
             }
 
