@@ -13,6 +13,7 @@ use App\Models\Illness;
 use App\Models\Orphan;
 use App\Models\Prescription;
 use App\Models\Widow;
+use Filament\Actions\Action;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms;
@@ -504,6 +505,17 @@ class HealthcareRequestResource extends Resource
                 ViewAction::make(),
                 EditAction::make()
                     ->visible(fn ($record) => $record->isPending() && $record->created_at->diffInDays(now()) <= 7),
+                Action::make('preview_pdf')
+                    ->label('Preview PDF')
+                    ->icon('heroicon-o-eye')
+                    ->color('info')
+                    ->url(fn (Prescription $record): string => route('prescriptions.preview', ['prescription' => $record]))
+                    ->openUrlInNewTab(),
+                Action::make('download_pdf')
+                    ->label('Download PDF')
+                    ->icon('heroicon-o-arrow-down-tray')
+                    ->url(fn (Prescription $record): string => route('prescriptions.download', ['prescription' => $record]))
+                    ->openUrlInNewTab(),
             ])
             ->defaultSort('prescription_date', 'desc');
     }

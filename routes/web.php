@@ -88,6 +88,20 @@ Route::get('/loans/write-off-documents/{writeOff}', [WidowLoanWriteOffController
     ->name('loans.write-off-document.download')
     ->middleware('auth');
 
+// Healthcare Prescription Document Routes
+Route::get('/prescriptions/{prescription}/preview', [\App\Http\Controllers\PrescriptionDocumentController::class, 'preview'])
+    ->name('prescriptions.preview')
+    ->middleware('auth');
+
+Route::get('/prescriptions/{prescription}/download', [\App\Http\Controllers\PrescriptionDocumentController::class, 'download'])
+    ->name('prescriptions.download')
+    ->middleware('auth');
+
+// Healthcare Period Report PDF Export Route
+Route::get('/admin/reports/prescription-report/pdf', [\App\Http\Controllers\PrescriptionReportController::class, 'exportPdf'])
+    ->name('reports.prescription-report.pdf')
+    ->middleware('auth');
+
 Route::middleware(['auth'])->group(function () {
     Route::get('/mfa/challenge', \App\Livewire\Mfa\MfaChallenge::class)->name('mfa.challenge');
     Route::get('/mfa/enroll', \App\Livewire\Mfa\MfaEnroll::class)->name('mfa.enroll');

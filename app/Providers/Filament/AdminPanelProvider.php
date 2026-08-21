@@ -53,6 +53,7 @@ class AdminPanelProvider extends PanelProvider
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
             ->pages([
                 Dashboard::class,
+                \App\Filament\Pages\Reports\PrescriptionReport::class,
             ])
             ->authGuard('web')
             ->resources([
@@ -271,6 +272,19 @@ class AdminPanelProvider extends PanelProvider
                                     ->icon('heroicon-o-beaker')
                                     ->url('/admin/illnesses')
                                     ->isActiveWhen(fn () => request()->is('admin/illnesses*')),
+                            ])
+                    );
+                }
+
+                // Reports (admin + super-admin)
+                if ($user?->can('view_medicals') || $user?->isAdmin() || $user?->isSuperAdmin()) {
+                    $builder = $builder->group(
+                        NavigationGroup::make('Reports')
+                            ->items([
+                                NavigationItem::make('Healthcare Reports')
+                                    ->icon('heroicon-o-document-chart-bar')
+                                    ->url('/admin/reports/prescription-report')
+                                    ->isActiveWhen(fn () => request()->is('admin/reports/prescription-report*')),
                             ])
                     );
                 }

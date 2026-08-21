@@ -100,6 +100,17 @@ class PrescriptionsTable
                 EditAction::make()
                     ->visible(fn (Prescription $record) => $record->isPending()),
                 \App\Filament\Actions\MarkHealthcareTreatedAction::make(),
+                \Filament\Actions\Action::make('preview_pdf')
+                    ->label('Preview PDF')
+                    ->icon('heroicon-o-eye')
+                    ->color('info')
+                    ->url(fn (Prescription $record): string => route('prescriptions.preview', ['prescription' => $record]))
+                    ->openUrlInNewTab(),
+                \Filament\Actions\Action::make('download_pdf')
+                    ->label('Download PDF')
+                    ->icon('heroicon-o-arrow-down-tray')
+                    ->url(fn (Prescription $record): string => route('prescriptions.download', ['prescription' => $record]))
+                    ->openUrlInNewTab(),
                 DeleteAction::make()
                     ->visible(fn (Prescription $record) => $record->isPending()),
             ])
