@@ -89,3 +89,78 @@ test('1. end-to-end project proposal -> admin approval -> milestone/expense trac
         ->assertSuccessful()
         ->assertSee('Solar Water Borehole Installation');
 });
+
+test('2. admin project table approve action executes without using $this in static closure context error', function () {
+    Filament::setCurrentPanel(Filament::getPanel('admin'));
+    $this->actingAs($this->admin);
+
+    $project = Project::create([
+        'name' => 'Community School Renovation',
+        'type' => ProjectType::SCHOOL,
+        'status' => ProjectStatus::PLANNING,
+        'zone_id' => $this->zone->id,
+        'deceased_id' => $this->deceased->id,
+        'budget_allocated' => 1200000.00,
+    ]);
+
+    Livewire::test(\App\Filament\Resources\Projects\Pages\ListProjects::class)
+        ->assertSuccessful()
+        ->assertTableActionVisible('approve', $project)
+        ->callTableAction('approve', $project)
+        ->assertHasNoTableActionErrors();
+
+    $project->refresh();
+    expect($project->status)->toBe(ProjectStatus::APPROVED);
+    expect($project->milestones()->count())->toBeGreaterThan(0);
+
+    // Approve action is no longer visible once approved, start action is visible
+    Livewire::test(\App\Filament\Resources\Projects\Pages\ListProjects::class)
+        ->assertTableActionHidden('approve', $project)
+        ->assertTableActionVisible('start', $project);
+});
+
+test('3. admin project table start, hold, resume, complete actions execute cleanly without errors', function () {
+    Filament::setCurrentPanel(Filament::getPanel('admin'));
+    $this->actingAs($this->admin);
+
+    $project = Project::create([
+        'name' => 'Health Clinic Construction',
+        'type' => ProjectType::CLINIC,
+        'status' => ProjectStatus::APPROVED,
+        'zone_id' => $this->zone->id,
+        'deceased_id' => $this->deceased->id,
+        'budget_allocated' => 2000000.00,
+    ]);
+
+    // 1. Start Work
+    Livewire::test(\App\Filament\Resources\Projects\Pages\ListProjects::class)
+        ->callTableAction('start', $project)
+        ->assertHasNoTableActionErrors();
+
+    expect($project->fresh()->status)->toBe(ProjectStatus::IN_PROGRESS);
+
+    // 2. Place on Hold
+    Livewire::test(\App\Filament\Resources\Projects\Pages\ListProjects::class)
+        ->callTableAction('hold', $project, ['reason' => 'Awaiting weather clearance'])
+        ->assertHasNoTableActionErrors();
+
+    expect($project->fresh()->status)->toBe(ProjectStatus::ON_HOLD);
+    expect($project->fresh()->notes)->toContain('Awaiting weather clearance');
+
+    // 3. Resume Project
+    Livewire::test(\App\Filament\Resources\Projects\Pages\ListProjects::class)
+        ->callTableAction('resume', $project)
+        ->assertHasNoTableActionErrors();
+
+    expect($project->fresh()->status)->toBe(ProjectStatus::IN_PROGRESS);
+
+    // Mark all milestones completed so complete Project succeeds
+    $project->milestones()->update(['status' => 'completed']);
+
+    // 4. Mark Complete
+    Livewire::test(\App\Filament\Resources\Projects\Pages\ListProjects::class)
+        ->callTableAction('complete', $project)
+        ->assertHasNoTableActionErrors();
+
+    expect($project->fresh()->status)->toBe(ProjectStatus::COMPLETED);
+});
