@@ -6,8 +6,11 @@ use App\Enums\Gender;
 use App\Enums\OrphanStatus;
 use App\Filament\Coordinator\Resources\OrphanResource\Pages\ViewOrphan as CoordinatorViewOrphan;
 use App\Filament\Coordinator\Resources\WidowResource\Pages\ViewWidow as CoordinatorViewWidow;
+use App\Filament\Resources\IdCards\Pages\EditIdCard;
 use App\Filament\Resources\IdCards\Pages\ListIdCards;
+use App\Filament\Resources\IdCards\Pages\ViewIdCard;
 use App\Models\Deceased;
+use App\Models\IdCard;
 use App\Models\IdCardTemplate;
 use App\Models\Orphan;
 use App\Models\User;
@@ -307,6 +310,71 @@ class BeneficiaryIdCardOperationalLifecycleTest extends TestCase
 
         $response = $this->get("/admin/id-cards/{$card->id}/edit");
         $response->assertStatus(403);
+    }
+
+    public function test_view_id_card_header_action_edit_visibility_and_immutability(): void
+    {
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+        $this->actingAs($this->admin);
+        $genService = app(IdCardGenerationService::class);
+
+        // 1. Draft card: Edit visible & direct edit accessible
+        $draftCard = $genService->generateCard($this->activeOrphanZoneA, $this->orphanTemplate, false);
+        $this->assertTrue(\App\Filament\Resources\IdCards\IdCardResource::canEdit($draftCard));
+        Livewire::test(EditIdCard::class, ['record' => $draftCard->getKey()])->assertSuccessful();
+
+        Livewire::test(ViewIdCard::class, ['record' => $draftCard->getKey()])
+            ->assertSuccessful()
+            ->assertActionVisible('edit')
+            ->assertActionVisible('activate_single')
+            ->assertActionHidden('replace')
+            ->assertActionHidden('revoke');
+
+        // 2. Active card: Edit hidden & direct edit 403
+        $activeCard = $genService->generateCard($this->activeWidowZoneA, $this->widowTemplate, false);
+        $activeCard->activate();
+        $this->assertFalse(\App\Filament\Resources\IdCards\IdCardResource::canEdit($activeCard));
+        $this->get("/admin/id-cards/{$activeCard->id}/edit")->assertStatus(403);
+
+        Livewire::test(ViewIdCard::class, ['record' => $activeCard->getKey()])
+            ->assertSuccessful()
+            ->assertActionHidden('edit')
+            ->assertActionHidden('activate_single')
+            ->assertActionVisible('replace')
+            ->assertActionVisible('revoke')
+            ->assertActionVisible('preview')
+            ->assertActionVisible('download');
+
+        // 3. Revoked card: Edit hidden & direct edit 403
+        $activeCard->revoke('Test revocation');
+        $revokedCard = $activeCard->fresh();
+        $this->assertFalse(\App\Filament\Resources\IdCards\IdCardResource::canEdit($revokedCard));
+        $this->get("/admin/id-cards/{$revokedCard->id}/edit")->assertStatus(403);
+
+        Livewire::test(ViewIdCard::class, ['record' => $revokedCard->getKey()])
+            ->assertSuccessful()
+            ->assertActionHidden('edit')
+            ->assertActionHidden('replace')
+            ->assertActionHidden('revoke')
+            ->assertActionVisible('reactivate');
+
+        // 4. Expired card: Edit hidden & direct edit 403
+        $expiredCard = IdCard::create([
+            'cardable_type' => get_class($this->activeOrphanZoneA),
+            'cardable_id' => $this->activeOrphanZoneA->id,
+            'template_id' => $this->orphanTemplate->id,
+            'card_number' => 'GOF-O-2020-9999',
+            'qr_code_path' => 'qr-codes/GOF-O-2020-9999.png',
+            'issued_at' => now()->subYears(3),
+            'expires_at' => now()->subYear(),
+            'status' => 'expired',
+        ]);
+        $this->assertFalse(\App\Filament\Resources\IdCards\IdCardResource::canEdit($expiredCard));
+        $this->get("/admin/id-cards/{$expiredCard->id}/edit")->assertStatus(403);
+
+        Livewire::test(ViewIdCard::class, ['record' => $expiredCard->getKey()])
+            ->assertSuccessful()
+            ->assertActionHidden('edit');
     }
 
     public function test_coordinator_cannot_access_admin_id_card_resource(): void
