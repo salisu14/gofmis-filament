@@ -121,7 +121,39 @@ class WidowResource extends Resource
                         Grid::make(3)->schema([
                             Forms\Components\TextInput::make('nin')
                                 ->label('NIN')
+                                ->live(onBlur: true)
                                 ->unique(table: 'widows', column: 'nin', ignoreRecord: true, modifyRuleUsing: fn ($rule, $get) => $rule->where('deceased_id', $get('deceased_id')))
+                                ->validationMessages([
+                                    'unique' => 'This widow (NIN) is already registered under the selected deceased household.',
+                                ])
+                                ->helperText(function ($get, $state) {
+                                    if (! $state || strlen($state) < 5) {
+                                        return '11-digit identity number';
+                                    }
+
+                                    $query = Widow::where('nin', $state);
+                                    $user = auth()->user();
+
+                                    if ($user && ! $user->hasAnyRole(['admin', 'super_admin'])) {
+                                        $zoneId = $user->coordinatedZone?->id;
+
+                                        if ($zoneId) {
+                                            $query->whereHas('deceased', fn ($q) => $q->where('zone_id', $zoneId));
+                                        } else {
+                                            return '11-digit identity number';
+                                        }
+                                    }
+
+                                    $existing = $query->with('deceased')->get();
+
+                                    if ($existing->isEmpty()) {
+                                        return '11-digit identity number';
+                                    }
+
+                                    $info = $existing->map(fn ($w) => "{$w->reg_no} (".($w->deceased?->full_name ?: 'Deceased #'.$w->deceased_id).')')->implode(', ');
+
+                                    return "⚠️ Notice: This woman already has a widow record under another deceased household [{$info}]. Creating this record will establish a separate widow history for the selected deceased.";
+                                })
                                 ->placeholder('11-digit identity number')
                                 ->maxLength(11)
                                 ->required(),
@@ -273,7 +305,25 @@ class WidowResource extends Resource
                         DatePicker::make('married_at')
                             ->label('Remarriage Date')
                             ->default(now())
-                            ->required(),
+                            ->maxDate(now())
+                            ->required()
+                            ->rule(function ($record) {
+                                return function (string $attribute, $value, \Closure $fail) use ($record) {
+                                    $date = \Illuminate\Support\Carbon::parse($value);
+
+                                    if ($date->isFuture()) {
+                                        $fail('Remarriage date cannot be in the future.');
+
+                                        return;
+                                    }
+
+                                    $dateOfDeath = $record->deceased?->date_of_death;
+
+                                    if ($dateOfDeath && $date->lt(\Illuminate\Support\Carbon::parse($dateOfDeath))) {
+                                        $fail('Remarriage date cannot be earlier than the deceased husband\'s date of death ('.\Illuminate\Support\Carbon::parse($dateOfDeath)->format('d M, Y').').');
+                                    }
+                                };
+                            }),
                         Textarea::make('notes')
                             ->label('Notes')
                             ->placeholder('Optional notes about the remarriage...')
@@ -298,14 +348,30 @@ class WidowResource extends Resource
                     ->color('success')
                     ->requiresConfirmation()
                     ->modalHeading('Reactivate Widow After Divorce')
-                    ->modalDescription('This will reactivate this widow record under her original deceased husband\'s household and restore benefit eligibility following divorce.')
+                    ->modalDescription('This action should only be used when the later marriage ended in divorce. If the later husband died, do not reactivate this record; register/create the widow under the later deceased husband\'s household instead.')
                     ->modalSubmitActionLabel('Yes, Reactivate')
                     ->visible(fn ($record) => (bool) $record->is_married)
                     ->schema([
                         DatePicker::make('divorced_at')
                             ->label('Divorce / Reactivation Date')
                             ->default(now())
-                            ->required(),
+                            ->maxDate(now())
+                            ->required()
+                            ->rule(function ($record) {
+                                return function (string $attribute, $value, \Closure $fail) use ($record) {
+                                    $date = \Illuminate\Support\Carbon::parse($value);
+
+                                    if ($date->isFuture()) {
+                                        $fail('Divorce / reactivation date cannot be in the future.');
+
+                                        return;
+                                    }
+
+                                    if ($record->married_at && $date->lt(\Illuminate\Support\Carbon::parse($record->married_at))) {
+                                        $fail('Divorce date cannot be earlier than the recorded remarriage date ('.\Illuminate\Support\Carbon::parse($record->married_at)->format('d M, Y').').');
+                                    }
+                                };
+                            }),
                         Textarea::make('notes')
                             ->label('Notes')
                             ->placeholder('Optional notes about the divorce/reactivation...')

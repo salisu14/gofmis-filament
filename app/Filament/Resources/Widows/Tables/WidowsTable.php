@@ -159,7 +159,25 @@ class WidowsTable
                             DatePicker::make('married_at')
                                 ->label('Remarriage Date')
                                 ->default(now())
-                                ->required(),
+                                ->maxDate(now())
+                                ->required()
+                                ->rule(function ($record) {
+                                    return function (string $attribute, $value, \Closure $fail) use ($record) {
+                                        $date = \Illuminate\Support\Carbon::parse($value);
+
+                                        if ($date->isFuture()) {
+                                            $fail('Remarriage date cannot be in the future.');
+
+                                            return;
+                                        }
+
+                                        $dateOfDeath = $record->deceased?->date_of_death;
+
+                                        if ($dateOfDeath && $date->lt(\Illuminate\Support\Carbon::parse($dateOfDeath))) {
+                                            $fail('Remarriage date cannot be earlier than the deceased husband\'s date of death ('.\Illuminate\Support\Carbon::parse($dateOfDeath)->format('d M, Y').').');
+                                        }
+                                    };
+                                }),
                             Textarea::make('notes')
                                 ->label('Notes')
                                 ->placeholder('Optional notes about the remarriage...')
@@ -184,14 +202,30 @@ class WidowsTable
                         ->color('success')
                         ->requiresConfirmation()
                         ->modalHeading('Reactivate Widow After Divorce')
-                        ->modalDescription('This will reactivate this widow record under her original deceased husband\'s household and restore benefit eligibility following divorce.')
+                        ->modalDescription('This action should only be used when the later marriage ended in divorce. If the later husband died, do not reactivate this record; register/create the widow under the later deceased husband\'s household instead.')
                         ->modalSubmitActionLabel('Yes, Reactivate')
                         ->visible(fn ($record) => (bool) $record->is_married)
                         ->schema([
                             DatePicker::make('divorced_at')
                                 ->label('Divorce / Reactivation Date')
                                 ->default(now())
-                                ->required(),
+                                ->maxDate(now())
+                                ->required()
+                                ->rule(function ($record) {
+                                    return function (string $attribute, $value, \Closure $fail) use ($record) {
+                                        $date = \Illuminate\Support\Carbon::parse($value);
+
+                                        if ($date->isFuture()) {
+                                            $fail('Divorce / reactivation date cannot be in the future.');
+
+                                            return;
+                                        }
+
+                                        if ($record->married_at && $date->lt(\Illuminate\Support\Carbon::parse($record->married_at))) {
+                                            $fail('Divorce date cannot be earlier than the recorded remarriage date ('.\Illuminate\Support\Carbon::parse($record->married_at)->format('d M, Y').').');
+                                        }
+                                    };
+                                }),
                             Textarea::make('notes')
                                 ->label('Notes')
                                 ->placeholder('Optional notes about the divorce/reactivation...')

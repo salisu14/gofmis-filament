@@ -71,9 +71,19 @@ class Widow extends Model
      */
     public function markAsMarried(?string $notes = null, ?string $marriedAt = null): void
     {
+        $date = $marriedAt ? \Illuminate\Support\Carbon::parse($marriedAt) : now();
+
+        if ($date->isFuture()) {
+            throw new \InvalidArgumentException('Remarriage date cannot be in the future.');
+        }
+
+        if ($this->deceased?->date_of_death && $date->lt(\Illuminate\Support\Carbon::parse($this->deceased->date_of_death))) {
+            throw new \InvalidArgumentException('Remarriage date cannot be earlier than the deceased husband\'s date of death.');
+        }
+
         $this->update([
             'is_married' => true,
-            'married_at' => $marriedAt ?? $this->married_at ?? now(),
+            'married_at' => $date,
             'is_eligible' => false,
         ]);
 
@@ -91,7 +101,7 @@ class Widow extends Model
             ->causedBy(auth()->user())
             ->withProperties([
                 'notes' => $notes,
-                'married_at' => $this->married_at,
+                'married_at' => $this->married_at?->toIso8601String(),
                 'event_type' => 'REMARRIED',
             ])
             ->log('REMARRIED');
@@ -102,9 +112,19 @@ class Widow extends Model
      */
     public function reactivateAfterDivorce(?string $notes = null, ?string $divorcedAt = null): void
     {
+        $date = $divorcedAt ? \Illuminate\Support\Carbon::parse($divorcedAt) : now();
+
+        if ($date->isFuture()) {
+            throw new \InvalidArgumentException('Divorce / reactivation date cannot be in the future.');
+        }
+
+        if ($this->married_at && $date->lt(\Illuminate\Support\Carbon::parse($this->married_at))) {
+            throw new \InvalidArgumentException('Divorce date cannot be earlier than the recorded remarriage date.');
+        }
+
         $this->update([
             'is_married' => false,
-            'divorced_at' => $divorcedAt ?? now(),
+            'divorced_at' => $date,
             'is_eligible' => true,
         ]);
 
@@ -114,7 +134,7 @@ class Widow extends Model
             ->causedBy(auth()->user())
             ->withProperties([
                 'notes' => $notes,
-                'divorced_at' => $this->divorced_at,
+                'divorced_at' => $this->divorced_at?->toIso8601String(),
                 'event_type' => 'REACTIVATED_AFTER_DIVORCE',
             ])
             ->log('REACTIVATED_AFTER_DIVORCE');

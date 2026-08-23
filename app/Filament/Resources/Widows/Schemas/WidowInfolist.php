@@ -131,6 +131,58 @@ class WidowInfolist
                             ->date('d M, Y')
                             ->placeholder('N/A'),
                     ])->columns(3),
+
+                Section::make('Marital Lifecycle History')
+                    ->icon('heroicon-m-clock')
+                    ->description('Append-only audit log of marital state changes for this household relationship.')
+                    ->schema([
+                        \Filament\Infolists\Components\RepeatableEntry::make('marital_lifecycle_activities')
+                            ->label('')
+                            ->getStateUsing(function (Widow $record) {
+                                return \Illuminate\Support\Facades\DB::table('activities')
+                                    ->where('subject_type', Widow::class)
+                                    ->where('subject_id', (string) $record->id)
+                                    ->orderBy('created_at', 'desc')
+                                    ->get()
+                                    ->map(function ($a) {
+                                        $props = json_decode($a->properties ?? '{}', true) ?: [];
+                                        $causer = $a->causer_id ? \App\Models\User::find($a->causer_id)?->name : 'System';
+                                        $eventType = $props['event_type'] ?? match ($a->description) {
+                                            'widow_marked_married', 'REMARRIED' => 'REMARRIED',
+                                            'REACTIVATED_AFTER_DIVORCE' => 'REACTIVATED_AFTER_DIVORCE',
+                                            'NEW_WIDOW_HOUSEHOLD_CREATED' => 'NEW_WIDOW_HOUSEHOLD_CREATED',
+                                            default => strtoupper($a->description ?: 'REGISTERED_AS_WIDOW'),
+                                        };
+                                        $effectiveDate = $props['married_at'] ?? $props['divorced_at'] ?? $a->created_at;
+
+                                        return [
+                                            'event_type' => str_replace('_', ' ', $eventType),
+                                            'effective_date' => $effectiveDate ? \Illuminate\Support\Carbon::parse($effectiveDate)->format('d M, Y H:i') : 'N/A',
+                                            'performed_by' => $causer ?: 'System',
+                                            'notes' => $props['notes'] ?? 'No notes provided',
+                                        ];
+                                    })
+                                    ->toArray();
+                            })
+                            ->schema([
+                                TextEntry::make('event_type')
+                                    ->label('Event')
+                                    ->badge()
+                                    ->color(fn ($state) => match (strtoupper($state ?? '')) {
+                                        'REMARRIED' => 'danger',
+                                        'REACTIVATED AFTER DIVORCE' => 'success',
+                                        'NEW WIDOW HOUSEHOLD CREATED' => 'info',
+                                        default => 'primary',
+                                    }),
+                                TextEntry::make('effective_date')
+                                    ->label('Effective Date'),
+                                TextEntry::make('performed_by')
+                                    ->label('Logged By'),
+                                TextEntry::make('notes')
+                                    ->label('Notes / Reason'),
+                            ])
+                            ->columns(4),
+                    ]),
             ]);
     }
 }
