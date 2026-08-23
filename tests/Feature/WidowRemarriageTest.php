@@ -9,6 +9,7 @@ use App\Models\IdCard;
 use App\Models\IdCardTemplate;
 use App\Models\User;
 use App\Models\Widow;
+use App\Models\WidowLoan;
 use App\Models\Zone;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -451,4 +452,121 @@ test('20. no SQL exception leaks for duplicate submissions', function () {
         ])
         ->call('create')
         ->assertHasFormErrors(['nin']);
+});
+
+// 21. Divorce restores eligibility when remarriage is the only blocker
+test('21. divorce restores eligibility when remarriage is the only blocker', function () {
+    $this->actingAs($this->admin);
+    $this->widowA->markAsMarried(notes: 'Remarried', marriedAt: '2026-05-01');
+
+    expect($this->widowA->is_eligible)->toBeFalse();
+
+    $this->widowA->reactivateAfterDivorce(notes: 'Divorced', divorcedAt: '2026-08-15');
+
+    $this->widowA->refresh();
+    expect($this->widowA->is_married)->toBeFalse()
+        ->and($this->widowA->is_eligible)->toBeTrue();
+});
+
+// 22. Divorce does not restore eligibility when loan write-off restriction remains
+test('22. divorce does not restore eligibility when loan write-off restriction remains', function () {
+    $superAdmin = User::factory()->create();
+    $superAdmin->assignRole('super_admin');
+
+    $bankAccount = \App\Models\BankAccount::create([
+        'account_name' => 'Disbursement Account',
+        'account_number' => '9988776655',
+        'opening_balance' => 500000.00,
+        'ledger_balance' => 500000.00,
+        'user_id' => $superAdmin->id,
+    ]);
+
+    $loan = WidowLoan::create([
+        'widow_id' => $this->widowA->id,
+        'principal_amount' => 50000.00,
+        'total_amount' => 50000.00,
+        'repayment_term_months' => 6,
+        'outstanding_balance' => 50000.00,
+        'status' => \App\Enums\WidowLoanStatus::DISBURSED,
+        'disbursed_at' => now(),
+        'bank_account_id' => $bankAccount->id,
+    ]);
+
+    // Super Admin writes off loan with reapplication_allowed = false
+    $writeOffService = new \App\Services\WidowLoanWriteOffService;
+    $writeOffService->writeOff($loan, $superAdmin, 'Hardship default', allowReapplication: false);
+
+    // Widow remarries
+    $this->actingAs($this->admin);
+    $this->widowA->markAsMarried(notes: 'Remarried', marriedAt: '2026-05-01');
+
+    // Widow divorces -> reactivate after divorce
+    $this->widowA->reactivateAfterDivorce(notes: 'Divorced', divorcedAt: '2026-08-15');
+
+    $this->widowA->refresh();
+    expect($this->widowA->is_married)->toBeFalse()
+        ->and($this->widowA->is_eligible)->toBeFalse(); // Preserved false due to write-off restriction!
+});
+
+// 23. Divorce does not mutate or delete loan write-off audit data
+test('23. divorce does not mutate or delete loan write-off audit data', function () {
+    $superAdmin = User::factory()->create();
+    $superAdmin->assignRole('super_admin');
+
+    $bankAccount = \App\Models\BankAccount::create([
+        'account_name' => 'Disbursement Account 2',
+        'account_number' => '9988776656',
+        'opening_balance' => 500000.00,
+        'ledger_balance' => 500000.00,
+        'user_id' => $superAdmin->id,
+    ]);
+
+    $loan = WidowLoan::create([
+        'widow_id' => $this->widowA->id,
+        'principal_amount' => 50000.00,
+        'total_amount' => 50000.00,
+        'repayment_term_months' => 6,
+        'outstanding_balance' => 50000.00,
+        'status' => \App\Enums\WidowLoanStatus::DISBURSED,
+        'disbursed_at' => now(),
+        'bank_account_id' => $bankAccount->id,
+    ]);
+
+    $writeOffService = new \App\Services\WidowLoanWriteOffService;
+    $writeOffService->writeOff($loan, $superAdmin, 'Default writeoff', allowReapplication: false);
+
+    $this->actingAs($this->admin);
+    $this->widowA->markAsMarried(notes: 'Remarried', marriedAt: '2026-05-01');
+    $this->widowA->reactivateAfterDivorce(notes: 'Divorced', divorcedAt: '2026-08-15');
+
+    $loan->refresh();
+    expect($loan->status)->toBe(\App\Enums\WidowLoanStatus::WRITTEN_OFF)
+        ->and($loan->reapplication_allowed)->toBeFalse()
+        ->and(\App\Models\WidowLoanWriteOff::where('widow_loan_id', $loan->id)->exists())->toBeTrue();
+});
+
+// 24. Revoked ID card remains revoked in both simple and write-off restricted cases
+test('24. revoked ID card remains revoked in both simple and write-off restricted cases', function () {
+    $template = IdCardTemplate::create([
+        'name' => 'Standard Widow Template',
+        'type' => 'widow',
+        'is_active' => true,
+    ]);
+
+    $idCard = IdCard::create([
+        'card_number' => 'GOF-W-2026-0099',
+        'cardable_type' => Widow::class,
+        'cardable_id' => $this->widowA->id,
+        'template_id' => $template->id,
+        'qr_code_path' => 'qrcodes/test.png',
+        'issued_at' => now(),
+        'status' => 'active',
+    ]);
+
+    $this->actingAs($this->admin);
+    $this->widowA->markAsMarried(notes: 'Remarried', marriedAt: '2026-05-01');
+    $this->widowA->reactivateAfterDivorce(notes: 'Divorced', divorcedAt: '2026-08-15');
+
+    $idCard->refresh();
+    expect($idCard->status)->toBe('revoked');
 });

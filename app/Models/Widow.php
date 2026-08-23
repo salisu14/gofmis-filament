@@ -122,11 +122,14 @@ class Widow extends Model
             throw new \InvalidArgumentException('Divorce date cannot be earlier than the recorded remarriage date.');
         }
 
+        // Remove marital status restriction
         $this->update([
             'is_married' => false,
             'divorced_at' => $date,
-            'is_eligible' => true,
         ]);
+
+        // Recalculate eligibility based on remaining domain rules (preserves independent blockers)
+        $this->recalculateEligibility();
 
         // Log the event
         activity()
@@ -136,8 +139,39 @@ class Widow extends Model
                 'notes' => $notes,
                 'divorced_at' => $this->divorced_at?->toIso8601String(),
                 'event_type' => 'REACTIVATED_AFTER_DIVORCE',
+                'is_eligible' => $this->is_eligible,
             ])
             ->log('REACTIVATED_AFTER_DIVORCE');
+    }
+
+    /**
+     * Recalculate overall eligibility based on domain business rules.
+     * Preserves independent disqualifying conditions (e.g. denied loan reapplication after write-off).
+     */
+    public function recalculateEligibility(): bool
+    {
+        // Marital status is a strict disqualifier
+        if ($this->is_married) {
+            $this->update(['is_eligible' => false]);
+
+            return false;
+        }
+
+        // Check independent loan write-off restriction
+        $hasDeniedWriteOff = $this->widowLoans()
+            ->where('status', \App\Enums\WidowLoanStatus::WRITTEN_OFF->value)
+            ->where('reapplication_allowed', false)
+            ->exists();
+
+        if ($hasDeniedWriteOff) {
+            $this->update(['is_eligible' => false]);
+
+            return false;
+        }
+
+        $this->update(['is_eligible' => true]);
+
+        return true;
     }
 
     public function idCards(): MorphMany
