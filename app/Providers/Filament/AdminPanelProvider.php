@@ -97,7 +97,7 @@ class AdminPanelProvider extends PanelProvider
                 // Deceased Module (admin + super-admin)
                 if ($user?->can('view_deceased')) {
                     $builder = $builder->group(
-                        NavigationGroup::make('Deceased')
+                        NavigationGroup::make('Beneficiary Registration')
                             ->items([
                                 NavigationItem::make('Deceased')
                                     ->icon('heroicon-o-user-minus')
@@ -113,6 +113,18 @@ class AdminPanelProvider extends PanelProvider
                                     ->icon('heroicon-o-user-group')
                                     ->url('/admin/orphans')
                                     ->isActiveWhen(fn () => request()->is('admin/orphans*')),
+
+                                NavigationItem::make('Widow History')
+                                    ->icon('heroicon-o-clock')
+                                    ->url('/admin/widow-histories')
+                                    ->badge(fn () => (string) \App\Models\Widow::historical()->count(), color: 'gray')
+                                    ->isActiveWhen(fn () => request()->is('admin/widow-histories*')),
+
+                                NavigationItem::make('Orphan History')
+                                    ->icon('heroicon-o-archive-box')
+                                    ->url('/admin/orphan-histories')
+                                    ->badge(fn () => (string) \App\Models\Orphan::historical()->count(), color: 'gray')
+                                    ->isActiveWhen(fn () => request()->is('admin/orphan-histories*')),
 
                                 NavigationItem::make('Zone Transfers')
                                     ->icon('heroicon-o-arrows-right-left')

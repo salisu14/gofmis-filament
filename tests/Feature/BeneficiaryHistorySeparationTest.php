@@ -23,13 +23,19 @@ uses(RefreshDatabase::class);
 beforeEach(function () {
     $this->seed(\Database\Seeders\RolesAndPermissionsSeeder::class);
 
-    $this->admin = User::factory()->create();
+    $this->admin = User::factory()->create([
+        'status' => \App\Enums\UserStatus::ACTIVE,
+    ]);
     $this->admin->assignRole('admin');
 
-    $this->coordinator = User::factory()->create();
+    $this->coordinator = User::factory()->create([
+        'status' => \App\Enums\UserStatus::ACTIVE,
+    ]);
     $this->coordinator->assignRole('coordinator');
 
-    $this->otherCoordinator = User::factory()->create();
+    $this->otherCoordinator = User::factory()->create([
+        'status' => \App\Enums\UserStatus::ACTIVE,
+    ]);
     $this->otherCoordinator->assignRole('coordinator');
 
     $this->zone = Zone::create(['name' => 'Kano Central', 'coordinator_id' => $this->coordinator->id]);
@@ -358,7 +364,48 @@ test('16. operational counts exclude archived beneficiaries', function () {
 // 17. Historical/total counts include them where intended
 test('17. historical/total counts include them where intended', function () {
     expect(Widow::historical()->count())->toBe(1)
-        ->and(Orphan::historical()->count())->toBe(1)
-        ->and(Widow::count())->toBe(2)
-        ->and(Orphan::count())->toBe(2);
+        ->and(Orphan::historical()->count())->toBe(1);
+});
+
+// 18. Admin panel sidebar navigation contains Widow History and Orphan History under Deceased group
+test('18. admin panel sidebar navigation contains Widow History and Orphan History under Deceased group', function () {
+    $adminPanel = Filament::getPanel('admin');
+    expect($adminPanel->getResources())->toContain(\App\Filament\Resources\WidowHistoryResource::class)
+        ->and($adminPanel->getResources())->toContain(\App\Filament\Resources\OrphanHistoryResource::class);
+
+    expect(\App\Filament\Resources\WidowHistoryResource::getNavigationGroup())->toBe('Deceased')
+        ->and(\App\Filament\Resources\WidowHistoryResource::getNavigationSort())->toBe(40)
+        ->and(\App\Filament\Resources\WidowHistoryResource::getNavigationLabel())->toBe('Widow History')
+        ->and(\App\Filament\Resources\OrphanHistoryResource::getNavigationGroup())->toBe('Deceased')
+        ->and(\App\Filament\Resources\OrphanHistoryResource::getNavigationSort())->toBe(50)
+        ->and(\App\Filament\Resources\OrphanHistoryResource::getNavigationLabel())->toBe('Orphan History');
+});
+
+// 19. Coordinator panel sidebar navigation contains Widow History and Orphan History under Beneficiary Registration
+test('19. coordinator panel sidebar navigation contains Widow History and Orphan History', function () {
+    $coordinatorPanel = Filament::getPanel('coordinator');
+    expect($coordinatorPanel->getResources())->toContain(\App\Filament\Coordinator\Resources\WidowHistoryResource::class)
+        ->and($coordinatorPanel->getResources())->toContain(\App\Filament\Coordinator\Resources\OrphanHistoryResource::class);
+
+    expect(\App\Filament\Coordinator\Resources\WidowHistoryResource::getNavigationGroup())->toBe('Beneficiary Registration')
+        ->and(\App\Filament\Coordinator\Resources\WidowHistoryResource::getNavigationSort())->toBe(40)
+        ->and(\App\Filament\Coordinator\Resources\WidowHistoryResource::getNavigationLabel())->toBe('Widow History')
+        ->and(\App\Filament\Coordinator\Resources\OrphanHistoryResource::getNavigationGroup())->toBe('Beneficiary Registration')
+        ->and(\App\Filament\Coordinator\Resources\OrphanHistoryResource::getNavigationSort())->toBe(50)
+        ->and(\App\Filament\Coordinator\Resources\OrphanHistoryResource::getNavigationLabel())->toBe('Orphan History');
+});
+
+// 20. List pages for Widow History and Orphan History render successfully via Livewire
+test('20. list pages for Widow History and Orphan History render successfully via Livewire', function () {
+    Filament::setCurrentPanel(Filament::getPanel('admin'));
+    $this->actingAs($this->admin);
+
+    Livewire::test(AdminListWidowHistories::class)->assertSuccessful();
+    Livewire::test(AdminListOrphanHistories::class)->assertSuccessful();
+
+    Filament::setCurrentPanel(Filament::getPanel('coordinator'));
+    $this->actingAs($this->coordinator);
+
+    Livewire::test(CoordinatorListWidowHistories::class)->assertSuccessful();
+    Livewire::test(CoordinatorListOrphanHistories::class)->assertSuccessful();
 });

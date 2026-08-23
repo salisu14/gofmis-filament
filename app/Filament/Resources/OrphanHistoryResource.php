@@ -18,7 +18,7 @@ class OrphanHistoryResource extends Resource
 
     protected static string|null|\BackedEnum $navigationIcon = 'heroicon-o-archive-box';
 
-    protected static string|null|\UnitEnum $navigationGroup = 'Historical Beneficiaries';
+    protected static string|null|\UnitEnum $navigationGroup = 'Deceased';
 
     protected static ?string $navigationLabel = 'Orphan History';
 
@@ -26,7 +26,17 @@ class OrphanHistoryResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Orphan History';
 
-    protected static ?int $navigationSort = 2;
+    protected static ?int $navigationSort = 50;
+
+    public static function getNavigationBadge(): ?string
+    {
+        return (string) static::getEloquentQuery()->count();
+    }
+
+    public static function getNavigationBadgeColor(): ?string
+    {
+        return 'gray';
+    }
 
     public static function canCreate(): bool
     {

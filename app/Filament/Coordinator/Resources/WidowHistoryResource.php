@@ -18,7 +18,7 @@ class WidowHistoryResource extends Resource
 
     protected static string|null|\BackedEnum $navigationIcon = 'heroicon-o-clock';
 
-    protected static string|null|\UnitEnum $navigationGroup = 'Historical Beneficiaries';
+    protected static string|null|\UnitEnum $navigationGroup = 'Beneficiary Registration';
 
     protected static ?string $navigationLabel = 'Widow History';
 
@@ -26,7 +26,17 @@ class WidowHistoryResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Widow History';
 
-    protected static ?int $navigationSort = 1;
+    protected static ?int $navigationSort = 40;
+
+    public static function getNavigationBadge(): ?string
+    {
+        return (string) static::getEloquentQuery()->count();
+    }
+
+    public static function getNavigationBadgeColor(): ?string
+    {
+        return 'gray';
+    }
 
     public static function canCreate(): bool
     {
