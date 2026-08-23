@@ -5,6 +5,7 @@
 namespace App\Filament\Coordinator\Resources;
 
 use App\Enums\BeneficiaryStatus;
+use App\Enums\CollectionStatus;
 use App\Filament\Coordinator\Resources\WelfareRequestResource\Pages\CreateWelfareRequest;
 use App\Filament\Coordinator\Resources\WelfareRequestResource\Pages\EditWelfareRequest;
 use App\Filament\Coordinator\Resources\WelfareRequestResource\Pages\ListWelfareRequests;
@@ -335,16 +336,13 @@ class WelfareRequestResource extends Resource
 
                 Tables\Columns\TextColumn::make('status')
                     ->badge()
-                    ->colors([
-                        'warning' => 'pending',
-                        'success' => 'approved',
-                        'danger' => 'rejected',
-                        'info' => 'collected',
-                    ]),
+                    ->color(fn (BeneficiaryStatus $state): string => $state->color())
+                    ->icon(fn (BeneficiaryStatus $state): string => $state->icon()),
 
                 Tables\Columns\IconColumn::make('collection_status')
                     ->label('Collected')
-                    ->boolean(),
+                    ->boolean()
+                    ->state(fn (WelfareBeneficiary $record): bool => $record->isCollected()),
 
                 Tables\Columns\TextColumn::make('collected_at')
                     ->date('M d, Y')
@@ -360,31 +358,40 @@ class WelfareRequestResource extends Resource
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
-                    ->options([
-                        'pending' => 'Pending',
-                        'approved' => 'Approved',
-                        'rejected' => 'Rejected',
-                        'collected' => 'Collected',
-                    ]),
+                    ->options(BeneficiaryStatus::class),
+
+                Tables\Filters\SelectFilter::make('collection_status')
+                    ->options(CollectionStatus::class),
 
                 Tables\Filters\SelectFilter::make('welfare_package_id')
                     ->label('Package')
                     ->relationship('welfarePackage', 'name'),
 
-                // ✅ FIXED: Use coordinatedZone instead of zone_id
                 Tables\Filters\Filter::make('my_zone')
                     ->label('My Zone Only')
-                    ->query(function (Builder $query) {
+                    ->query(function (Builder $query, array $data): Builder {
+                        if (! ($data['isActive'] ?? false)) {
+                            return $query;
+                        }
+
                         $zoneId = auth()->user()?->coordinatedZone?->id;
                         if ($zoneId) {
                             $query->whereHas('deceased', fn ($q) => $q->where('zone_id', $zoneId));
                         }
+
+                        return $query;
                     })
                     ->default(),
 
                 Tables\Filters\Filter::make('not_collected')
                     ->label('Not Yet Collected')
-                    ->query(fn ($q) => $q->approved()->notCollected()),
+                    ->query(function (Builder $query, array $data): Builder {
+                        if (! ($data['isActive'] ?? false)) {
+                            return $query;
+                        }
+
+                        return $query->notCollected();
+                    }),
             ])
             ->recordActions([
                 ViewAction::make(),

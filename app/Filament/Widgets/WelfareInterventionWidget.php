@@ -1,4 +1,5 @@
 <?php
+
 // app/Filament/Widgets/WelfareInterventionWidget.php
 
 namespace App\Filament\Widgets;
@@ -13,7 +14,9 @@ use Filament\Widgets\TableWidget as BaseWidget;
 class WelfareInterventionWidget extends BaseWidget
 {
     protected static ?string $heading = 'Welfare Interventions';
+
     protected static ?int $sort = 6;
+
     protected int|string|array $columnSpan = 'full';
 
     public function table(Table $table): Table
@@ -25,10 +28,10 @@ class WelfareInterventionWidget extends BaseWidget
                     ->whereIn('status', ['approved', 'collected'])
             )
             ->heading('Welfare Support Beneficiaries')
-            ->description(fn() => 'Total welfare packages: ' . WelfarePackage::count() .
-                ' | Total beneficiaries: ' . WelfareBeneficiary::count() .
-                ' | Approved: ' . WelfareBeneficiary::approved()->count() .
-                ' | Collected: ' . WelfareBeneficiary::collected()->count())
+            ->description(fn () => 'Total welfare packages: '.WelfarePackage::count().
+                ' | Total beneficiaries: '.WelfareBeneficiary::count().
+                ' | Approved: '.WelfareBeneficiary::approved()->count().
+                ' | Collected: '.WelfareBeneficiary::collected()->count())
             ->columns([
                 TextColumn::make('deceased.full_name')
                     ->label('Family Head')
@@ -46,16 +49,13 @@ class WelfareInterventionWidget extends BaseWidget
 
                 TextColumn::make('status')
                     ->badge()
-                    ->colors([
-                        'warning' => 'pending',
-                        'success' => 'approved',
-                        'danger' => 'rejected',
-                        'info' => 'collected',
-                    ]),
+                    ->color(fn (\App\Enums\BeneficiaryStatus $state): string => $state->color())
+                    ->icon(fn (\App\Enums\BeneficiaryStatus $state): string => $state->icon()),
 
                 IconColumn::make('collection_status')
                     ->label('Collected')
-                    ->boolean(),
+                    ->boolean()
+                    ->state(fn (\App\Models\WelfareBeneficiary $record): bool => $record->isCollected()),
 
                 TextColumn::make('collected_at')
                     ->date('M d, Y')

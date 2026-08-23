@@ -140,7 +140,24 @@ class BeneficiariesRelationManager extends RelationManager
                     ->options(CollectionStatus::class),
 
                 Filter::make('ready_for_collection')
-                    ->query(fn ($query) => $query->readyForCollection())
+                    ->query(function (Builder $query, array $data): Builder {
+                        if (! ($data['isActive'] ?? false)) {
+                            return $query;
+                        }
+
+                        return $query->readyForCollection();
+                    })
+                    ->toggle(),
+
+                Filter::make('not_collected')
+                    ->label('Not Yet Collected')
+                    ->query(function (Builder $query, array $data): Builder {
+                        if (! ($data['isActive'] ?? false)) {
+                            return $query;
+                        }
+
+                        return $query->notCollected();
+                    })
                     ->toggle(),
             ])
             ->headerActions([
