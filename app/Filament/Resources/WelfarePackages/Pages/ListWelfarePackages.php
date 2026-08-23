@@ -7,6 +7,7 @@ use App\Models\Deceased;
 use App\Models\WelfarePackage;
 use App\Services\Welfare\WelfareNominationService;
 use Filament\Actions;
+use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ListRecords;
@@ -29,7 +30,33 @@ class ListWelfarePackages extends ListRecords
                         ->options(fn () => WelfarePackage::open()->pluck('name', 'id'))
                         ->required()
                         ->searchable()
+                        ->live()
                         ->native(false),
+
+                    Placeholder::make('stock_capacity_advisory')
+                        ->label('Stock Availability & Capacity Advisory')
+                        ->content(function (Get $get) {
+                            $packageId = $get('welfare_package_id');
+                            if (! $packageId) {
+                                return 'Select an open package to view stock capacity advisory.';
+                            }
+
+                            $package = WelfarePackage::find($packageId);
+                            if (! $package) {
+                                return 'Package not found.';
+                            }
+
+                            $service = app(\App\Services\Inventory\StockAvailabilityService::class);
+                            $capacityData = $service->calculatePackageCapacity($package);
+
+                            $nominatedCount = $package->beneficiaries()->count();
+                            $capacity = $capacityData['capacity'];
+                            $bottleneck = $capacityData['bottleneck_item'];
+                            $status = $capacityData['readiness_status'];
+                            $remaining = max(0, $capacity - $nominatedCount);
+
+                            return "Status: {$status} | Estimated Capacity: {$capacity} Households (Bottleneck: {$bottleneck}) | Already Nominated: {$nominatedCount} | Remaining Supportable: {$remaining}";
+                        }),
 
                     Select::make('vulnerability_filter')
                         ->label('Filter by Household Vulnerability')

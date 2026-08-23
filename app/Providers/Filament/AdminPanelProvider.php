@@ -54,6 +54,7 @@ class AdminPanelProvider extends PanelProvider
             ->pages([
                 Dashboard::class,
                 \App\Filament\Pages\Reports\PrescriptionReport::class,
+                \App\Filament\Pages\StockAvailability::class,
             ])
             ->authGuard('web')
             ->resources([
@@ -216,6 +217,11 @@ class AdminPanelProvider extends PanelProvider
                                     ->icon('heroicon-o-queue-list')
                                     ->url('/admin/items')
                                     ->isActiveWhen(fn () => request()->is('admin/items*')),
+
+                                NavigationItem::make('Stock Availability')
+                                    ->icon('heroicon-o-chart-bar')
+                                    ->url('/admin/stock-availability')
+                                    ->isActiveWhen(fn () => request()->is('admin/stock-availability*')),
                             ])
                     );
                 }
