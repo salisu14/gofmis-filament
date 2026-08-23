@@ -16,6 +16,7 @@ use App\Models\Zone;
 use App\Services\Welfare\WelfareNominationService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Livewire\Livewire;
 
 uses(RefreshDatabase::class);
 
@@ -491,4 +492,24 @@ test('D2. linked widow and orphan inherit vulnerability status from deceased hou
 
     expect($widow->refresh()->vulnerability_status)->toBe(\App\Enums\VulnerabilityStatus::B)
         ->and($orphan->refresh()->vulnerability_status)->toBe(\App\Enums\VulnerabilityStatus::B);
+});
+
+// E1. Super Admin and Admin can mount nominate_beneficiaries action modal without TypeError
+test('E1. super admin and admin can mount nominate_beneficiaries action modal without TypeError', function () {
+    \Filament\Facades\Filament::setCurrentPanel(\Filament\Facades\Filament::getPanel('admin'));
+    $this->actingAs($this->admin);
+
+    Livewire::test(\App\Filament\Resources\WelfarePackages\Pages\ListWelfarePackages::class)
+        ->mountAction('nominate_beneficiaries')
+        ->assertActionMounted('nominate_beneficiaries');
+});
+
+// E2. Coordinator can mount nominate_beneficiaries action modal without TypeError
+test('E2. coordinator can mount nominate_beneficiaries action modal without TypeError', function () {
+    \Filament\Facades\Filament::setCurrentPanel(\Filament\Facades\Filament::getPanel('coordinator'));
+    $this->actingAs($this->coordinator);
+
+    Livewire::test(\App\Filament\Coordinator\Resources\WelfareRequestResource\Pages\ListWelfareRequests::class)
+        ->mountAction('nominate_beneficiaries')
+        ->assertActionMounted('nominate_beneficiaries');
 });
