@@ -2,9 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Enums\StockMovementType;
 use App\Enums\UserStatus;
 use App\Models\Category;
 use App\Models\Item;
+use App\Models\StockMovement;
 use App\Models\User;
 use App\Models\WelfarePackage;
 use App\Models\WelfarePackageItem;
@@ -40,9 +42,28 @@ beforeEach(function () {
         'category_id' => $this->category->id,
         'user_id' => $this->admin->id,
     ]);
+
+    // Seed canonical opening balances via stock_movements
+    StockMovement::create([
+        'item_id' => $this->rice->id,
+        'movement_type' => StockMovementType::OPENING_BALANCE,
+        'quantity' => 200,
+        'occurred_at' => now(),
+        'created_by' => $this->admin->id,
+        'notes' => 'Test opening balance',
+    ]);
+
+    StockMovement::create([
+        'item_id' => $this->oil->id,
+        'movement_type' => StockMovementType::OPENING_BALANCE,
+        'quantity' => 100,
+        'occurred_at' => now(),
+        'created_by' => $this->admin->id,
+        'notes' => 'Test opening balance',
+    ]);
 });
 
-// 1 & 2. Access control
+// 1. Access control
 test('1. admin can access stock availability page while unauthorized user is denied', function () {
     Filament::setCurrentPanel(Filament::getPanel('admin'));
     $this->actingAs($this->admin);
@@ -51,17 +72,72 @@ test('1. admin can access stock availability page while unauthorized user is den
         ->assertSuccessful();
 });
 
-// 3 & 4 & 5. Stock metrics computation
-test('3. stock availability service correctly computes item metrics and statuses', function () {
+// 2. Items with no movements show zero on-hand
+test('2. items with no stock movements show zero on-hand', function () {
+    $emptyItem = Item::create([
+        'name' => 'Empty Item',
+        'description' => 'No movements',
+        'category_id' => $this->category->id,
+        'user_id' => $this->admin->id,
+    ]);
+
+    $service = app(StockAvailabilityService::class);
+    $metrics = $service->getItemStockMetrics($emptyItem->id)->first();
+
+    expect($metrics['on_hand'])->toBe(0)
+        ->and($metrics['available'])->toBe(0)
+        ->and($metrics['status'])->toBe('OUT_OF_STOCK');
+});
+
+// 3. Stock metrics computed from ledger
+test('3. stock availability service derives on-hand from stock movements ledger', function () {
     $service = app(StockAvailabilityService::class);
     $metrics = $service->getItemStockMetrics($this->rice->id)->first();
 
     expect($metrics['item_id'])->toBe($this->rice->id)
-        ->and($metrics['on_hand'])->toBeGreaterThan(0)
-        ->and($metrics['status'])->toBeIn(['IN_STOCK', 'LOW_STOCK', 'OUT_OF_STOCK']);
+        ->and($metrics['on_hand'])->toBe(200)
+        ->and($metrics['reserved'])->toBe(0)
+        ->and($metrics['available'])->toBe(200)
+        ->and($metrics['status'])->toBe('IN_STOCK');
 });
 
-// 6 & 7 & 8. Welfare capacity calculation with bottleneck
+// 4. Outflow reduces on-hand
+test('4. welfare issue movement reduces on-hand stock', function () {
+    // Simulate a welfare distribution
+    StockMovement::create([
+        'item_id' => $this->rice->id,
+        'movement_type' => StockMovementType::WELFARE_ISSUE,
+        'quantity' => -50,
+        'occurred_at' => now(),
+        'created_by' => $this->admin->id,
+        'notes' => 'Test welfare distribution',
+    ]);
+
+    $service = app(StockAvailabilityService::class);
+    $metrics = $service->getItemStockMetrics($this->rice->id)->first();
+
+    expect($metrics['on_hand'])->toBe(150)
+        ->and($metrics['available'])->toBe(150);
+});
+
+// 5. Purchase receipt increases on-hand
+test('5. purchase receipt movement increases on-hand stock', function () {
+    StockMovement::create([
+        'item_id' => $this->oil->id,
+        'movement_type' => StockMovementType::PURCHASE_RECEIPT,
+        'quantity' => 50,
+        'occurred_at' => now(),
+        'created_by' => $this->admin->id,
+        'notes' => 'Test purchase receipt',
+    ]);
+
+    $service = app(StockAvailabilityService::class);
+    $metrics = $service->getItemStockMetrics($this->oil->id)->first();
+
+    expect($metrics['on_hand'])->toBe(150);
+});
+
+// 6. Welfare capacity bottleneck
 test('6. welfare package capacity correctly calculates minimum bottleneck capacity across items', function () {
     $package = WelfarePackage::create([
         'name' => 'Festive Distribution Package',
@@ -72,7 +148,7 @@ test('6. welfare package capacity correctly calculates minimum bottleneck capaci
         'created_by' => $this->admin->id,
     ]);
 
-    // 1 bag of rice per family (available = 100 -> capacity = 100)
+    // Rice: 200 on-hand, 1 per family => capacity 200
     WelfarePackageItem::create([
         'welfare_package_id' => $package->id,
         'item_id' => $this->rice->id,
@@ -80,7 +156,7 @@ test('6. welfare package capacity correctly calculates minimum bottleneck capaci
         'quantity_per_family' => 1,
     ]);
 
-    // 2 bottles of oil per family (available = 100 -> capacity = 50)
+    // Oil: 100 on-hand, 2 per family => capacity 50 (bottleneck)
     WelfarePackageItem::create([
         'welfare_package_id' => $package->id,
         'item_id' => $this->oil->id,
@@ -96,12 +172,36 @@ test('6. welfare package capacity correctly calculates minimum bottleneck capaci
         ->and($capacityData['readiness_status'])->toBe('READY');
 });
 
-// 9. Stock report PDF / HTML export stream
-test('9. admin can export stock availability report stream', function () {
+// 7. Empty package returns INCOMPLETE
+test('7. empty welfare package returns incomplete readiness', function () {
+    $package = WelfarePackage::create([
+        'name' => 'Empty Package',
+        'description' => 'No items',
+        'start_date' => now()->subDays(1),
+        'end_date' => now()->addDays(5),
+        'status' => \App\Enums\WelfarePackageStatus::OPEN,
+        'created_by' => $this->admin->id,
+    ]);
+
+    $service = app(StockAvailabilityService::class);
+    $capacityData = $service->calculatePackageCapacity($package);
+
+    expect($capacityData['capacity'])->toBe(0)
+        ->and($capacityData['readiness_status'])->toBe('INCOMPLETE');
+});
+
+// 8. Stock report PDF export
+test('8. admin can export stock availability report as genuine PDF', function () {
     Filament::setCurrentPanel(Filament::getPanel('admin'));
     $this->actingAs($this->admin);
 
     Livewire::test(\App\Filament\Pages\StockAvailability::class)
         ->callAction('export_pdf')
         ->assertFileDownloaded();
+});
+
+// 9. Reconcile command runs without error
+test('9. inventory reconcile command runs successfully', function () {
+    $this->artisan('inventory:reconcile')
+        ->assertSuccessful();
 });

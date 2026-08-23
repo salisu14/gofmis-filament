@@ -153,12 +153,33 @@ class WelfareBeneficiary extends Model
             return false;
         }
 
-        return $this->update([
+        $updated = $this->update([
             'collection_status' => CollectionStatus::COLLECTED,
             'collected_at' => now(),
             'collected_by' => $collectedBy ?? auth()->id(),
             'collection_notes' => $notes,
         ]);
+
+        if ($updated) {
+            $packageItems = $this->welfarePackage?->items;
+            if ($packageItems) {
+                foreach ($packageItems as $pkgItem) {
+                    \App\Models\StockMovement::firstOrCreate([
+                        'item_id' => $pkgItem->item_id,
+                        'movement_type' => \App\Enums\StockMovementType::WELFARE_ISSUE,
+                        'reference_type' => self::class,
+                        'reference_id' => $this->id,
+                    ], [
+                        'quantity' => -1 * (int) $pkgItem->quantity_per_family,
+                        'occurred_at' => now(),
+                        'created_by' => $collectedBy ?? auth()->id(),
+                        'notes' => "Welfare Package Collection ({$this->welfarePackage?->name})",
+                    ]);
+                }
+            }
+        }
+
+        return $updated;
     }
 
     public function markAsApproved(?string $approvedBy = null): bool

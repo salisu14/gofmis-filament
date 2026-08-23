@@ -4,9 +4,8 @@ namespace App\Services\Inventory;
 
 use App\Enums\BeneficiaryStatus;
 use App\Enums\CollectionStatus;
-use App\Models\ImprestTransaction;
-use App\Models\InterventionItem;
 use App\Models\Item;
+use App\Models\StockMovement;
 use App\Models\WelfarePackage;
 use App\Models\WelfarePackageItem;
 use Illuminate\Support\Collection;
@@ -16,6 +15,10 @@ class StockAvailabilityService
 {
     /**
      * Get stock availability metrics for all items or a specific item.
+     *
+     * On Hand  = SUM(stock_movements.quantity) for item
+     * Reserved = SUM(quantity_per_family) for approved, uncollected welfare allocations
+     * Available = max(0, On Hand - Reserved)
      */
     public function getItemStockMetrics(?string $itemId = null): Collection
     {
@@ -27,47 +30,34 @@ class StockAvailabilityService
 
         $items = $query->get();
 
-        // Grouped aggregates for purchased stock
-        $purchasedStock = ImprestTransaction::whereNotNull('item_id')
-            ->select('item_id', DB::raw('SUM(quantity) as total_purchased'))
+        // On Hand from canonical stock_movements ledger (grouped aggregate)
+        $onHandByItem = StockMovement::select('item_id', DB::raw('COALESCE(SUM(quantity), 0) as on_hand'))
             ->groupBy('item_id')
-            ->pluck('total_purchased', 'item_id');
+            ->pluck('on_hand', 'item_id');
 
-        // Grouped aggregates for intervention issued stock
-        $issuedIntervention = InterventionItem::whereNotNull('item_id')
-            ->select('item_id', DB::raw('SUM(quantity) as total_issued'))
-            ->groupBy('item_id')
-            ->pluck('total_issued', 'item_id');
-
-        // Grouped aggregates for collected welfare allocations
-        $welfareCollected = WelfarePackageItem::join('welfare_beneficiaries', 'welfare_package_items.welfare_package_id', '=', 'welfare_beneficiaries.welfare_package_id')
-            ->where('welfare_beneficiaries.collection_status', CollectionStatus::COLLECTED->value)
-            ->select('welfare_package_items.item_id', DB::raw('SUM(welfare_package_items.quantity_per_family) as total_welfare_issued'))
-            ->groupBy('welfare_package_items.item_id')
-            ->pluck('total_welfare_issued', 'welfare_package_items.item_id');
-
-        // Grouped aggregates for reserved/approved uncollected welfare allocations
-        $welfareReserved = WelfarePackageItem::join('welfare_beneficiaries', 'welfare_package_items.welfare_package_id', '=', 'welfare_beneficiaries.welfare_package_id')
+        // Reserved = approved + NOT_COLLECTED welfare allocations × quantity_per_family
+        $reservedByItem = WelfarePackageItem::join(
+            'welfare_beneficiaries',
+            'welfare_package_items.welfare_package_id',
+            '=',
+            'welfare_beneficiaries.welfare_package_id'
+        )
             ->where('welfare_beneficiaries.status', BeneficiaryStatus::APPROVED->value)
             ->where('welfare_beneficiaries.collection_status', CollectionStatus::NOT_COLLECTED->value)
-            ->select('welfare_package_items.item_id', DB::raw('SUM(welfare_package_items.quantity_per_family) as total_reserved'))
+            ->whereNull('welfare_beneficiaries.deleted_at')
+            ->select('welfare_package_items.item_id', DB::raw('COALESCE(SUM(welfare_package_items.quantity_per_family), 0) as total_reserved'))
             ->groupBy('welfare_package_items.item_id')
             ->pluck('total_reserved', 'welfare_package_items.item_id');
 
-        return $items->map(function (Item $item) use ($purchasedStock, $issuedIntervention, $welfareCollected, $welfareReserved) {
-            $purchased = (float) ($purchasedStock->get($item->id) ?? 0);
-            $issuedInt = (float) ($issuedIntervention->get($item->id) ?? 0);
-            $issuedWel = (float) ($welfareCollected->get($item->id) ?? 0);
-            $reserved = (float) ($welfareReserved->get($item->id) ?? 0);
-
-            // Default baseline on_hand stock for master catalog items if no explicit purchase entry exists yet
-            $baseStock = max(100.0, $purchased);
-            $onHand = max(0.0, $baseStock - $issuedInt - $issuedWel);
-            $available = max(0.0, $onHand - $reserved);
+        return $items->map(function (Item $item) use ($onHandByItem, $reservedByItem) {
+            $onHand = (int) ($onHandByItem->get($item->id) ?? 0);
+            $reserved = (int) ($reservedByItem->get($item->id) ?? 0);
+            $available = max(0, $onHand - $reserved);
+            $reorderLevel = $item->reorder_level ?? 15;
 
             $status = match (true) {
                 $available <= 0 => 'OUT_OF_STOCK',
-                $available <= 15 => 'LOW_STOCK',
+                $available <= $reorderLevel => 'LOW_STOCK',
                 default => 'IN_STOCK',
             };
 
@@ -75,11 +65,12 @@ class StockAvailabilityService
                 'item_id' => $item->id,
                 'name' => $item->name,
                 'category_name' => $item->category?->name ?? 'Uncategorized',
-                'on_hand' => (int) $onHand,
-                'reserved' => (int) $reserved,
-                'available' => (int) $available,
+                'unit_of_measure' => $item->unit_of_measure ?? 'Units',
+                'on_hand' => $onHand,
+                'reserved' => $reserved,
+                'available' => $available,
                 'status' => $status,
-                'reorder_level' => 15,
+                'reorder_level' => $reorderLevel,
             ];
         });
     }

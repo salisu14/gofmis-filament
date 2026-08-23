@@ -3,8 +3,8 @@
 namespace App\Filament\Pages;
 
 use App\Models\Item;
-use App\Services\DocumentBrandingService;
 use App\Services\Inventory\StockAvailabilityService;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Filament\Actions\Action;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
@@ -42,58 +42,96 @@ class StockAvailability extends Page implements HasForms, HasTable
                 ->action(function () {
                     $service = app(StockAvailabilityService::class);
                     $metrics = $service->getItemStockMetrics();
-                    $branding = app(DocumentBrandingService::class);
 
-                    $pdfHtml = '
+                    $totalOnHand = $metrics->sum('on_hand');
+                    $totalReserved = $metrics->sum('reserved');
+                    $totalAvailable = $metrics->sum('available');
+
+                    $pdfHtml = '<!DOCTYPE html>
+                    <html>
+                    <head>
+                    <meta charset="utf-8">
                     <style>
-                        body { font-family: sans-serif; font-size: 12px; }
-                        h2 { color: #1e3a8a; }
-                        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-                        th, td { border: 1px solid #cbd5e1; padding: 8px; text-align: left; }
-                        th { background-color: #f1f5f9; }
-                        .badge { padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 10px; }
+                        body { font-family: sans-serif; font-size: 11px; color: #1e293b; margin: 30px; }
+                        h2 { color: #1e3a8a; margin-bottom: 4px; }
+                        .subtitle { color: #64748b; margin-bottom: 16px; }
+                        table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+                        th, td { border: 1px solid #cbd5e1; padding: 6px 8px; text-align: left; }
+                        th { background-color: #f1f5f9; font-weight: 600; }
+                        .text-right { text-align: right; }
+                        .badge { padding: 3px 8px; border-radius: 4px; font-weight: bold; font-size: 9px; }
                         .badge-in { background-color: #dcfce7; color: #166534; }
                         .badge-low { background-color: #fef9c3; color: #854d0e; }
                         .badge-out { background-color: #fee2e2; color: #991b1b; }
+                        .summary { margin-top: 16px; font-size: 10px; color: #64748b; }
+                        tfoot td { font-weight: bold; background-color: #f8fafc; }
                     </style>
-                    <h2>GOF MIS — Stock Availability Report</h2>
-                    <p>Generated on: '.now()->format('F d, Y H:i:s').'</p>
+                    </head>
+                    <body>
+                    <h2>GOF MIS &mdash; Stock Availability Report</h2>
+                    <p class="subtitle">Generated on: ' . now()->format('F d, Y H:i:s') . '</p>
                     <table>
                         <thead>
                             <tr>
+                                <th>#</th>
                                 <th>Item Name</th>
                                 <th>Category</th>
-                                <th>On Hand</th>
-                                <th>Reserved</th>
-                                <th>Available</th>
+                                <th>Unit</th>
+                                <th class="text-right">On Hand</th>
+                                <th class="text-right">Reserved</th>
+                                <th class="text-right">Available</th>
                                 <th>Status</th>
                             </tr>
                         </thead>
                         <tbody>';
 
+                    $rowNum = 0;
                     foreach ($metrics as $row) {
+                        $rowNum++;
                         $badgeClass = match ($row['status']) {
                             'IN_STOCK' => 'badge-in',
                             'LOW_STOCK' => 'badge-low',
                             default => 'badge-out',
                         };
+                        $statusLabel = str_replace('_', ' ', $row['status']);
+                        $unit = $row['unit_of_measure'] ?? 'Units';
 
                         $pdfHtml .= "
                             <tr>
+                                <td>{$rowNum}</td>
                                 <td>{$row['name']}</td>
                                 <td>{$row['category_name']}</td>
-                                <td>{$row['on_hand']}</td>
-                                <td>{$row['reserved']}</td>
-                                <td>{$row['available']}</td>
-                                <td><span class='badge {$badgeClass}'>{$row['status']}</span></td>
+                                <td>{$unit}</td>
+                                <td class='text-right'>" . number_format($row['on_hand']) . "</td>
+                                <td class='text-right'>" . number_format($row['reserved']) . "</td>
+                                <td class='text-right'>" . number_format($row['available']) . "</td>
+                                <td><span class='badge {$badgeClass}'>{$statusLabel}</span></td>
                             </tr>";
                     }
 
-                    $pdfHtml .= '</tbody></table>';
+                    $pdfHtml .= "
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan='4'>Totals</td>
+                                <td class='text-right'>" . number_format($totalOnHand) . "</td>
+                                <td class='text-right'>" . number_format($totalReserved) . "</td>
+                                <td class='text-right'>" . number_format($totalAvailable) . "</td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                    <p class='summary'>Report generated by GOF MIS Inventory Module. Stock levels are derived from the canonical stock movements ledger.</p>
+                    </body></html>";
 
-                    return response()->streamDownload(function () use ($pdfHtml) {
-                        echo $pdfHtml;
-                    }, 'stock-availability-report-'.now()->format('Y-m-d').'.html');
+                    $pdf = Pdf::loadHTML($pdfHtml)->setPaper('a4', 'landscape');
+                    $filename = 'stock-availability-report-' . now()->format('Y-m-d') . '.pdf';
+
+                    return response()->streamDownload(
+                        fn () => print($pdf->output()),
+                        $filename,
+                        ['Content-Type' => 'application/pdf']
+                    );
                 }),
         ];
     }
@@ -115,6 +153,10 @@ class StockAvailability extends Page implements HasForms, HasTable
                     ->sortable()
                     ->badge()
                     ->color('info'),
+
+                TextColumn::make('unit_of_measure')
+                    ->label('Unit')
+                    ->default('Units'),
 
                 TextColumn::make('on_hand')
                     ->label('On Hand')
