@@ -409,3 +409,36 @@ test('20. list pages for Widow History and Orphan History render successfully vi
     Livewire::test(CoordinatorListWidowHistories::class)->assertSuccessful();
     Livewire::test(CoordinatorListOrphanHistories::class)->assertSuccessful();
 });
+
+// 21. Admin user without view_widows permission cannot access Widow History
+test('21. admin user without view_widows permission cannot access Widow History', function () {
+    $restrictedAdmin = User::factory()->create([
+        'status' => \App\Enums\UserStatus::ACTIVE,
+    ]);
+    // Assign role with view_deceased and view_orphans but revoke/exclude view_widows
+    $role = \App\Models\Role::create(['name' => 'restricted_admin_role', 'guard_name' => 'web']);
+    $role->givePermissionTo(['view_deceased', 'view_orphans']);
+    $restrictedAdmin->assignRole($role);
+
+    Filament::setCurrentPanel(Filament::getPanel('admin'));
+    $this->actingAs($restrictedAdmin);
+
+    expect(\App\Filament\Resources\WidowHistoryResource::canViewAny())->toBeFalse()
+        ->and(\App\Filament\Resources\OrphanHistoryResource::canViewAny())->toBeTrue();
+});
+
+// 22. Admin user without view_orphans permission cannot access Orphan History
+test('22. admin user without view_orphans permission cannot access Orphan History', function () {
+    $restrictedAdmin = User::factory()->create([
+        'status' => \App\Enums\UserStatus::ACTIVE,
+    ]);
+    $role = \App\Models\Role::create(['name' => 'restricted_admin_role_2', 'guard_name' => 'web']);
+    $role->givePermissionTo(['view_deceased', 'view_widows']);
+    $restrictedAdmin->assignRole($role);
+
+    Filament::setCurrentPanel(Filament::getPanel('admin'));
+    $this->actingAs($restrictedAdmin);
+
+    expect(\App\Filament\Resources\OrphanHistoryResource::canViewAny())->toBeFalse()
+        ->and(\App\Filament\Resources\WidowHistoryResource::canViewAny())->toBeTrue();
+});

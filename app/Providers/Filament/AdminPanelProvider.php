@@ -94,44 +94,64 @@ class AdminPanelProvider extends PanelProvider
                     );
                 }
 
-                // Deceased Module (admin + super-admin)
-                if ($user?->can('view_deceased')) {
-                    $builder = $builder->group(
-                        NavigationGroup::make('Beneficiary Registration')
-                            ->items([
-                                NavigationItem::make('Deceased')
-                                    ->icon('heroicon-o-user-minus')
-                                    ->url('/admin/deceaseds')
-                                    ->isActiveWhen(fn () => request()->is('admin/deceaseds*')),
+                // Beneficiary Registration Module (admin + super-admin)
+                $hasDeceasedAccess = $user?->hasRole('super_admin') || $user?->can('view_deceased');
+                $hasWidowAccess = $user?->hasRole('super_admin') || $user?->can('view_widows') || $user?->can('view_deceased');
+                $hasOrphanAccess = $user?->hasRole('super_admin') || $user?->can('view_orphans') || $user?->can('view_deceased');
 
-                                NavigationItem::make('Widows')
-                                    ->icon('heroicon-o-heart')
-                                    ->url('/admin/widows')
-                                    ->isActiveWhen(fn () => request()->is('admin/widows*')),
+                if ($hasDeceasedAccess || $hasWidowAccess || $hasOrphanAccess) {
+                    $items = [];
 
-                                NavigationItem::make('Orphans')
-                                    ->icon('heroicon-o-user-group')
-                                    ->url('/admin/orphans')
-                                    ->isActiveWhen(fn () => request()->is('admin/orphans*')),
+                    if ($hasDeceasedAccess) {
+                        $items[] = NavigationItem::make('Deceased')
+                            ->icon('heroicon-o-user-minus')
+                            ->url('/admin/deceaseds')
+                            ->isActiveWhen(fn () => request()->is('admin/deceaseds*'));
+                    }
 
-                                NavigationItem::make('Widow History')
-                                    ->icon('heroicon-o-clock')
-                                    ->url('/admin/widow-histories')
-                                    ->badge(fn () => (string) \App\Models\Widow::historical()->count(), color: 'gray')
-                                    ->isActiveWhen(fn () => request()->is('admin/widow-histories*')),
+                    if ($hasWidowAccess) {
+                        $items[] = NavigationItem::make('Widows')
+                            ->icon('heroicon-o-heart')
+                            ->url('/admin/widows')
+                            ->isActiveWhen(fn () => request()->is('admin/widows*'));
+                    }
 
-                                NavigationItem::make('Orphan History')
-                                    ->icon('heroicon-o-archive-box')
-                                    ->url('/admin/orphan-histories')
-                                    ->badge(fn () => (string) \App\Models\Orphan::historical()->count(), color: 'gray')
-                                    ->isActiveWhen(fn () => request()->is('admin/orphan-histories*')),
+                    if ($hasOrphanAccess) {
+                        $items[] = NavigationItem::make('Orphans')
+                            ->icon('heroicon-o-user-group')
+                            ->url('/admin/orphans')
+                            ->isActiveWhen(fn () => request()->is('admin/orphans*'));
+                    }
 
-                                NavigationItem::make('Zone Transfers')
-                                    ->icon('heroicon-o-arrows-right-left')
-                                    ->url('/admin/zone-transfers')
-                                    ->isActiveWhen(fn () => request()->is('admin/zone-transfers*')),
-                            ])
-                    );
+                    if ($hasWidowAccess) {
+                        $items[] = NavigationItem::make('Widow History')
+                            ->icon('heroicon-o-clock')
+                            ->url('/admin/widow-histories')
+                            ->badge(fn () => (string) \App\Models\Widow::historical()->count(), color: 'gray')
+                            ->isActiveWhen(fn () => request()->is('admin/widow-histories*'));
+                    }
+
+                    if ($hasOrphanAccess) {
+                        $items[] = NavigationItem::make('Orphan History')
+                            ->icon('heroicon-o-archive-box')
+                            ->url('/admin/orphan-histories')
+                            ->badge(fn () => (string) \App\Models\Orphan::historical()->count(), color: 'gray')
+                            ->isActiveWhen(fn () => request()->is('admin/orphan-histories*'));
+                    }
+
+                    if ($hasDeceasedAccess) {
+                        $items[] = NavigationItem::make('Zone Transfers')
+                            ->icon('heroicon-o-arrows-right-left')
+                            ->url('/admin/zone-transfers')
+                            ->isActiveWhen(fn () => request()->is('admin/zone-transfers*'));
+                    }
+
+                    if (! empty($items)) {
+                        $builder = $builder->group(
+                            NavigationGroup::make('Beneficiary Registration')
+                                ->items($items)
+                        );
+                    }
                 }
 
                 // Education Module (admin + super-admin + verifier)

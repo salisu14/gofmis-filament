@@ -13,12 +13,20 @@ class OrphanPolicy
 
     public function viewAny(User $user): bool
     {
-        return $user->hasAnyRole(['super_admin', 'admin', 'coordinator']);
+        if ($user->hasRole('super_admin')) {
+            return true;
+        }
+
+        return $user->can('view_orphans');
     }
 
     public function view(User $user, Orphan $orphan): bool
     {
-        return $user->hasAnyRole(['super_admin', 'admin', 'coordinator']);
+        if ($user->hasRole('super_admin')) {
+            return true;
+        }
+
+        return $user->can('view_orphans');
     }
 
     public function create(User $user): bool

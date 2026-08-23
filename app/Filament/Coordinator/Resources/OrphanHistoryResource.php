@@ -37,6 +37,21 @@ class OrphanHistoryResource extends Resource
         return 'gray';
     }
 
+    public static function canViewAny(): bool
+    {
+        $user = auth()->user();
+
+        if (! $user) {
+            return false;
+        }
+
+        if ($user->hasRole('super_admin')) {
+            return true;
+        }
+
+        return $user->can('view_orphans');
+    }
+
     public static function canCreate(): bool
     {
         return false;
