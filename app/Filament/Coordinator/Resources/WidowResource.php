@@ -38,6 +38,11 @@ class WidowResource extends Resource
     /**
      * Zone Scoping Logic
      */
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()->operational();
+    }
+
     protected static function applyZoneScope(Builder $query, string $zoneId): Builder
     {
         return $query->whereHas('deceased', fn (Builder $q) => $q->where('zone_id', $zoneId));
@@ -427,5 +432,13 @@ class WidowResource extends Resource
             'edit' => \App\Filament\Coordinator\Resources\WidowResource\Pages\EditWidow::route('/{record}/edit'),
             'view' => \App\Filament\Coordinator\Resources\WidowResource\Pages\ViewWidow::route('/{record}'),
         ];
+    }
+
+    public static function getRecordRouteBindingEloquentQuery(): Builder
+    {
+        return static::getModel()::query()
+            ->withoutGlobalScopes([
+                SoftDeletingScope::class,
+            ]);
     }
 }

@@ -1,6 +1,7 @@
 <?php
 
 use App\Filament\Coordinator\Resources\WidowResource\Pages\ListWidows as CoordinatorListWidows;
+use App\Filament\Resources\WidowHistoryResource\Pages\ListWidowHistories as AdminListWidowHistories;
 use App\Filament\Resources\Widows\Pages\CreateWidow as AdminCreateWidow;
 use App\Filament\Resources\Widows\Pages\ListWidows as AdminListWidows;
 use App\Filament\Resources\Widows\Pages\ViewWidow;
@@ -134,7 +135,7 @@ test('5. divorce / reactivation date required', function () {
 
     Filament::setCurrentPanel(Filament::getPanel('admin'));
 
-    Livewire::test(AdminListWidows::class)
+    Livewire::test(AdminListWidowHistories::class)
         ->callTableAction('reactivateAfterDivorce', $this->widowA, [
             'divorced_at' => null,
         ])
@@ -149,7 +150,7 @@ test('6. future divorce / reactivation date rejected via action validation', fun
     Filament::setCurrentPanel(Filament::getPanel('admin'));
     $futureDate = now()->addDays(10)->format('Y-m-d');
 
-    Livewire::test(AdminListWidows::class)
+    Livewire::test(AdminListWidowHistories::class)
         ->callTableAction('reactivateAfterDivorce', $this->widowA, [
             'divorced_at' => $futureDate,
         ])
@@ -163,7 +164,7 @@ test('7. divorce date earlier than remarriage date rejected', function () {
 
     Filament::setCurrentPanel(Filament::getPanel('admin'));
 
-    Livewire::test(AdminListWidows::class)
+    Livewire::test(AdminListWidowHistories::class)
         ->callTableAction('reactivateAfterDivorce', $this->widowA, [
             'divorced_at' => '2026-04-15', // Earlier than 2026-05-01!
         ])
@@ -177,7 +178,7 @@ test('8. valid divorce reactivation succeeds', function () {
 
     Filament::setCurrentPanel(Filament::getPanel('admin'));
 
-    Livewire::test(AdminListWidows::class)
+    Livewire::test(AdminListWidowHistories::class)
         ->callTableAction('reactivateAfterDivorce', $this->widowA, [
             'divorced_at' => '2026-08-15',
             'notes' => 'Divorce final',
@@ -331,24 +332,21 @@ test('16. action visibility state matrix', function () {
     Filament::setCurrentPanel(Filament::getPanel('admin'));
     $this->actingAs($this->admin);
 
-    // Active unmarried widow: markAsMarried visible, reactivateAfterDivorce hidden
+    // Active unmarried widow: markAsMarried visible on AdminListWidows
     Livewire::test(AdminListWidows::class)
-        ->assertTableActionVisible('markAsMarried', $this->widowA)
-        ->assertTableActionHidden('reactivateAfterDivorce', $this->widowA);
+        ->assertTableActionVisible('markAsMarried', $this->widowA);
 
-    // Remarried widow: markAsMarried hidden, reactivateAfterDivorce visible
+    // Remarried widow: reactivateAfterDivorce visible on AdminListWidowHistories
     $this->widowA->markAsMarried(notes: 'Remarried', marriedAt: '2026-05-01');
 
-    Livewire::test(AdminListWidows::class)
-        ->assertTableActionHidden('markAsMarried', $this->widowA)
+    Livewire::test(AdminListWidowHistories::class)
         ->assertTableActionVisible('reactivateAfterDivorce', $this->widowA);
 
-    // Reactivated widow: markAsMarried visible again, reactivateAfterDivorce hidden
+    // Reactivated widow: markAsMarried visible again on AdminListWidows
     $this->widowA->reactivateAfterDivorce(notes: 'Divorced', divorcedAt: '2026-08-15');
 
     Livewire::test(AdminListWidows::class)
-        ->assertTableActionVisible('markAsMarried', $this->widowA)
-        ->assertTableActionHidden('reactivateAfterDivorce', $this->widowA);
+        ->assertTableActionVisible('markAsMarried', $this->widowA);
 });
 
 // 17. Marital lifecycle history renders correctly on view page

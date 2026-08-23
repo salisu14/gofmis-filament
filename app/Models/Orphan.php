@@ -213,6 +213,39 @@ class Orphan extends Model
         return $query;
     }
 
+    public function scopeOperational(\Illuminate\Database\Eloquent\Builder $query): \Illuminate\Database\Eloquent\Builder
+    {
+        $cutoffDate = now()->subYears(18)->format('Y-m-d');
+
+        return $query
+            ->whereNotIn('status', [OrphanStatus::ARCHIVED->value, OrphanStatus::REJECTED->value, 'archived', 'rejected'])
+            ->where(function ($q) use ($cutoffDate) {
+                $q->where(function ($m) use ($cutoffDate) {
+                    $m->whereIn('gender', [Gender::MALE->value, 'MALE', 'male'])
+                        ->where('birth_date', '>', $cutoffDate);
+                })->orWhere(function ($f) {
+                    $f->whereIn('gender', [Gender::FEMALE->value, 'FEMALE', 'female'])
+                        ->where('is_married', false);
+                })->orWhereNull('gender');
+            });
+    }
+
+    public function scopeHistorical(\Illuminate\Database\Eloquent\Builder $query): \Illuminate\Database\Eloquent\Builder
+    {
+        $cutoffDate = now()->subYears(18)->format('Y-m-d');
+
+        return $query->where(function ($q) use ($cutoffDate) {
+            $q->whereIn('status', [OrphanStatus::ARCHIVED->value, OrphanStatus::REJECTED->value, 'archived', 'rejected'])
+                ->orWhere(function ($m) use ($cutoffDate) {
+                    $m->whereIn('gender', [Gender::MALE->value, 'MALE', 'male'])
+                        ->where('birth_date', '<=', $cutoffDate);
+                })->orWhere(function ($f) {
+                    $f->whereIn('gender', [Gender::FEMALE->value, 'FEMALE', 'female'])
+                        ->where('is_married', true);
+                });
+        });
+    }
+
     public function hasHistoricalRecords(): bool
     {
         return $this->educations()->exists()

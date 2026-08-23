@@ -1,4 +1,5 @@
 <?php
+
 // app/Filament/Widgets/StatsOverviewWidget.php
 
 namespace App\Filament\Widgets;
@@ -12,6 +13,7 @@ use Filament\Widgets\StatsOverviewWidget\Stat;
 class StatsOverviewWidget extends BaseWidget
 {
     protected static ?int $sort = 1;
+
     protected int|string|array $columnSpan = ['lg' => 2]; // Takes half width = 4 stats fit nicely
 
     protected function getStats(): array
@@ -22,39 +24,39 @@ class StatsOverviewWidget extends BaseWidget
                 ->descriptionIcon('heroicon-m-user-minus')
                 ->color('gray'),
 
-            Stat::make('Total Widows', Widow::where('is_eligible', true)->count())
-                ->description(Widow::where('is_married', true)->count() . ' remarried')
+            Stat::make('Active Widows', Widow::operational()->count())
+                ->description(Widow::historical()->count().' historical / remarried')
                 ->descriptionIcon('heroicon-m-heart')
                 ->color('warning'),
 
-            Stat::make('Total Orphans', Orphan::where('is_eligible', true)->count())
-                ->description(Orphan::where('is_married', true)->count() . ' married')
+            Stat::make('Active Orphans', Orphan::operational()->count())
+                ->description(Orphan::historical()->count().' historical / archived')
                 ->descriptionIcon('heroicon-m-users')
                 ->color('info'),
 
-            Stat::make('Total Beneficiaries',
-                Widow::where('is_eligible', true)->count() + Orphan::where('is_eligible', true)->count())
-                ->description('Widows + Orphans')
+            Stat::make('Active Beneficiaries',
+                Widow::operational()->count() + Orphan::operational()->count())
+                ->description('Operational Widows + Orphans')
                 ->descriptionIcon('heroicon-m-user-group')
                 ->color('primary'),
         ];
     }
 }
-//<?php
-//// app/Filament/Widgets/StatsOverviewWidget.php
+// <?php
+// // app/Filament/Widgets/StatsOverviewWidget.php
 //
-//namespace App\Filament\Widgets;
+// namespace App\Filament\Widgets;
 //
-//use App\Models\Deceased;
-//use App\Models\Orphan;
-//use App\Models\Widow;
-//use App\Models\WidowLoan;
-//use Filament\Widgets\StatsOverviewWidget as BaseWidget;
-//use Filament\Widgets\StatsOverviewWidget\Stat;
-//use Illuminate\Database\Eloquent\Builder;
+// use App\Models\Deceased;
+// use App\Models\Orphan;
+// use App\Models\Widow;
+// use App\Models\WidowLoan;
+// use Filament\Widgets\StatsOverviewWidget as BaseWidget;
+// use Filament\Widgets\StatsOverviewWidget\Stat;
+// use Illuminate\Database\Eloquent\Builder;
 //
-//class StatsOverviewWidget extends BaseWidget
-//{
+// class StatsOverviewWidget extends BaseWidget
+// {
 //    protected static ?int $sort = 1;
 //    protected int|string|array $columnSpan = 'full';
 //
@@ -85,4 +87,4 @@ class StatsOverviewWidget extends BaseWidget
 //                ->color('success'),
 //        ];
 //    }
-//}
+// }

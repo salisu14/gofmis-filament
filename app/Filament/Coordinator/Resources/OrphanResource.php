@@ -49,6 +49,15 @@ class OrphanResource extends Resource
     /**
      * Zone Scoping Logic
      */
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+            ->withoutGlobalScopes([
+                EligibleOrphanScope::class,
+            ])
+            ->operational();
+    }
+
     protected static function applyZoneScope(Builder $query, string $zoneId): Builder
     {
         return $query->whereHas('deceased', function ($q) use ($zoneId) {
@@ -402,5 +411,14 @@ class OrphanResource extends Resource
             'edit' => \App\Filament\Coordinator\Resources\OrphanResource\Pages\EditOrphan::route('/{record}/edit'),
             'view' => \App\Filament\Coordinator\Resources\OrphanResource\Pages\ViewOrphan::route('/{record}'),
         ];
+    }
+
+    public static function getRecordRouteBindingEloquentQuery(): Builder
+    {
+        return static::getModel()::query()
+            ->withoutGlobalScopes([
+                EligibleOrphanScope::class,
+                SoftDeletingScope::class,
+            ]);
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -244,6 +245,16 @@ class Widow extends Model
         }
 
         return true;
+    }
+
+    public function scopeOperational(Builder $query): Builder
+    {
+        return $query->where('is_married', false);
+    }
+
+    public function scopeHistorical(Builder $query): Builder
+    {
+        return $query->where('is_married', true);
     }
 
     protected static function booted(): void
