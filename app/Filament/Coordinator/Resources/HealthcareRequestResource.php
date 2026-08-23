@@ -204,7 +204,7 @@ class HealthcareRequestResource extends Resource
                                     }
 
                                     return $query->get()
-                                        ->mapWithKeys(fn ($o) => [$o->id => "{$o->full_name} ({$o->reg_no})"]);
+                                        ->mapWithKeys(fn ($o) => [$o->id => "{$o->display_name} ({$o->reg_no})"]);
                                 }
 
                                 if ($type === Widow::class) {
@@ -217,7 +217,7 @@ class HealthcareRequestResource extends Resource
                                     }
 
                                     return $query->get()
-                                        ->mapWithKeys(fn ($w) => [$w->id => "{$w->full_name} ({$w->reg_no})"]);
+                                        ->mapWithKeys(fn ($w) => [$w->id => "{$w->display_name} ({$w->reg_no})"]);
                                 }
 
                                 return [];

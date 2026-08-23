@@ -225,7 +225,9 @@ class WelfareRequestResource extends Resource
                                     }
                                 }
 
-                                return $query->pluck('full_name', 'id')->toArray();
+                                return $query->get()->mapWithKeys(fn (Deceased $d) => [
+                                    $d->id => $d->display_name ?: "Deceased ({$d->reg_no})",
+                                ])->toArray();
                             })
                             ->rules([
                                 fn (Get $get, ?Model $record) => function (string $attribute, $value, \Closure $fail) use ($get, $record) {

@@ -280,17 +280,14 @@ class WidowResource extends Resource
                             ->rows(2),
                     ])
                     ->action(function ($record, array $data) {
-                        $record->update([
-                            'is_married' => true,
-                            'married_at' => $data['married_at'] ?? now(),
-                        ]);
-
-                        // Call the model method to handle side effects
-                        $record->markAsMarried($data['notes'] ?? null);
+                        $record->markAsMarried(
+                            notes: $data['notes'] ?? null,
+                            marriedAt: $data['married_at'] ?? null
+                        );
 
                         Notification::make()
                             ->title('Marked as Married')
-                            ->body("{$record->full_name} has been marked as married and removed from benefits.")
+                            ->body("{$record->full_name} has been marked as married and removed from active benefits.")
                             ->success()
                             ->send();
                     }),

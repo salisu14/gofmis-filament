@@ -43,8 +43,11 @@ class BeneficiariesRelationManager extends RelationManager
                     ->label('Beneficiary')
                     ->options(function (Get $get) {
                         $type = $get('beneficiary_type');
-                        if (!$type) return [];
-                        return $type::pluck('full_name', 'id');
+                        if (! $type) {
+                            return [];
+                        }
+
+                        return $type::all()->mapWithKeys(fn ($b) => [$b->id => "{$b->display_name} ({$b->reg_no})"]);
                     })
                     ->searchable()
                     ->required(),
@@ -68,7 +71,7 @@ class BeneficiariesRelationManager extends RelationManager
                     ->label('Name'),
                 TextColumn::make('beneficiary_type')
                     ->badge()
-                    ->formatStateUsing(fn($state) => class_basename($state)),
+                    ->formatStateUsing(fn ($state) => class_basename($state)),
                 TextColumn::make('role')
                     ->badge(),
             ])

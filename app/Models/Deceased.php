@@ -57,17 +57,21 @@ class Deceased extends Model
 
     public function getDisplayNameAttribute(): string
     {
-        return $this->full_name
-            ?: trim(
-                collect([
-                    $this->first_name,
-                    $this->middle_name,
-                    $this->last_name,
-                ])
-                    ->filter()
-                    ->implode(' ')
-            )
-                ?: 'Unnamed deceased record';
+        if (! empty($this->full_name)) {
+            return $this->full_name;
+        }
+
+        $name = trim(collect([
+            $this->first_name,
+            $this->middle_name,
+            $this->last_name,
+        ])->filter()->implode(' '));
+
+        if ($name !== '') {
+            return $name;
+        }
+
+        return ! empty($this->reg_no) ? "Deceased ({$this->reg_no})" : 'Unnamed deceased record';
     }
 
     public function getAgeAtDeathAttribute(): ?int

@@ -67,27 +67,27 @@ class Widow extends Model
     /**
      * Mark widow as married and revoke eligibility.
      */
-    public function markAsMarried(?string $notes = null): void
+    public function markAsMarried(?string $notes = null, ?string $marriedAt = null): void
     {
         $this->update([
             'is_married' => true,
-            'married_at' => now(),
+            'married_at' => $marriedAt ?? $this->married_at ?? now(),
             'is_eligible' => false,
         ]);
 
-        // Deactivate ID cards
-        $this->idCards()->where('status', 'active')->update(['status' => 'inactive']);
-
-        // Cancel pending intervention requests
-        $this->interventionRequests()
-            ->whereIn('status', ['pending', 'draft'])
-            ->update(['status' => 'cancelled', 'notes' => 'Beneficiary got married']);
+        // Revoke active ID cards
+        $this->idCards()
+            ->where('status', 'active')
+            ->update([
+                'status' => 'revoked',
+                'revocation_reason' => 'Beneficiary remarried',
+            ]);
 
         // Log the event
         activity()
             ->performedOn($this)
             ->causedBy(auth()->user())
-            ->withProperties(['notes' => $notes])
+            ->withProperties(['notes' => $notes, 'married_at' => $this->married_at])
             ->log('widow_marked_married');
     }
 
