@@ -152,6 +152,11 @@ class Orphan extends Model
         return $this->isOperationalBeneficiary() && (bool) $this->is_eligible;
     }
 
+    public function getVulnerabilityStatusAttribute(): ?\App\Enums\VulnerabilityStatus
+    {
+        return $this->deceased?->vulnerability_status;
+    }
+
     public function idCards(): MorphMany
     {
         return $this->morphMany(IdCard::class, 'cardable');

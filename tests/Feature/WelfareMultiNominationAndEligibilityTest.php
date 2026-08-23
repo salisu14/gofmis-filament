@@ -356,3 +356,139 @@ test('C1. domain eligibility helpers correctly evaluate operational and eligible
     expect($femaleMarriedOrphan->isOperationalBeneficiary())->toBeFalse()
         ->and($femaleMarriedOrphan->isEligibleForSupport())->toBeFalse();
 });
+
+// D1. Vulnerability prioritization and deterministic sorting
+test('D1. deceased households sort by vulnerability A -> B -> C and then by oldest registration date', function () {
+    $decC = Deceased::create([
+        'first_name' => 'Charlie',
+        'last_name' => 'Lower',
+        'nin' => '30000000001',
+        'reg_no' => 'DEC-C001',
+        'guardian_name' => 'Guardian C',
+        'guardian_phone' => '08012345678',
+        'date_registered' => now()->subMonths(10),
+        'date_of_death' => now()->subMonths(11),
+        'zone_id' => $this->zoneA->id,
+        'vulnerability_status' => \App\Enums\VulnerabilityStatus::C,
+    ]);
+    Widow::create([
+        'first_name' => 'WidowC',
+        'last_name' => 'Test',
+        'nin' => '33333333301',
+        'reg_no' => 'WID-C01',
+        'child_sequence' => 1,
+        'deceased_id' => $decC->id,
+        'is_eligible' => true,
+        'is_married' => false,
+    ]);
+
+    $decB = Deceased::create([
+        'first_name' => 'Bravo',
+        'last_name' => 'Medium',
+        'nin' => '30000000002',
+        'reg_no' => 'DEC-B001',
+        'guardian_name' => 'Guardian B',
+        'guardian_phone' => '08012345678',
+        'date_registered' => now()->subMonths(5),
+        'date_of_death' => now()->subMonths(6),
+        'zone_id' => $this->zoneA->id,
+        'vulnerability_status' => \App\Enums\VulnerabilityStatus::B,
+    ]);
+    Widow::create([
+        'first_name' => 'WidowB',
+        'last_name' => 'Test',
+        'nin' => '33333333302',
+        'reg_no' => 'WID-B01',
+        'child_sequence' => 1,
+        'deceased_id' => $decB->id,
+        'is_eligible' => true,
+        'is_married' => false,
+    ]);
+
+    $decA = Deceased::create([
+        'first_name' => 'Alpha',
+        'last_name' => 'Critical',
+        'nin' => '30000000003',
+        'reg_no' => 'DEC-A001',
+        'guardian_name' => 'Guardian A',
+        'guardian_phone' => '08012345678',
+        'date_registered' => now()->subMonths(2),
+        'date_of_death' => now()->subMonths(3),
+        'zone_id' => $this->zoneA->id,
+        'vulnerability_status' => \App\Enums\VulnerabilityStatus::A,
+    ]);
+    Widow::create([
+        'first_name' => 'WidowA',
+        'last_name' => 'Test',
+        'nin' => '33333333303',
+        'reg_no' => 'WID-A01',
+        'child_sequence' => 1,
+        'deceased_id' => $decA->id,
+        'is_eligible' => true,
+        'is_married' => false,
+    ]);
+
+    $sortedIds = Deceased::whereIn('id', [$decC->id, $decB->id, $decA->id])
+        ->orderByRaw("
+            CASE vulnerability_status
+                WHEN 'A' THEN 1
+                WHEN 'B' THEN 2
+                WHEN 'C' THEN 3
+                ELSE 4
+            END ASC
+        ")
+        ->orderBy('date_registered', 'asc')
+        ->pluck('id')
+        ->toArray();
+
+    expect($sortedIds)->toBe([$decA->id, $decB->id, $decC->id]);
+});
+
+// D2. Vulnerability inheritance on Widow and Orphan
+test('D2. linked widow and orphan inherit vulnerability status from deceased household', function () {
+    $dec = Deceased::create([
+        'first_name' => 'Household',
+        'last_name' => 'Head',
+        'nin' => '40000000001',
+        'reg_no' => 'DEC-H001',
+        'guardian_name' => 'Guardian H',
+        'guardian_phone' => '08012345678',
+        'date_registered' => now()->subMonths(1),
+        'date_of_death' => now()->subMonths(2),
+        'zone_id' => $this->zoneA->id,
+        'vulnerability_status' => \App\Enums\VulnerabilityStatus::A,
+    ]);
+
+    $widow = Widow::create([
+        'first_name' => 'Inherit',
+        'last_name' => 'Widow',
+        'nin' => '44444444401',
+        'reg_no' => 'WID-H01',
+        'child_sequence' => 1,
+        'deceased_id' => $dec->id,
+        'is_eligible' => true,
+        'is_married' => false,
+    ]);
+
+    $orphan = Orphan::create([
+        'first_name' => 'Inherit',
+        'last_name' => 'Orphan',
+        'reg_no' => 'ORP-H01',
+        'child_sequence' => 1,
+        'gender' => Gender::FEMALE,
+        'birth_date' => now()->subYears(8),
+        'deceased_id' => $dec->id,
+        'status' => OrphanStatus::ACTIVE,
+        'is_eligible' => true,
+        'is_married' => false,
+    ]);
+
+    expect($widow->vulnerability_status)->toBe(\App\Enums\VulnerabilityStatus::A)
+        ->and($orphan->vulnerability_status)->toBe(\App\Enums\VulnerabilityStatus::A);
+
+    // Dynamic update test
+    $dec->update(['vulnerability_status' => \App\Enums\VulnerabilityStatus::B]);
+
+    expect($widow->refresh()->vulnerability_status)->toBe(\App\Enums\VulnerabilityStatus::B)
+        ->and($orphan->refresh()->vulnerability_status)->toBe(\App\Enums\VulnerabilityStatus::B);
+});
