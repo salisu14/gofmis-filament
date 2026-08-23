@@ -31,12 +31,14 @@ class Widow extends Model
         'child_sequence',
         'full_name',
         'married_at',
+        'divorced_at',
     ];
 
     protected $casts = [
         'is_eligible' => 'boolean',
         'is_married' => 'boolean',
         'married_at' => 'datetime',
+        'divorced_at' => 'datetime',
         'skills' => 'array',
     ];
 
@@ -87,8 +89,35 @@ class Widow extends Model
         activity()
             ->performedOn($this)
             ->causedBy(auth()->user())
-            ->withProperties(['notes' => $notes, 'married_at' => $this->married_at])
-            ->log('widow_marked_married');
+            ->withProperties([
+                'notes' => $notes,
+                'married_at' => $this->married_at,
+                'event_type' => 'REMARRIED',
+            ])
+            ->log('REMARRIED');
+    }
+
+    /**
+     * Reactivate widow relationship under original deceased after divorce.
+     */
+    public function reactivateAfterDivorce(?string $notes = null, ?string $divorcedAt = null): void
+    {
+        $this->update([
+            'is_married' => false,
+            'divorced_at' => $divorcedAt ?? now(),
+            'is_eligible' => true,
+        ]);
+
+        // Log the event
+        activity()
+            ->performedOn($this)
+            ->causedBy(auth()->user())
+            ->withProperties([
+                'notes' => $notes,
+                'divorced_at' => $this->divorced_at,
+                'event_type' => 'REACTIVATED_AFTER_DIVORCE',
+            ])
+            ->log('REACTIVATED_AFTER_DIVORCE');
     }
 
     public function idCards(): MorphMany
@@ -192,6 +221,24 @@ class Widow extends Model
                 $model->middle_name,
                 $model->last_name,
             ])));
+        });
+
+        static::created(function (Widow $widow) {
+            $existingCount = static::withoutGlobalScopes()
+                ->where('nin', $widow->nin)
+                ->where('id', '!=', $widow->id)
+                ->count();
+
+            $eventType = $existingCount > 0 ? 'NEW_WIDOW_HOUSEHOLD_CREATED' : 'REGISTERED_AS_WIDOW';
+
+            activity()
+                ->performedOn($widow)
+                ->causedBy(auth()->user())
+                ->withProperties([
+                    'deceased_id' => $widow->deceased_id,
+                    'event_type' => $eventType,
+                ])
+                ->log($eventType);
         });
 
         static::updating(function ($model) {

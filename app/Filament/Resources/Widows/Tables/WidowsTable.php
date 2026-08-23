@@ -147,22 +147,22 @@ class WidowsTable
                         ),
 
                     Action::make('markAsMarried')
-                        ->label('Mark Married')
+                        ->label('Mark as Remarried')
                         ->icon('heroicon-m-heart')
                         ->color('danger')
                         ->requiresConfirmation()
-                        ->modalHeading('Mark as Married')
-                        ->modalDescription('This will revoke all benefits and eligibility. This action cannot be undone.')
-                        ->modalSubmitActionLabel('Yes, Mark as Married')
+                        ->modalHeading('Mark as Remarried')
+                        ->modalDescription('This will mark the widow relationship under this household as remarried and revoke active benefits. All historical loans, repayments, and records remain preserved.')
+                        ->modalSubmitActionLabel('Yes, Mark as Remarried')
                         ->visible(fn ($record) => ! $record->is_married)
                         ->schema([
                             DatePicker::make('married_at')
-                                ->label('Marriage Date')
+                                ->label('Remarriage Date')
                                 ->default(now())
                                 ->required(),
                             Textarea::make('notes')
                                 ->label('Notes')
-                                ->placeholder('Optional notes about the marriage...')
+                                ->placeholder('Optional notes about the remarriage...')
                                 ->rows(2),
                         ])
                         ->action(function ($record, array $data) {
@@ -172,8 +172,40 @@ class WidowsTable
                             );
 
                             Notification::make()
-                                ->title('Marked as Married')
-                                ->body("{$record->full_name} has been marked as married and removed from active benefits.")
+                                ->title('Marked as Remarried')
+                                ->body("{$record->full_name} has been marked as remarried.")
+                                ->success()
+                                ->send();
+                        }),
+
+                    Action::make('reactivateAfterDivorce')
+                        ->label('Reactivate After Divorce')
+                        ->icon('heroicon-m-arrow-path')
+                        ->color('success')
+                        ->requiresConfirmation()
+                        ->modalHeading('Reactivate Widow After Divorce')
+                        ->modalDescription('This will reactivate this widow record under her original deceased husband\'s household and restore benefit eligibility following divorce.')
+                        ->modalSubmitActionLabel('Yes, Reactivate')
+                        ->visible(fn ($record) => (bool) $record->is_married)
+                        ->schema([
+                            DatePicker::make('divorced_at')
+                                ->label('Divorce / Reactivation Date')
+                                ->default(now())
+                                ->required(),
+                            Textarea::make('notes')
+                                ->label('Notes')
+                                ->placeholder('Optional notes about the divorce/reactivation...')
+                                ->rows(2),
+                        ])
+                        ->action(function ($record, array $data) {
+                            $record->reactivateAfterDivorce(
+                                notes: $data['notes'] ?? null,
+                                divorcedAt: $data['divorced_at'] ?? null
+                            );
+
+                            Notification::make()
+                                ->title('Widow Reactivated')
+                                ->body("{$record->full_name} has been reactivated following divorce.")
                                 ->success()
                                 ->send();
                         }),

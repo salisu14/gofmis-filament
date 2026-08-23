@@ -66,8 +66,16 @@ class WidowInfolist
                             ]),
 
                         TextEntry::make('married_at')
+                            ->label('Remarriage Date')
                             ->dateTime()
-                            ->visible(fn (Widow $record): bool => $record->is_married),
+                            ->placeholder('N/A')
+                            ->visible(fn (Widow $record): bool => (bool) $record->married_at),
+
+                        TextEntry::make('divorced_at')
+                            ->label('Divorce / Reactivation Date')
+                            ->dateTime()
+                            ->placeholder('N/A')
+                            ->visible(fn (Widow $record): bool => (bool) $record->divorced_at),
 
                         TextEntry::make('skills')
                             ->badge()

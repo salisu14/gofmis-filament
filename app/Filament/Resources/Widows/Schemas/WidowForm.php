@@ -87,7 +87,7 @@ class WidowForm
                         Grid::make(2)->schema([
                             TextInput::make('nin')
                                 ->label('NIN')
-                                ->unique(ignoreRecord: true)
+                                ->unique(table: 'widows', column: 'nin', ignoreRecord: true, modifyRuleUsing: fn ($rule, $get) => $rule->where('deceased_id', $get('deceased_id')))
                                 ->placeholder('11-digit National Identity Number')
                                 ->maxLength(11)
                                 ->required(),
