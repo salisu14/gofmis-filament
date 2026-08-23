@@ -36,6 +36,7 @@ beforeEach(function () {
     $this->deceasedA = Deceased::factory()->create([
         'zone_id' => $this->zone->id,
         'date_of_death' => '2025-01-15',
+        'date_registered' => '2025-01-20',
     ]);
 
     $this->widowA = Widow::create([

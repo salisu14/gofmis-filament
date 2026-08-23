@@ -175,6 +175,16 @@ class Widow extends Model
         return true;
     }
 
+    public function isOperationalBeneficiary(): bool
+    {
+        return ! $this->is_married && ! $this->trashed();
+    }
+
+    public function isEligibleForSupport(): bool
+    {
+        return $this->isOperationalBeneficiary() && (bool) $this->is_eligible;
+    }
+
     public function idCards(): MorphMany
     {
         return $this->morphMany(IdCard::class, 'cardable');

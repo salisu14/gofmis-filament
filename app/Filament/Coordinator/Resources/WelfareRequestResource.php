@@ -267,6 +267,13 @@ class WelfareRequestResource extends Resource
                                             $fail('This family already has a welfare request/allocation for the selected package.');
                                         }
                                     }
+
+                                    $hasOperationalWidow = $deceased->widows->contains(fn ($w) => $w->isOperationalBeneficiary() && $w->is_eligible);
+                                    $hasOperationalOrphan = $deceased->orphans->contains(fn ($o) => $o->isOperationalBeneficiary() && $o->is_eligible);
+
+                                    if (! $hasOperationalWidow && ! $hasOperationalOrphan) {
+                                        $fail('The selected deceased family has no eligible operational beneficiaries.');
+                                    }
                                 },
                             ])
                             ->required(),

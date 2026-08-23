@@ -111,6 +111,47 @@ class Orphan extends Model
         $this->revokeActiveBenefits($this->archiveReasonText($reason));
     }
 
+    public function isOverAged(): bool
+    {
+        if ($this->gender !== Gender::MALE) {
+            return false;
+        }
+
+        if (! $this->birth_date) {
+            return $this->age >= 18;
+        }
+
+        return $this->birth_date->age >= 18;
+    }
+
+    public function isOperationalBeneficiary(): bool
+    {
+        if ($this->trashed()) {
+            return false;
+        }
+
+        $statusStr = $this->status instanceof OrphanStatus ? $this->status->value : (string) $this->status;
+
+        if (in_array($statusStr, [OrphanStatus::ARCHIVED->value, OrphanStatus::REJECTED->value, 'archived', 'rejected'], true)) {
+            return false;
+        }
+
+        if ($this->isOverAged()) {
+            return false;
+        }
+
+        if ($this->is_married) {
+            return false;
+        }
+
+        return true;
+    }
+
+    public function isEligibleForSupport(): bool
+    {
+        return $this->isOperationalBeneficiary() && (bool) $this->is_eligible;
+    }
+
     public function idCards(): MorphMany
     {
         return $this->morphMany(IdCard::class, 'cardable');

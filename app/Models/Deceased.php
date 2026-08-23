@@ -167,6 +167,30 @@ class Deceased extends Model
             $query->where('zone_id', $zoneId);
         });
 
+        static::saving(function ($model) {
+            $today = \Carbon\Carbon::today();
+
+            if ($model->date_of_birth && \Carbon\Carbon::parse($model->date_of_birth)->greaterThan($today)) {
+                throw new \InvalidArgumentException('Date of Birth cannot be in the future.');
+            }
+
+            if ($model->date_of_death && \Carbon\Carbon::parse($model->date_of_death)->greaterThan($today)) {
+                throw new \InvalidArgumentException('Date of Death cannot be in the future.');
+            }
+
+            if ($model->date_registered && \Carbon\Carbon::parse($model->date_registered)->greaterThan($today)) {
+                throw new \InvalidArgumentException('Date Registered cannot be in the future.');
+            }
+
+            if ($model->date_of_birth && $model->date_of_death && \Carbon\Carbon::parse($model->date_of_death)->lessThan(\Carbon\Carbon::parse($model->date_of_birth))) {
+                throw new \InvalidArgumentException('Date of Death cannot be earlier than Date of Birth.');
+            }
+
+            if ($model->date_registered && $model->date_of_death && \Carbon\Carbon::parse($model->date_registered)->lessThan(\Carbon\Carbon::parse($model->date_of_death))) {
+                throw new \InvalidArgumentException('Date Registered cannot be earlier than Date of Death.');
+            }
+        });
+
         static::creating(function ($model) {
             $model->full_name = trim(implode(' ', array_filter([
                 $model->first_name,

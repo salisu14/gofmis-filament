@@ -8,6 +8,7 @@ use App\Models\Deceased;
 use App\Models\User;
 use App\Models\WelfareBeneficiary;
 use App\Models\WelfarePackage;
+use App\Models\Widow;
 use App\Models\Zone;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -143,6 +144,16 @@ test('6. valid welfare request can be submitted by coordinator', function () {
     $ownDeceased = Deceased::factory()->create([
         'full_name' => 'Family Head Two',
         'zone_id' => $this->zone->id,
+    ]);
+    Widow::create([
+        'first_name' => 'Amina',
+        'last_name' => 'Test',
+        'nin' => '99999999901',
+        'reg_no' => 'WID-TEST-99',
+        'child_sequence' => 1,
+        'deceased_id' => $ownDeceased->id,
+        'is_eligible' => true,
+        'is_married' => false,
     ]);
 
     $this->actingAs($this->coordinator);
