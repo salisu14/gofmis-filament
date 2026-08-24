@@ -89,7 +89,7 @@ class PendingItemsWidget extends Widget
             ->get()
             ->each(fn ($item) => $items->push([
                 'type' => 'welfare',
-                'label' => 'Welfare Request',
+                'label' => 'Welfare Nomination',
                 'name' => $item->deceased?->display_name ?? 'Unknown',
                 'detail' => $item->welfarePackage?->name ?? '',
                 'status' => 'Pending',

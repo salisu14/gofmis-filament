@@ -128,19 +128,56 @@ class WelfarePackage extends Model
             && $this->end_date >= now();
     }
 
+    /**
+     * True only when the package is DRAFT (DRAFT → OPEN is the only open transition).
+     */
     public function canBeOpened(): bool
     {
-        return $this->status->canTransitionTo(WelfarePackageStatus::OPEN);
+        return $this->isDraft();
     }
 
+    /**
+     * True only when the package is OPEN (OPEN → CLOSED).
+     */
     public function canBeClosed(): bool
     {
-        return $this->status->canTransitionTo(WelfarePackageStatus::CLOSED);
+        return $this->isOpen();
     }
 
+    /**
+     * True only when the package is CLOSED (CLOSED → OPEN reopen path).
+     */
     public function canBeReopened(): bool
     {
         return $this->isClosed();
+    }
+
+    /**
+     * True if at least one WelfareBeneficiary nomination exists for this package.
+     */
+    public function hasNominations(): bool
+    {
+        return $this->beneficiaries()->exists();
+    }
+
+    /**
+     * Package composition (items, quantities) may be edited only when:
+     *   - status is DRAFT, OR
+     *   - status is OPEN AND no nominations have been made yet.
+     *
+     * Reopening a CLOSED package does NOT restore editability if nominations exist.
+     */
+    public function isCompositionEditable(): bool
+    {
+        if ($this->isDraft()) {
+            return true;
+        }
+
+        if ($this->isOpen() && ! $this->hasNominations()) {
+            return true;
+        }
+
+        return false;
     }
 
     public function approvedBeneficiaries(): Collection

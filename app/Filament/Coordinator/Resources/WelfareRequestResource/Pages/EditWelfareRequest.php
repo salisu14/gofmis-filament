@@ -19,7 +19,7 @@ class EditWelfareRequest extends EditRecord
         parent::mount($record);
 
         if ($this->getRecord()->status !== BeneficiaryStatus::PENDING) {
-            abort(403, 'Only pending welfare requests can be edited.');
+            abort(403, 'Only pending welfare nominations can be edited.');
         }
     }
 
@@ -53,7 +53,7 @@ class EditWelfareRequest extends EditRecord
 
             if ($exists) {
                 throw \Illuminate\Validation\ValidationException::withMessages([
-                    'deceased_id' => 'This family already has a welfare request/allocation for the selected package.',
+                    'deceased_id' => 'This family already has a welfare nomination/allocation for the selected package.',
                 ]);
             }
         }
@@ -68,7 +68,7 @@ class EditWelfareRequest extends EditRecord
         } catch (\Illuminate\Database\UniqueConstraintViolationException|\Illuminate\Database\QueryException $e) {
             if (str_contains($e->getMessage(), 'unique_package_deceased') || str_contains($e->getMessage(), 'UNIQUE constraint failed')) {
                 throw \Illuminate\Validation\ValidationException::withMessages([
-                    'deceased_id' => 'This family already has a welfare request/allocation for the selected package.',
+                    'deceased_id' => 'This family already has a welfare nomination/allocation for the selected package.',
                 ]);
             }
 
@@ -83,7 +83,7 @@ class EditWelfareRequest extends EditRecord
 
             Notification::make()
                 ->title('Cannot Edit')
-                ->body('Only pending requests can be edited.')
+                ->body('Only pending nominations can be edited.')
                 ->danger()
                 ->send();
         }

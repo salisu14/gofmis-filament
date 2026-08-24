@@ -143,7 +143,7 @@ class ListWelfareRequests extends ListRecords
                 }),
 
             Actions\CreateAction::make()
-                ->label('New Welfare Request'),
+                ->label('New Welfare Nomination'),
         ];
     }
 }

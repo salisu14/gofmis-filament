@@ -122,13 +122,7 @@ class Deceased extends Model
         return $this->hasMany(Widow::class);
     }
 
-    public function welfares(): BelongsToMany
-    {
-        return $this->belongsToMany(Welfare::class, 'deceased_welfare')
-            ->using(DeceasedWelfare::class) // <-- ADD THIS
-            ->withPivot('collection_status')
-            ->withTimestamps();
-    }
+// Legacy welfare relationship removed as part of canonical consolidation.
 
     public function welfarePackages(): BelongsToMany
     {

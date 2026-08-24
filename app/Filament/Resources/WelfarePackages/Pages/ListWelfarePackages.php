@@ -21,7 +21,7 @@ class ListWelfarePackages extends ListRecords
     {
         return [
             Actions\Action::make('nominate_beneficiaries')
-                ->label('Nominate Beneficiaries')
+                ->label('Nominate Households')
                 ->icon('heroicon-o-user-plus')
                 ->color('primary')
                 ->form([
@@ -78,7 +78,7 @@ class ListWelfarePackages extends ListRecords
                         ->native(false),
 
                     Select::make('deceased_ids')
-                        ->label('Nominated Deceased Families (Prioritized A → B → C)')
+                        ->label('Households to Nominate (Prioritized A → B → C)')
                         ->multiple()
                         ->searchable()
                         ->required()

@@ -30,7 +30,7 @@ class BeneficiariesRelationManager extends RelationManager
 {
     protected static string $relationship = 'beneficiaries';
 
-    protected static ?string $title = 'Beneficiaries';
+    protected static ?string $title = 'Nominated Households';
 
     public function form(Schema $schema): Schema
     {
@@ -109,7 +109,7 @@ class BeneficiariesRelationManager extends RelationManager
                     ->label('Family'),
 
                 TextColumn::make('suggester.name')
-                    ->label('Suggested By')
+                    ->label('Nominated By')
                     ->toggleable(),
 
                 TextColumn::make('status')
@@ -162,7 +162,7 @@ class BeneficiariesRelationManager extends RelationManager
             ])
             ->headerActions([
                 CreateAction::make()
-                    ->label('Suggest Beneficiary')
+                    ->label('Nominate Household')
                     ->visible(fn () => $this->getOwnerRecord()->isOpen() && auth()->user()?->can('suggest', WelfareBeneficiary::class))
                     ->mutateDataUsing(function (array $data) {
                         $packageId = $this->getOwnerRecord()->id;

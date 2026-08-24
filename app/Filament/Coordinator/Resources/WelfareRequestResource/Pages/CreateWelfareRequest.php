@@ -64,6 +64,6 @@ class CreateWelfareRequest extends CreateRecord
 
     protected function getCreatedNotificationTitle(): ?string
     {
-        return 'Welfare request submitted successfully';
+        return 'Welfare nomination submitted successfully';
     }
 }

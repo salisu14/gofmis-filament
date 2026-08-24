@@ -169,7 +169,7 @@ class RecentActivityWidget extends Widget
         $welfareQuery->latest()->limit(5)->get()
             ->each(fn ($item) => $activities->push([
                 'type' => 'welfare_requested',
-                'label' => 'Welfare Request',
+                'label' => 'Welfare Nomination',
                 'description' => ($item->welfarePackage?->name ?? 'Unknown').' - '.($item->deceased?->display_name ?? 'Unknown'),
                 'icon' => 'heroicon-m-gift',
                 'color' => 'warning',

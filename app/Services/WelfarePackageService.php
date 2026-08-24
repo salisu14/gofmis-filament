@@ -34,8 +34,8 @@ class WelfarePackageService
      */
     public function updatePackage(WelfarePackage $package, array $data, array $items = []): WelfarePackage
     {
-        if (!$package->isDraft()) {
-            throw new RuntimeException('Only draft packages can be edited.');
+        if (! $package->isCompositionEditable()) {
+            throw new RuntimeException('This package cannot be edited. Package composition is locked once nominations exist or when the package is Closed.');
         }
 
         return DB::transaction(function () use ($package, $data, $items) {
@@ -133,8 +133,8 @@ class WelfarePackageService
 
     public function syncItems(WelfarePackage $package, array $items): void
     {
-        if (!$package->isDraft()) {
-            throw new RuntimeException('Items can only be modified for draft packages.');
+        if (! $package->isCompositionEditable()) {
+            throw new RuntimeException('Items can only be modified while the package composition is editable (Draft, or Open with zero nominations).');
         }
 
         // Delete existing items not in the new list

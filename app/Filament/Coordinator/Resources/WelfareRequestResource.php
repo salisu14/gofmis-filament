@@ -36,11 +36,11 @@ class WelfareRequestResource extends Resource
 
     protected static string|null|\BackedEnum $navigationIcon = 'heroicon-o-gift';
 
-    protected static ?string $navigationLabel = 'Welfare Requests';
+    protected static ?string $navigationLabel = 'Welfare Nominations';
 
-    protected static ?string $modelLabel = 'Welfare Request';
+    protected static ?string $modelLabel = 'Welfare Nomination';
 
-    protected static ?string $pluralModelLabel = 'Welfare Requests';
+    protected static ?string $pluralModelLabel = 'Welfare Nominations';
 
     protected static string|null|\UnitEnum $navigationGroup = 'Intervention Requests';
 
