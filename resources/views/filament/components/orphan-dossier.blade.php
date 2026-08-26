@@ -265,10 +265,20 @@
                     <td class="info-value">{{ $orphan->vulnerability_status?->getLabel() ?? $deceased?->vulnerability_status?->getLabel() ?? 'Standard' }}</td>
                     <td class="info-label">Sponsorship:</td>
                     <td class="info-value">
-                        @if($orphan->sponsorships->where('status', 'active')->count() > 0)
+                        @php
+                            $activeSponsorships = $orphan->sponsorships->filter(function ($s) {
+                                $started = blank($s->start_date) || $s->start_date->lte(today());
+                                $notEnded = blank($s->end_date) || $s->end_date->gte(today());
+
+                                return $started && $notEnded;
+                            });
+                        @endphp
+                        @if($activeSponsorships->count() > 0)
                             <span class="badge badge-success">Sponsored</span>
+                        @elseif($orphan->sponsorships->count() > 0)
+                            <span class="badge badge-warning">Sponsorship on Record</span>
                         @else
-                            <span class="badge">Unsponsored</span>
+                            <span class="badge">Not Sponsored</span>
                         @endif
                     </td>
                 </tr>
@@ -294,9 +304,14 @@
     </tr>
     <tr>
         <td class="info-label">Guardian / Widow:</td>
-        <td class="info-value">{{ $deceased?->widow?->full_name ?? 'N/A' }}</td>
+        <td class="info-value">
+            @php
+                $guardianWidow = $deceased?->widows?->first();
+            @endphp
+            {{ $deceased?->guardian_name ?? ($guardianWidow?->full_name ?? 'N/A') }}
+        </td>
         <td class="info-label">Guardian Contact:</td>
-        <td class="info-value">{{ $deceased?->widow?->phone ?? $orphan->address ?? 'N/A' }}</td>
+        <td class="info-value">{{ $deceased?->guardian_phone ?? $orphan->address ?? 'N/A' }}</td>
     </tr>
 </table>
 
@@ -401,14 +416,21 @@
                 @php
                     $iType = $item->type?->name ?? 'Special Support';
                     $iDate = $item->created_at ? $item->created_at->format('d/m/Y') : 'N/A';
-                    $reqVal = $item->requested_amount ? '₦'.number_format((float) $item->requested_amount, 2) : ($item->details ?? 'N/A');
-                    $appVal = $item->approved_amount ? '₦'.number_format((float) $item->approved_amount, 2) : ($item->amount ? '₦'.number_format((float) $item->amount, 2) : 'N/A');
-                    $iStatus = $fmtEnum($item->status ?? 'Fulfilled');
+                    // InterventionRequest carries requested_amount + notes;
+                    // an Intervention (fulfilment) carries a posted amount.
+                    $isFulfilment = $item instanceof \App\Models\Intervention;
+                    $reqVal = $item->requested_amount !== null
+                        ? '₦'.number_format((float) $item->requested_amount, 2)
+                        : ($item->notes ?? 'N/A');
+                    $appVal = $item->amount !== null
+                        ? '₦'.number_format((float) $item->amount, 2)
+                        : ($isFulfilment ? $reqVal : 'N/A');
+                    $iStatus = $fmtEnum($item->status ?? '');
                 @endphp
                 <tr>
                     <td>{{ $iDate }}</td>
                     <td><strong>{{ $iType }}</strong></td>
-                    <td>{{ $reqVal }}</td>
+                    <td>{{ $reqVal }}@if($item->notes ?? null)<br><span style="font-size:9px;color:#4b5563;">{{ $item->notes }}</span>@endif</td>
                     <td>{{ $appVal }}</td>
                     <td><span class="badge badge-info">{{ $iStatus }}</span></td>
                 </tr>
@@ -437,14 +459,18 @@
                 @php
                     $pkgName = $w->welfarePackage?->name ?? 'Welfare Package';
                     $wStatus = $fmtEnum($w->status);
-                    $itemsSummary = $w->welfarePackage?->items ? $w->welfarePackage->items->map(fn($item) => ($item->item?->name ?? 'Item') . ' (' . $item->quantity . ')')->implode(', ') : 'N/A';
+                    $itemsSummary = $w->welfarePackage?->items
+                        ? $w->welfarePackage->items->map(fn($item) => ($item->item?->name ?? 'Item') . ' (' . $item->quantity_per_family . ')')->implode(', ')
+                        : 'N/A';
                 @endphp
                 <tr>
                     <td><strong>{{ $pkgName }}</strong></td>
                     <td><span class="badge badge-info">{{ $wStatus }}</span></td>
                     <td>
-                        @if($w->is_collected)
+                        @if($w->isCollected())
                             <span class="badge badge-success">Collected</span>
+                        @elseif($w->isApproved() && ! $w->isCollected())
+                            <span class="badge badge-warning">Approved / Not Collected</span>
                         @else
                             <span class="badge badge-warning">Pending</span>
                         @endif
@@ -475,14 +501,16 @@
         <tbody>
             @foreach($orphan->sponsorships as $sp)
                 @php
-                    $spStatus = $fmtEnum($sp->status);
+                    $spStarted = blank($sp->start_date) || $sp->start_date->lte(today());
+                    $spNotEnded = blank($sp->end_date) || $sp->end_date->gte(today());
+                    $spStatus = ($spStarted && $spNotEnded) ? 'Active' : 'Past';
                 @endphp
                 <tr>
-                    <td><strong>{{ $sp->sponsor?->name ?? 'Anonymous Sponsor' }}</strong></td>
-                    <td>₦{{ number_format((float) ($sp->monthly_amount ?? $sp->amount ?? 0), 2) }} / month</td>
+                    <td><strong>{{ $sp->sponsor?->name ?? ($sp->sponsor_name ?? 'Anonymous Sponsor') }}</strong></td>
+                    <td>₦{{ number_format((float) ($sp->amount_committed ?? 0), 2) }}</td>
                     <td>{{ $sp->start_date ? \Carbon\Carbon::parse($sp->start_date)->format('d/m/Y') : 'N/A' }}</td>
                     <td>{{ $sp->end_date ? \Carbon\Carbon::parse($sp->end_date)->format('d/m/Y') : 'Ongoing' }}</td>
-                    <td><span class="badge badge-success">{{ $spStatus }}</span></td>
+                    <td><span class="badge {{ $spStatus === 'Active' ? 'badge-success' : 'badge' }}">{{ $spStatus }}</span></td>
                 </tr>
             @endforeach
         </tbody>

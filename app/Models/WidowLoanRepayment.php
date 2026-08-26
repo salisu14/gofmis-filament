@@ -24,7 +24,7 @@ class WidowLoanRepayment extends Model
     ];
 
     protected $casts = [
-        'amount'  => 'decimal:2',
+        'amount' => 'decimal:2',
         'paid_at' => 'date',
     ];
 
@@ -57,39 +57,51 @@ class WidowLoanRepayment extends Model
         return $this->belongsTo(Transaction::class);
     }
 
+    /**
+     * Cumulative amount paid strictly up to and including this repayment,
+     * ordered deterministically as (paid_at ASC, receipt_number ASC).
+     *
+     * `receipt_number` is auto-assigned from `MAX(receipt_number) + 1` at
+     * posting time (see WidowLoanService::recordRepayment), so it is a stable
+     * monotonic business sequence. Using it as the tie-breaker removes the
+     * ambiguity that second-precision `created_at` (plus random UUID `id`) would
+     * otherwise introduce when several repayments share the same paid_at date.
+     *
+     * Legacy rows with a NULL receipt_number are ordered as the earliest
+     * (COALESCE -> 0) so historical reprints remain self-consistent.
+     */
     public function getTotalPaidUpToThisAttribute(): float
     {
-        if (!$this->widowLoan) {
+        if (! $this->widowLoan) {
             return 0;
         }
 
         return (float) $this->widowLoan->repayments()
             ->where(function ($query) {
                 $query->where('paid_at', '<', $this->paid_at)
-                      ->orWhere(function ($q) {
-                          $q->where('paid_at', $this->paid_at)
-                            ->where(function ($q2) {
-                                $q2->where('created_at', '<=', $this->created_at)
-                                   ->orWhere('id', $this->id);
-                            });
-                      });
+                    ->orWhere(function ($q) {
+                        $q->where('paid_at', $this->paid_at)
+                            ->whereRaw('COALESCE(receipt_number, 0) < ?', [(int) ($this->receipt_number ?? 0)]);
+                    })
+                    ->orWhere('id', $this->id);
             })
             ->sum('amount');
     }
 
     public function getBalanceAfterAttribute(): float
     {
-        if (!$this->widowLoan) {
+        if (! $this->widowLoan) {
             return 0;
         }
 
         $totalPayable = (float) $this->widowLoan->total_payable;
+
         return max(0, $totalPayable - $this->total_paid_up_to_this);
     }
 
     public function getInstallmentContext(): array
     {
-        if (!$this->widowLoan) {
+        if (! $this->widowLoan) {
             return ['n' => 1, 'm' => 1];
         }
 
@@ -129,28 +141,53 @@ class WidowLoanRepayment extends Model
             $repayment->widowLoan->refreshBalance();
         });
 
-        // Prevent modification of existing/posted repayments
+        // Prevent modification/deletion of existing/posted repayments. This is
+        // deliberately UNCONDITIONAL: the previous console/unit-test carve-out
+        // evaluated to false in CLI, cron, queue and test contexts, silently
+        // disabling the immutability guard exactly where automated processing
+        // runs. The only legitimate post-write to a repayment is attaching its
+        // transaction reference, which uses updateQuietly (fires no model
+        // events) and is scoped in attachTransactionReference().
         static::updating(function (WidowLoanRepayment $repayment) {
-            if ((!app()->runningInConsole() || app()->runningUnitTests()) && !request()->routeIs('*.transactions.*')) {
-                throw new \RuntimeException("Posted financial repayments cannot be edited.");
-            }
+            throw new \RuntimeException('Posted financial repayments cannot be edited.');
         });
 
         static::deleting(function (WidowLoanRepayment $repayment) {
-            if ((!app()->runningInConsole() || app()->runningUnitTests()) && !request()->routeIs('*.transactions.*')) {
-                throw new \RuntimeException("Posted financial repayments cannot be deleted.");
-            }
+            throw new \RuntimeException('Posted financial repayments cannot be deleted.');
         });
     }
 
     /**
      * Narrowly scoped domain method to attach a system transaction reference
-     * without bypassing the general financial immutability constraints.
+     * after a repayment is posted, without bypassing the general financial
+     * immutability constraints.
+     *
+     * Guarantees:
+     *  - accepts ONLY the transaction_id (no arbitrary attributes);
+     *  - idempotent when the same reference is already attached;
+     *  - refuses to overwrite a different existing reference;
+     *  - writes via updateQuietly purely to avoid a redundant refreshBalance()
+     *    (the transaction is itself created inside the same posting transaction
+     *    so the FK is a pure reference, incapable of altering amount/paid_at/
+     *    loan/bank/method/receipt or any balance fact).
+     *
+     * @throws \RuntimeException when an overwrite of a different reference is attempted.
      */
     public function attachTransactionReference($transactionId): self
     {
+        $existing = $this->getOriginal('transaction_id');
+
+        if ($existing !== null && $existing !== $transactionId) {
+            throw new \RuntimeException('Cannot overwrite an existing transaction reference on a posted repayment.');
+        }
+
+        if ($existing === $transactionId) {
+            return $this;
+        }
+
         $this->updateQuietly(['transaction_id' => $transactionId]);
-        
+        $this->syncOriginal();
+
         return $this;
     }
 }

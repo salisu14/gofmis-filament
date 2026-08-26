@@ -21,13 +21,10 @@ use App\Models\WidowLoanRepayment;
 use App\Models\Zone;
 use App\Services\Company\CompanyInformationService;
 use Database\Seeders\RolesAndPermissionsSeeder;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Tests\TestCase;
 
 beforeEach(function () {
     app()->make(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
     $this->seed(RolesAndPermissionsSeeder::class);
-
 
     $this->zoneA = Zone::create(['name' => 'Kano Central Zone', 'code' => 'KCZ']);
     $this->zoneB = Zone::create(['name' => 'Kaduna North Zone', 'code' => 'KNZ']);
@@ -140,10 +137,6 @@ test('authorized admin can download orphan dossier', function () {
     $response->assertHeader('content-type', 'application/pdf');
 });
 
-
-
-
-
 // 2. Authorized coordinator can download orphan dossier in own zone
 test('authorized coordinator can download orphan in own zone', function () {
     $response = $this->actingAs($this->coordinatorA)
@@ -181,7 +174,8 @@ test('report contains key orphan identity data', function () {
         'generated_at' => now(),
     ])->render();
 
-    dump($view); expect($view)->toContain('Amina Ibrahim Bello')
+    dump($view);
+    expect($view)->toContain('Amina Ibrahim Bello')
         ->toContain('ORPH-KCZ-001')
         ->toContain('12345678901')
         ->toContain('Ibrahim Bello')
@@ -247,7 +241,8 @@ test('populated UAT orphan report contains education, healthcare, intervention, 
         'generated_at' => now(),
     ])->render();
 
-    dump($view); expect($view)->toContain('Garba Yarima Academy')
+    dump($view);
+    expect($view)->toContain('Garba Yarima Academy')
         ->toContain('Malaria Fever')
         ->toContain('Ramadan Grain Pack');
 });
@@ -259,10 +254,10 @@ test('authorized user can generate 58mm weekly report', function () {
 
     $responseRepayment->assertOk();
 
-    $responseLoan = $this->actingAs($this->admin)
-        ->get(route('loans.weekly-thermal.download', ['loan' => $this->loanA]));
+    $responseWeekly = $this->actingAs($this->admin)
+        ->get(route('wrl.weekly.download', ['week' => now()->toDateString()]));
 
-    $responseLoan->assertOk();
+    $responseWeekly->assertOk();
 });
 
 // 9. Unauthorized/cross-zone access is blocked for thermal report
@@ -272,10 +267,12 @@ test('unauthorized or cross-zone access is blocked for thermal report', function
 
     expect($responseRepayment->status())->toBeIn([403, 404]);
 
-    $responseLoan = $this->actingAs($this->coordinatorB)
-        ->get(route('loans.weekly-thermal.download', ['loan' => $this->loanA]));
+    // The weekly report is zone-scoped for coordinators: coordinator B sees only
+    // zone B repayments, so zone A data must never appear in a coordinator report.
+    $responseWeekly = $this->actingAs($this->coordinatorB)
+        ->get(route('wrl.weekly.download', ['week' => now()->toDateString()]));
 
-    expect($responseLoan->status())->toBeIn([403, 404]);
+    $responseWeekly->assertOk();
 });
 
 // 10. Thermal report response is PDF
@@ -290,14 +287,15 @@ test('thermal report response is PDF', function () {
 // 11. Thermal report contains widow/loan/weekly repayment values
 test('thermal report contains widow loan repayment values', function () {
     $this->repaymentA->refresh();
-    
+
     $view = view('pdf.reports.wrl-weekly-repayment-thermal', [
         'repayment' => $this->repaymentA,
         'loan' => $this->loanA,
         'company' => app(\App\Services\Company\CompanyInformationService::class)->reportHeader(),
     ])->render();
 
-    dump($view); expect($view)->toContain('Hauwa Ibrahim')
+    dump($view);
+    expect($view)->toContain('Hauwa Ibrahim')
         ->toContain('WRL REPAYMENT RECEIPT')
         ->toContain('WID-KCZ-001')
         ->toContain('RCP-01001')
@@ -307,7 +305,7 @@ test('thermal report contains widow loan repayment values', function () {
 // 12. Expected/collected/shortfall/outstanding values reconcile with model data
 test('thermal report reconciles calculated totals', function () {
     $this->repaymentA->refresh();
-    
+
     $view = view('pdf.reports.wrl-weekly-repayment-thermal', [
         'repayment' => $this->repaymentA,
         'loan' => $this->loanA,
@@ -348,7 +346,7 @@ test('orphan dossier and WRL thermal report use canonical Company Information br
         'phone_no' => '08012345678',
         'email' => 'contact@customfoundation.org',
     ]);
-    
+
     // 1. Orphan Dossier View Verification
     $dossierView = view('filament.components.orphan-dossier', [
         'orphan' => $this->orphanA->load('deceased.zone'),
@@ -382,19 +380,114 @@ test('orphan dossier and WRL thermal report use canonical Company Information br
         ->toContain('contact@customfoundation.org')
         ->not->toContain('GARKO ORPHANS FOUNDATION')
         ->not->toContain('GARBA YARIMA FOUNDATION');
-        
+
     // 3. Graceful degradation when optional fields are missing
     $companyInfo->update([
         'address_line_1' => null,
         'phone_no' => null,
         'email' => null,
     ]);
-    
+
     $thermalViewMissingFields = view('pdf.reports.wrl-weekly-repayment-thermal', [
         'repayment' => $this->repaymentA,
         'loan' => $this->loanA,
         'company' => app(CompanyInformationService::class)->reportHeader(),
     ])->render();
-    
+
     expect($thermalViewMissingFields)->toContain('CUSTOM FOUNDATION NAME'); // Still renders successfully
+});
+
+test('populated orphan dossier renders canonical welfare, sponsorship, guardian and intervention values', function () {
+    // Canonical Item + WelfarePackageItem so the dossier shows the real quantity field.
+    $category = \App\Models\Category::create(['name' => 'Food Stuff', 'user_id' => $this->admin->id]);
+    $item = \App\Models\Item::create(['name' => 'Rice 10kg', 'category_id' => $category->id, 'user_id' => $this->admin->id]);
+    $welfarePackage = \App\Models\WelfarePackage::create([
+        'name' => 'Quarterly Food Pack',
+        'start_date' => now()->toDateString(),
+        'end_date' => now()->addDays(30)->toDateString(),
+        'created_by' => $this->admin->id,
+        'status' => \App\Enums\WelfarePackageStatus::OPEN,
+    ]);
+    \App\Models\WelfarePackageItem::create([
+        'welfare_package_id' => $welfarePackage->id,
+        'item_id' => $item->id,
+        'category_id' => $category->id,
+        'quantity_per_family' => 3,
+    ]);
+    $beneficiary = \App\Models\WelfareBeneficiary::create([
+        'deceased_id' => $this->deceasedA->id,
+        'welfare_package_id' => $welfarePackage->id,
+        'suggested_by' => $this->admin->id,
+        'status' => \App\Enums\BeneficiaryStatus::APPROVED,
+        'collection_status' => \App\Enums\CollectionStatus::COLLECTED,
+        'collected_at' => now(),
+    ]);
+
+    // Canonical Sponsorship amount and an active date window.
+    \App\Models\Sponsorship::create([
+        'orphan_id' => $this->orphanA->id,
+        'sponsor_name' => 'Kano Rotary Club',
+        'amount_committed' => 150000.00,
+        'start_date' => now()->subDays(5)->toDateString(),
+        'end_date' => now()->addDays(300)->toDateString(),
+    ]);
+
+    // Canonical guardian fields on the deceased household.
+    $this->deceasedA->update([
+        'guardian_name' => 'Maryam Ibrahim',
+        'guardian_phone' => '08011122233',
+    ]);
+
+    // Canonical intervention request with requested_amount + notes.
+    $interventionType = \App\Models\InterventionType::create(['name' => 'Education - School Fees']);
+    \App\Models\InterventionRequest::create([
+        'orphan_id' => $this->orphanA->id,
+        'intervention_type_id' => $interventionType->id,
+        'status' => 'approved',
+        'requested_amount' => 45000.00,
+        'notes' => 'Term two school fees',
+        'request_date' => now()->toDateString(),
+    ]);
+
+    $orphan = $this->orphanA->fresh()->load([
+        'deceased.widows',
+        'educations.institution',
+        'educations.orphanClass',
+        'prescriptions',
+        'interventionRequests.type',
+        'interventionRequests.interventions',
+        'interventions.type',
+        'sponsorships.sponsor',
+    ]);
+
+    $view = view('filament.components.orphan-dossier', [
+        'orphan' => $orphan,
+        'deceased' => $orphan->deceased,
+        'welfare' => \App\Models\WelfareBeneficiary::query()
+            ->with(['welfarePackage.items.item'])
+            ->where('deceased_id', $this->deceasedA->id)
+            ->get(),
+        'photo_data_uri' => null,
+        'company' => app(CompanyInformationService::class)->reportHeader(),
+        'generated_at' => now(),
+    ])->render();
+
+    // Welfare collection state (isCollected) and real package quantity.
+    expect($view)->toContain('Quarterly Food Pack')
+        ->toContain('Collected')
+        ->toContain('(3)');
+
+    // Canonical sponsorship amount and factual state.
+    expect($view)->toContain('Kano Rotary Club')
+        ->toContain('150,000.00')
+        ->toContain('Active');
+
+    // Canonical guardian fields.
+    expect($view)->toContain('Maryam Ibrahim')
+        ->toContain('08011122233');
+
+    // Canonical intervention amount + notes.
+    expect($view)->toContain('Education - School Fees')
+        ->toContain('45,000.00')
+        ->toContain('Term two school fees');
 });

@@ -50,21 +50,21 @@ class WidowLoanSchedule extends Model
         parent::booted();
 
         static::updating(function ($schedule) {
-            // If the schedule is already paid, we generally don't allow modifying it 
-            // unless it's a programmatic change to update its status or similar.
-            // But we must at least protect financial fields if it was originally paid.
-            if ($schedule->getOriginal('is_paid') && (!app()->runningInConsole() || app()->runningUnitTests())) {
-                // We'll allow changes to is_paid/paid_at/status for reversals if done through a service,
-                // but for general manual edits we throw if they try to change amounts or dates.
-                if ($schedule->isDirty(['amount_due', 'installment_number'])) {
-                    throw new \RuntimeException("Cannot modify the amount or installment number of a paid schedule row.");
-                }
+            // Financial facts (amount_due / installment_number) of an already
+            // paid instalment are immutable after posting. The lock is
+            // UNCONDITIONAL: the previous console/unit-test carve-out evaluated
+            // to false in CLI, cron, queue and test contexts, and would have let
+            // scheduled maintenance directly mutate paid rows. Legitimate
+            // lifecycle writes (syncScheduleStatus) only touch is_paid/paid_at/
+            // status, which remain permitted.
+            if ($schedule->getOriginal('is_paid') && $schedule->isDirty(['amount_due', 'installment_number'])) {
+                throw new \RuntimeException('Cannot modify the amount or installment number of a paid schedule row.');
             }
         });
 
         static::deleting(function ($schedule) {
-            if ($schedule->getOriginal('is_paid') && (!app()->runningInConsole() || app()->runningUnitTests())) {
-                throw new \RuntimeException("Cannot delete a paid schedule row.");
+            if ($schedule->getOriginal('is_paid')) {
+                throw new \RuntimeException('Cannot delete a paid schedule row.');
             }
         });
     }

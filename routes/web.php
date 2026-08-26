@@ -94,8 +94,12 @@ Route::get('/loans/{loan}/statement', [WidowLoanRepaymentController::class, 'dow
     ->name('loans.statement.download')
     ->middleware('auth');
 
-Route::get('/loans/{loan}/weekly-thermal-report', [WidowLoanRepaymentController::class, 'downloadWeeklyThermalReport'])
-    ->name('loans.weekly-thermal.download')
+// TRUE 58mm thermal WRL WEEKLY repayment report (aggregate reconciliation).
+// Query params: week=YYYY-MM-DD (normalized to the containing ISO Monday-Sunday
+// week), optional zone=<uuid> (admin/super_admin only; coordinators are always
+// scoped to their own zone).
+Route::get('/wrl/reports/weekly', [WidowLoanRepaymentController::class, 'downloadWeeklyReport'])
+    ->name('wrl.weekly.download')
     ->middleware('auth');
 
 Route::get('/loans/write-off-documents/{writeOff}', [WidowLoanWriteOffController::class, 'downloadDocument'])
