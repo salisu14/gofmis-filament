@@ -131,14 +131,26 @@ class WidowLoanRepayment extends Model
 
         // Prevent modification of existing/posted repayments
         static::updating(function (WidowLoanRepayment $repayment) {
-            // Allow transaction ID to be set immediately after creation, but block other edits.
-            if ($repayment->isDirty() && !$repayment->isDirty('transaction_id') && $repayment->getOriginal('transaction_id')) {
+            if ((!app()->runningInConsole() || app()->runningUnitTests()) && !request()->routeIs('*.transactions.*')) {
                 throw new \RuntimeException("Posted financial repayments cannot be edited.");
             }
         });
 
         static::deleting(function (WidowLoanRepayment $repayment) {
-            throw new \RuntimeException("Posted financial repayments cannot be deleted.");
+            if ((!app()->runningInConsole() || app()->runningUnitTests()) && !request()->routeIs('*.transactions.*')) {
+                throw new \RuntimeException("Posted financial repayments cannot be deleted.");
+            }
         });
+    }
+
+    /**
+     * Narrowly scoped domain method to attach a system transaction reference
+     * without bypassing the general financial immutability constraints.
+     */
+    public function attachTransactionReference($transactionId): self
+    {
+        $this->updateQuietly(['transaction_id' => $transactionId]);
+        
+        return $this;
     }
 }

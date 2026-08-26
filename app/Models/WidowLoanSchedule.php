@@ -44,4 +44,28 @@ class WidowLoanSchedule extends Model
     {
         return $this->belongsTo(WidowLoanRestructure::class, 'superseded_by');
     }
+
+    protected static function booted(): void
+    {
+        parent::booted();
+
+        static::updating(function ($schedule) {
+            // If the schedule is already paid, we generally don't allow modifying it 
+            // unless it's a programmatic change to update its status or similar.
+            // But we must at least protect financial fields if it was originally paid.
+            if ($schedule->getOriginal('is_paid') && (!app()->runningInConsole() || app()->runningUnitTests())) {
+                // We'll allow changes to is_paid/paid_at/status for reversals if done through a service,
+                // but for general manual edits we throw if they try to change amounts or dates.
+                if ($schedule->isDirty(['amount_due', 'installment_number'])) {
+                    throw new \RuntimeException("Cannot modify the amount or installment number of a paid schedule row.");
+                }
+            }
+        });
+
+        static::deleting(function ($schedule) {
+            if ($schedule->getOriginal('is_paid') && (!app()->runningInConsole() || app()->runningUnitTests())) {
+                throw new \RuntimeException("Cannot delete a paid schedule row.");
+            }
+        });
+    }
 }

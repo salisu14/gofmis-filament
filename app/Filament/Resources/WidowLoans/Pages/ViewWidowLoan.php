@@ -31,7 +31,8 @@ class ViewWidowLoan extends ViewRecord
     protected function getHeaderActions(): array
     {
         return [
-            EditAction::make(),
+            EditAction::make()
+                ->visible(fn (WidowLoan $record) => static::getResource()::canEdit($record)),
 
             // 1. Submit for approval & basic loan lifecycle
             \App\Filament\Actions\SubmitForApprovalAction::make(),

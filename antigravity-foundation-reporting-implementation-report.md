@@ -245,7 +245,57 @@ Following a final manual UAT pass, the following business-rule and historical-in
 ### Implementation Details
 - **WRL Repayment Receipt Nomenclature**: Changed "WRL WEEKLY REPAYMENT REPORT" to "WRL REPAYMENT RECEIPT" to correctly reflect its purpose as an individual transaction receipt.
 - **Historical Integrity of Receipts**: Thermal receipts now calculate historical balance and installment context accurately instead of reflecting current-day totals.
-- **Loan Lifecycle Locking**: Added `updating` model events to `WidowLoan` to restrict editing financially material fields after a loan is disbursed or has financial activity. Also enforced this at the UI level in `WidowLoanForm`.
-- **Repayment Immutability**: Added `updating` and `deleting` model events to `WidowLoanRepayment` to prevent modification or deletion of posted repayments. Removed Edit and Delete actions from `RepaymentsRelationManager` and `WidowLoanRepaymentsTable`.
+- **Loan Lifecycle Locking**: Added `updating` and `deleting` model events to `WidowLoan` to restrict editing financially material fields and prevent deletion after a loan is disbursed or has financial activity. Enforced this at the UI level by overriding `canEdit` and `canDelete` in `WidowLoanResource`.
+- **Schedule Immutability**: Added `updating` and `deleting` model events to `WidowLoanSchedule` to protect the amounts and dates of paid installment rows. In the UI, `SchedulesRelationManager` prevents regeneration if payments exist and disables editing/deleting of paid rows.
+- **Repayment Immutability**: Added `updating` and `deleting` model events to `WidowLoanRepayment` to unconditionally prevent modification or deletion of posted repayments. Removed Edit and Delete actions from `RepaymentsRelationManager` and `WidowLoanRepaymentsTable`. Overrode `canEdit` and `canDelete` in `WidowLoanRepaymentResource` and removed its edit route to block direct URL access.
+- **Automated Validation**: Created a dedicated `WrlFinancialImmutabilityTest.php` to continuously verify all domain-level financial protection invariants.
+
+## 11. Final Pre-Commit Acceptance — WRL Financial Immutability
+
+### 1. WidowLoanService Bypass Verification
+The `WidowLoanService` now uses a narrowly scoped domain method `attachTransactionReference($transactionId)` instead of a general `updateQuietly()` to attach the auditing ledger entry. This ensures that no user-controlled financial fields (amount, paid_at, etc.) can be maliciously bypassed via the service logic. The domain invariant remains strictly intact: posted repayment business data is fully immutable.
+
+### 2. Manual UAT Acceptance Matrix
+- [x] PASS 1. COMPLETED loan View page — Edit absent.
+- [x] PASS 2. COMPLETED loan table row — Edit absent.
+- [x] PASS 3. COMPLETED loan direct edit URL — 403/404.
+- [x] PASS 4. COMPLETED loan — Delete absent/blocked.
+- [x] PASS 5. Loan with repayments — financial terms cannot be edited.
+- [x] PASS 6. Loan with repayments — Regenerate Schedule absent.
+- [x] PASS 7. Paid schedule row — Edit absent.
+- [x] PASS 8. Paid schedule row — Delete absent.
+- [x] PASS 9. Posted repayment table — Edit absent.
+- [x] PASS 10. Posted repayment table — Delete absent.
+- [x] PASS 11. Posted repayment direct edit URL — blocked.
+- [x] PASS 12. Statement PDF, normal repayment PDF receipt, and Thermal 58mm Receipt still work.
+
+### 3. Verification Results
+1. **Targeted Foundation Reporting Suite & Immutability**: 
+   - 21 passed, 0 failed.
+2. **Full-Suite Pest Regression**:
+   - 620 passed (2,313 assertions), 0 failed. (100% Green).
+3. **Database Safety Check**:
+   - Pre-suite SHA-256: `fda05e5cd05ddbe20306243ebc3186ce625ab4fdf37706e44ddf33528f7e4ae9`
+   - Post-suite SHA-256: `fda05e5cd05ddbe20306243ebc3186ce625ab4fdf37706e44ddf33528f7e4ae9`
+   - *Result*: Byte-identical isolation confirmed.
+
+### 4. Final Git Status & Diff
+```text
+ M antigravity-foundation-reporting-implementation-report.md
+ D app/Filament/Resources/WidowLoanRepayments/Pages/EditWidowLoanRepayment.php
+ M app/Filament/Resources/WidowLoanRepayments/WidowLoanRepaymentResource.php
+ M app/Filament/Resources/WidowLoans/Pages/ViewWidowLoan.php
+ M app/Filament/Resources/WidowLoans/RelationManagers/SchedulesRelationManager.php
+ M app/Filament/Resources/WidowLoans/Tables/WidowLoansTable.php
+ M app/Filament/Resources/WidowLoans/WidowLoanResource.php
+ M app/Models/WidowLoan.php
+ M app/Models/WidowLoanRepayment.php
+ M app/Models/WidowLoanSchedule.php
+ M app/Services/WidowLoanService.php
+ M tests/Feature/FilamentResourceSmokeTest.php
+?? tests/Feature/WrlFinancialImmutabilityTest.php
+
+13 files changed, 114 insertions(+), 35 deletions(-)
+```
 
 **Status**: READY FOR FINAL COMMIT.

@@ -3,7 +3,6 @@
 namespace App\Filament\Resources\WidowLoanRepayments;
 
 use App\Filament\Resources\WidowLoanRepayments\Pages\CreateWidowLoanRepayment;
-use App\Filament\Resources\WidowLoanRepayments\Pages\EditWidowLoanRepayment;
 use App\Filament\Resources\WidowLoanRepayments\Pages\ListWidowLoanRepayments;
 use App\Filament\Resources\WidowLoanRepayments\Schemas\WidowLoanRepaymentForm;
 use App\Filament\Resources\WidowLoanRepayments\Tables\WidowLoanRepaymentsTable;
@@ -42,7 +41,16 @@ class WidowLoanRepaymentResource extends Resource
         return [
             'index' => ListWidowLoanRepayments::route('/'),
             'create' => CreateWidowLoanRepayment::route('/create'),
-            'edit' => EditWidowLoanRepayment::route('/{record}/edit'),
         ];
+    }
+
+    public static function canEdit(\Illuminate\Database\Eloquent\Model $record): bool
+    {
+        return false;
+    }
+
+    public static function canDelete(\Illuminate\Database\Eloquent\Model $record): bool
+    {
+        return false;
     }
 }

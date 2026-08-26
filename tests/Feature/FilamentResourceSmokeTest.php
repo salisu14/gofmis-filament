@@ -71,7 +71,7 @@ beforeEach(function () {
         'total_payable' => 50000.00,
         'duration_months' => 6,
         'repayment_frequency' => \App\Enums\LoanRepaymentFrequency::MONTHLY,
-        'status' => \App\Enums\WidowLoanStatus::DISBURSED,
+        'status' => \App\Enums\WidowLoanStatus::PENDING,
         'disbursed_at' => now(),
     ]);
 

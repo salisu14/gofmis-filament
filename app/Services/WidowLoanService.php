@@ -354,7 +354,7 @@ class WidowLoanService
                 'is_system' => true,
             ]);
 
-            $repayment->update(['transaction_id' => $transaction->id]);
+            $repayment->attachTransactionReference($transaction->id);
 
             // Single authoritative balance recalculation.
             // Do NOT manually increment/decrement loan totals — refreshBalance() handles it all.

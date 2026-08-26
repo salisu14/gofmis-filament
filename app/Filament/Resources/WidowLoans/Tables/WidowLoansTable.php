@@ -168,7 +168,8 @@ class WidowLoansTable
                         ->action(fn (WidowLoan $record) => $record->generateLedger()),
 
                     ViewAction::make(),
-                    EditAction::make(),
+                    EditAction::make()
+                        ->visible(fn (WidowLoan $record) => \App\Filament\Resources\WidowLoans\WidowLoanResource::canEdit($record)),
 
                     Action::make('downloadStatement')
                         ->label('Download Statement')

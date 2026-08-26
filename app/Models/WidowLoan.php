@@ -71,6 +71,18 @@ class WidowLoan extends Model
             }
         });
 
+        static::deleting(function ($loan) {
+            $hasFinancialActivity = in_array($loan->getOriginal('status'), [
+                \App\Enums\WidowLoanStatus::DISBURSED,
+                \App\Enums\WidowLoanStatus::COMPLETED,
+                \App\Enums\WidowLoanStatus::WRITTEN_OFF,
+            ]) || $loan->repayments()->exists() || $loan->schedules()->exists();
+
+            if ($hasFinancialActivity) {
+                throw new \RuntimeException("Cannot delete a loan that has already been financially active or scheduled.");
+            }
+        });
+
         // -------------------------------------------------------
         // Zone-based global scope — coordinators only see loans
         // for widows that belong to their own zone.
