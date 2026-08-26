@@ -46,8 +46,8 @@ class WidowResource extends Resource
     {
         return [
             RelationManagers\PrescriptionsRelationManager::class,
-//            RelationManagers\LoansRelationManager::class,
-//            RelationManagers\WidowLoansRelationManager::class,
+            //            RelationManagers\LoansRelationManager::class,
+            //            RelationManagers\WidowLoansRelationManager::class,
         ];
     }
 
@@ -77,6 +77,7 @@ class WidowResource extends Resource
             'nin',
         ];
     }
+
     public static function getGlobalSearchResultTitle(Model $record): string
     {
         return $record->full_name ?? $record->name ?? 'Record';
@@ -91,9 +92,14 @@ class WidowResource extends Resource
         ];
     }
 
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()->operational();
+    }
+
     public static function getRecordRouteBindingEloquentQuery(): Builder
     {
-        return parent::getRecordRouteBindingEloquentQuery()
+        return static::getModel()::query()
             ->withoutGlobalScopes([
                 SoftDeletingScope::class,
             ]);

@@ -73,8 +73,7 @@ class SubmitForApprovalAction
                         ->send();
                 }
             })
-            ->visible(fn (WidowLoan $record) => $record->status === \App\Enums\WidowLoanStatus::DRAFT
-                && ! $record->approvalFlow
+            ->visible(fn (WidowLoan $record) => $record->canSubmitForApproval()
                 && (
                     auth()->user()->hasAnyRole([
                         'coordinator',

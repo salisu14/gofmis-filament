@@ -148,7 +148,8 @@ class BulkPrintIdCards extends Page implements HasForms
 
                                 return $model::where('is_eligible', true)
                                     ->whereDoesntHave('idCards', fn ($q) => $q->where('status', 'active'))
-                                    ->pluck('full_name', 'id');
+                                    ->get()
+                                    ->mapWithKeys(fn ($b) => [$b->id => "{$b->display_name} ({$b->reg_no})"]);
                             })
                             ->live()
                             ->afterStateUpdated(fn () => $this->resetCount()),

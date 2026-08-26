@@ -4,7 +4,7 @@ namespace App\Data\Deceased;
 
 use Spatie\LaravelData\Data;
 
-class DeceasedData  extends Data
+class DeceasedData extends Data
 {
     public function __construct(
         public string $firstName,
@@ -15,14 +15,17 @@ class DeceasedData  extends Data
         public string $vulnerabilityStatus,
         public ?string $deathCause,
         public ?string $deathPlace,
-        public ?string $occupation = null,
-        public ?int $numberOfOrphansLeft = 0,
-        public ?int $numberOfWidowsLeft = 0,
+        public ?string $occupation,
+        public ?int $numberOfOrphansLeft,
+        public ?int $numberOfWidowsLeft,
         public ?string $guardianName,
         public ?string $guardianPhone = null,
         public ?bool $hasDeathCert = false,
         public ?string $deathCertUrl = null,
         public ?int $age = null,
         public ?string $zoneId = null,
+        public ?string $dateRegistered = null,
+        public ?string $dateOfBirth = null,
+        public ?string $dateOfDeath = null,
     ) {}
 }

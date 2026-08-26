@@ -40,12 +40,16 @@ class Deceased extends Model
         'guardian_phone',
         'zone_id', // ✅ IMPORTANT
         'full_name',
+        'date_of_birth',
+        'date_of_death',
     ];
 
     protected $casts = [
         'has_death_cert' => 'boolean',
         'age' => 'integer',
         'date_registered' => 'date',
+        'date_of_birth' => 'date',
+        'date_of_death' => 'date',
         'number_of_orphans_left' => 'integer',
         'number_of_widows_left' => 'integer',
         'vulnerability_status' => VulnerabilityStatus::class,
@@ -53,17 +57,31 @@ class Deceased extends Model
 
     public function getDisplayNameAttribute(): string
     {
-        return $this->full_name
-            ?: trim(
-                collect([
-                    $this->first_name,
-                    $this->middle_name,
-                    $this->last_name,
-                ])
-                    ->filter()
-                    ->implode(' ')
-            )
-                ?: 'Unnamed deceased record';
+        if (! empty($this->full_name)) {
+            return $this->full_name;
+        }
+
+        $name = trim(collect([
+            $this->first_name,
+            $this->middle_name,
+            $this->last_name,
+        ])->filter()->implode(' '));
+
+        if ($name !== '') {
+            return $name;
+        }
+
+        return ! empty($this->reg_no) ? "Deceased ({$this->reg_no})" : 'Unnamed deceased record';
+    }
+
+    public function getAgeAtDeathAttribute(): ?int
+    {
+        if ($this->date_of_birth && $this->date_of_death) {
+            return $this->date_of_birth->diffInYears($this->date_of_death);
+        }
+
+        // Fallback to legacy age if dates are missing
+        return $this->age ?: null;
     }
 
     public function zone(): BelongsTo
@@ -104,13 +122,7 @@ class Deceased extends Model
         return $this->hasMany(Widow::class);
     }
 
-    public function welfares(): BelongsToMany
-    {
-        return $this->belongsToMany(Welfare::class, 'deceased_welfare')
-            ->using(DeceasedWelfare::class) // <-- ADD THIS
-            ->withPivot('collection_status')
-            ->withTimestamps();
-    }
+// Legacy welfare relationship removed as part of canonical consolidation.
 
     public function welfarePackages(): BelongsToMany
     {
@@ -147,6 +159,30 @@ class Deceased extends Model
             }
 
             $query->where('zone_id', $zoneId);
+        });
+
+        static::saving(function ($model) {
+            $today = \Carbon\Carbon::today();
+
+            if ($model->date_of_birth && \Carbon\Carbon::parse($model->date_of_birth)->greaterThan($today)) {
+                throw new \InvalidArgumentException('Date of Birth cannot be in the future.');
+            }
+
+            if ($model->date_of_death && \Carbon\Carbon::parse($model->date_of_death)->greaterThan($today)) {
+                throw new \InvalidArgumentException('Date of Death cannot be in the future.');
+            }
+
+            if ($model->date_registered && \Carbon\Carbon::parse($model->date_registered)->greaterThan($today)) {
+                throw new \InvalidArgumentException('Date Registered cannot be in the future.');
+            }
+
+            if ($model->date_of_birth && $model->date_of_death && \Carbon\Carbon::parse($model->date_of_death)->lessThan(\Carbon\Carbon::parse($model->date_of_birth))) {
+                throw new \InvalidArgumentException('Date of Death cannot be earlier than Date of Birth.');
+            }
+
+            if ($model->date_registered && $model->date_of_death && \Carbon\Carbon::parse($model->date_registered)->lessThan(\Carbon\Carbon::parse($model->date_of_death))) {
+                throw new \InvalidArgumentException('Date Registered cannot be earlier than Date of Death.');
+            }
         });
 
         static::creating(function ($model) {

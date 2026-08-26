@@ -14,16 +14,20 @@ class DeceasedFactory extends Factory
 
     public function definition(): array
     {
+        $deathDate = fake()->dateTimeBetween('-5 years', '-2 months');
+        $regDate = fake()->dateTimeBetween($deathDate, 'now');
+
         return [
             'id' => Str::uuid(),
             'first_name' => fake()->firstName(),
             'last_name' => fake()->lastName(),
             'nin' => fake()->unique()->numerify('###########'),
-            'reg_no' => 'DEC-' . fake()->unique()->numberBetween(10000, 99999),
+            'reg_no' => 'DEC-'.fake()->unique()->numberBetween(10000, 99999),
             'guardian_name' => fake()->name(),
             'guardian_phone' => fake()->phoneNumber(),
             'vulnerability_status' => fake()->randomElement(VulnerabilityStatus::cases()),
-            'date_registered' => fake()->date(),
+            'date_of_death' => $deathDate->format('Y-m-d'),
+            'date_registered' => $regDate->format('Y-m-d'),
             'zone_id' => Zone::first()?->id,
         ];
     }

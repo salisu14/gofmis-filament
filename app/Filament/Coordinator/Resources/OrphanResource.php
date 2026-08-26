@@ -49,6 +49,15 @@ class OrphanResource extends Resource
     /**
      * Zone Scoping Logic
      */
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+            ->withoutGlobalScopes([
+                EligibleOrphanScope::class,
+            ])
+            ->operational();
+    }
+
     protected static function applyZoneScope(Builder $query, string $zoneId): Builder
     {
         return $query->whereHas('deceased', function ($q) use ($zoneId) {
@@ -258,6 +267,11 @@ class OrphanResource extends Resource
             ]);
     }
 
+    public static function infolist(Schema $schema): Schema
+    {
+        return \App\Filament\Resources\Orphans\Schemas\OrphanInfolist::configure($schema);
+    }
+
     /* -------------------------------------------------------------------------
      | TABLE CONFIGURATION
      ------------------------------------------------------------------------- */
@@ -265,13 +279,13 @@ class OrphanResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(fn (Builder $query) => $query->with(['activeSponsorships.sponsor']))
             ->columns([
-                Tables\Columns\ImageColumn::make('picture_url')
-                    ->label('')
+                Tables\Columns\ImageColumn::make('profile_photo_url')
+                    ->label('Profile Photo')
                     ->circular()
-                    ->disk('public')
-                    ->visibility('public')
-                    ->checkFileExistence(false),
+                    ->checkFileExistence(false)
+                    ->defaultImageUrl('https://via.placeholder.com/40'),
 
                 Tables\Columns\TextColumn::make('full_name')
                     ->searchable(['first_name', 'last_name', 'middle_name'])
@@ -293,15 +307,17 @@ class OrphanResource extends Resource
                     ->sortable('birth_date')
                     ->alignCenter(),
 
+                Tables\Columns\TextColumn::make('sponsorship_status')
+                    ->label('Sponsorship')
+                    ->state(fn (Orphan $record): string => $record->hasActiveSponsorship() ? 'Sponsored' : 'Not Sponsored')
+                    ->badge()
+                    ->color(fn (string $state): string => $state === 'Sponsored' ? 'success' : 'gray')
+                    ->toggleable(),
+
                 Tables\Columns\TextColumn::make('status')
                     ->badge()
-                    ->color(fn (string $state) => match ($state) {
-                        'active', 'approved' => 'success',
-                        'pending', 'pending_review' => 'warning',
-                        'rejected', 'inactive' => 'danger',
-                        Orphan::STATUS_ARCHIVED => 'gray',
-                        default => 'gray',
-                    }),
+                    ->formatStateUsing(fn ($state) => $state instanceof \App\Enums\OrphanStatus ? $state->label() : (\App\Enums\OrphanStatus::tryFrom((string) $state)?->label() ?? ucfirst((string) $state)))
+                    ->color(fn ($state) => $state instanceof \App\Enums\OrphanStatus ? $state->color() : (\App\Enums\OrphanStatus::tryFrom((string) $state)?->color() ?? 'gray')),
 
                 Tables\Columns\IconColumn::make('is_eligible')
                     ->label('Eligible')
@@ -317,15 +333,7 @@ class OrphanResource extends Resource
             ->filters([
                 Tables\Filters\SelectFilter::make('gender')->options(Gender::class),
                 Tables\Filters\SelectFilter::make('status')
-                    ->options([
-                        'active' => 'Active',
-                        'approved' => 'Approved',
-                        'pending' => 'Pending',
-                        'pending_review' => 'Pending Review',
-                        'inactive' => 'Inactive',
-                        'rejected' => 'Rejected',
-                        Orphan::STATUS_ARCHIVED => 'Archived',
-                    ]),
+                    ->options(\App\Enums\OrphanStatus::class),
                 Tables\Filters\TernaryFilter::make('is_eligible')->label('Eligible Only'),
                 Tables\Filters\TernaryFilter::make('is_married')->label('Married Only'),
             ])
@@ -402,5 +410,14 @@ class OrphanResource extends Resource
             'edit' => \App\Filament\Coordinator\Resources\OrphanResource\Pages\EditOrphan::route('/{record}/edit'),
             'view' => \App\Filament\Coordinator\Resources\OrphanResource\Pages\ViewOrphan::route('/{record}'),
         ];
+    }
+
+    public static function getRecordRouteBindingEloquentQuery(): Builder
+    {
+        return static::getModel()::query()
+            ->withoutGlobalScopes([
+                EligibleOrphanScope::class,
+                SoftDeletingScope::class,
+            ]);
     }
 }

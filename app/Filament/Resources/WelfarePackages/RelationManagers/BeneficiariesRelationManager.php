@@ -30,7 +30,7 @@ class BeneficiariesRelationManager extends RelationManager
 {
     protected static string $relationship = 'beneficiaries';
 
-    protected static ?string $title = 'Beneficiaries';
+    protected static ?string $title = 'Nominated Households';
 
     public function form(Schema $schema): Schema
     {
@@ -40,12 +40,44 @@ class BeneficiariesRelationManager extends RelationManager
                     ->relationship(
                         'deceased',
                         'full_name',
-                        modifyQueryUsing: fn(Builder $query): Builder => $query
+                        modifyQueryUsing: function (Builder $query, RelationManager $livewire): Builder {
+                            $packageId = $livewire->getOwnerRecord()?->id;
+                            if ($packageId) {
+                                $existingDeceasedIds = WelfareBeneficiary::where('welfare_package_id', $packageId)
+                                    ->pluck('deceased_id')
+                                    ->toArray();
+
+                                if (! empty($existingDeceasedIds)) {
+                                    $query->whereNotIn('id', $existingDeceasedIds);
+                                }
+                            }
+
+                            return $query;
+                        }
                     )
-                    ->getOptionLabelFromRecordUsing(fn($record): string => "{$record->full_name} - {$record->reg_no}"
-                    )
+                    ->getOptionLabelFromRecordUsing(fn ($record): string => "{$record->full_name} - {$record->reg_no}")
                     ->searchable(['full_name', 'reg_no'])
                     ->preload()
+                    ->rules([
+                        fn (RelationManager $livewire, ?\Illuminate\Database\Eloquent\Model $record) => function (string $attribute, $value, \Closure $fail) use ($livewire, $record) {
+                            if (! $value) {
+                                return;
+                            }
+                            $packageId = $livewire->getOwnerRecord()?->id;
+                            if (! $packageId) {
+                                return;
+                            }
+
+                            $exists = WelfareBeneficiary::where('welfare_package_id', $packageId)
+                                ->where('deceased_id', $value)
+                                ->when($record, fn ($q) => $q->where('id', '!=', $record->id))
+                                ->exists();
+
+                            if ($exists) {
+                                $fail('This family already has a welfare request/allocation for the selected package.');
+                            }
+                        },
+                    ])
                     ->required()
                     ->disabledOn('edit'),
 
@@ -55,8 +87,8 @@ class BeneficiariesRelationManager extends RelationManager
                     ->visibleOn('edit'),
 
                 Textarea::make('rejection_reason')
-                    ->visible(fn(Get $get) => $get('status') === BeneficiaryStatus::REJECTED->value)
-                    ->required(fn(Get $get) => $get('status') === BeneficiaryStatus::REJECTED->value),
+                    ->visible(fn (Get $get) => $get('status') === BeneficiaryStatus::REJECTED->value)
+                    ->required(fn (Get $get) => $get('status') === BeneficiaryStatus::REJECTED->value),
             ]);
     }
 
@@ -77,18 +109,18 @@ class BeneficiariesRelationManager extends RelationManager
                     ->label('Family'),
 
                 TextColumn::make('suggester.name')
-                    ->label('Suggested By')
+                    ->label('Nominated By')
                     ->toggleable(),
 
                 TextColumn::make('status')
                     ->badge()
-                    ->color(fn(BeneficiaryStatus $state): string => $state->color())
-                    ->icon(fn(BeneficiaryStatus $state): string => $state->icon()),
+                    ->color(fn (BeneficiaryStatus $state): string => $state->color())
+                    ->icon(fn (BeneficiaryStatus $state): string => $state->icon()),
 
                 TextColumn::make('collection_status')
                     ->badge()
-                    ->color(fn(CollectionStatus $state): string => $state->color())
-                    ->icon(fn(CollectionStatus $state): string => $state->icon()),
+                    ->color(fn (CollectionStatus $state): string => $state->color())
+                    ->icon(fn (CollectionStatus $state): string => $state->icon()),
 
                 TextColumn::make('collected_at')
                     ->dateTime('M d, Y H:i')
@@ -108,18 +140,38 @@ class BeneficiariesRelationManager extends RelationManager
                     ->options(CollectionStatus::class),
 
                 Filter::make('ready_for_collection')
-                    ->query(fn($query) => $query->readyForCollection())
+                    ->query(function (Builder $query, array $data): Builder {
+                        if (! ($data['isActive'] ?? false)) {
+                            return $query;
+                        }
+
+                        return $query->readyForCollection();
+                    })
+                    ->toggle(),
+
+                Filter::make('not_collected')
+                    ->label('Not Yet Collected')
+                    ->query(function (Builder $query, array $data): Builder {
+                        if (! ($data['isActive'] ?? false)) {
+                            return $query;
+                        }
+
+                        return $query->notCollected();
+                    })
                     ->toggle(),
             ])
             ->headerActions([
                 CreateAction::make()
-                    ->label('Suggest Beneficiary')
-                    ->visible(fn() => $this->getOwnerRecord()->isOpen() && auth()->user()?->can('suggest', WelfareBeneficiary::class))
-                    ->mutateDataUsing(function (array $data) {
-                        $data['suggested_by'] = auth()->id();
-                        $data['status'] = BeneficiaryStatus::PENDING;
-                        $data['collection_status'] = CollectionStatus::NOT_COLLECTED;
-                        return $data;
+                    ->label('Nominate Household')
+                    ->visible(fn () => $this->getOwnerRecord()->isOpen() && auth()->user()?->can('suggest', WelfareBeneficiary::class))
+                    ->using(function (array $data, RelationManager $livewire) {
+                        $package = $livewire->getOwnerRecord();
+                        $user = auth()->user();
+
+                        $beneficiary = app(\App\Services\Welfare\WelfareNominationService::class)
+                            ->nominateSingle($package->id, $data['deceased_id'], $user);
+
+                        return $beneficiary;
                     }),
             ])
             ->recordActions([
@@ -130,7 +182,7 @@ class BeneficiariesRelationManager extends RelationManager
                         ->icon('heroicon-o-check-circle')
                         ->color('success')
                         ->requiresConfirmation()
-                        ->visible(fn(WelfareBeneficiary $record): bool => (auth()->user()?->can('approve', $record) ?? false)
+                        ->visible(fn (WelfareBeneficiary $record): bool => (auth()->user()?->can('approve', $record) ?? false)
                             && $record->canBeApproved()
                         )
                         ->action(function (WelfareBeneficiary $record) {
@@ -145,7 +197,7 @@ class BeneficiariesRelationManager extends RelationManager
                                 ->required()
                                 ->label('Rejection Reason'),
                         ])
-                        ->visible(fn(WelfareBeneficiary $record): bool => (auth()->user()?->can('reject', $record) ?? false)
+                        ->visible(fn (WelfareBeneficiary $record): bool => (auth()->user()?->can('reject', $record) ?? false)
                             && $record->canBeRejected()
                         )
                         ->action(function (WelfareBeneficiary $record, array $data) {
@@ -161,7 +213,7 @@ class BeneficiariesRelationManager extends RelationManager
                             Textarea::make('notes')
                                 ->label('Collection Notes'),
                         ])
-                        ->visible(fn(WelfareBeneficiary $record): bool => (auth()->user()?->can('collect', $record) ?? false)
+                        ->visible(fn (WelfareBeneficiary $record): bool => (auth()->user()?->can('collect', $record) ?? false)
                             && $record->canBeCollected()
                         )
                         ->action(function (WelfareBeneficiary $record, array $data) {
@@ -172,10 +224,10 @@ class BeneficiariesRelationManager extends RelationManager
                         }),
 
                     EditAction::make()
-                        ->visible(fn(WelfareBeneficiary $record): bool => auth()->user()?->can('view', $record) && $record->isPending()),
+                        ->visible(fn (WelfareBeneficiary $record): bool => auth()->user()?->can('view', $record) && $record->isPending()),
 
                     DeleteAction::make()
-                        ->visible(fn(WelfareBeneficiary $record): bool => auth()->user()?->can('delete', $record) ?? false),
+                        ->visible(fn (WelfareBeneficiary $record): bool => auth()->user()?->can('delete', $record) ?? false),
                 ]),
             ])
             ->toolbarActions([
@@ -184,7 +236,7 @@ class BeneficiariesRelationManager extends RelationManager
                         ->icon('heroicon-o-check-circle')
                         ->color('success')
                         ->requiresConfirmation()
-                        ->visible(fn(): bool => auth()->user()?->hasAnyRole(['admin', 'super_admin']) ?? false)
+                        ->visible(fn (): bool => auth()->user()?->hasAnyRole(['admin', 'super_admin']) ?? false)
                         ->action(function ($records) {
                             app(BeneficiaryService::class)->bulkApprove($records->pluck('id')->toArray());
                         }),
@@ -193,7 +245,7 @@ class BeneficiariesRelationManager extends RelationManager
                         ->icon('heroicon-o-check-badge')
                         ->color('primary')
                         ->requiresConfirmation()
-                        ->visible(fn(): bool => auth()->user()?->hasAnyRole(['admin', 'super_admin']) ?? false)
+                        ->visible(fn (): bool => auth()->user()?->hasAnyRole(['admin', 'super_admin']) ?? false)
                         ->action(function ($records) {
                             app(BeneficiaryService::class)->bulkCollect($records->pluck('id')->toArray());
                         }),

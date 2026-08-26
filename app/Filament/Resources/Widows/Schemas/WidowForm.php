@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Widows\Schemas;
 
 use App\Models\Deceased;
+use App\Models\Widow;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
@@ -87,7 +88,39 @@ class WidowForm
                         Grid::make(2)->schema([
                             TextInput::make('nin')
                                 ->label('NIN')
-                                ->unique(ignoreRecord: true)
+                                ->live(onBlur: true)
+                                ->unique(table: 'widows', column: 'nin', ignoreRecord: true, modifyRuleUsing: fn ($rule, $get) => $rule->where('deceased_id', $get('deceased_id')))
+                                ->validationMessages([
+                                    'unique' => 'This widow (NIN) is already registered under the selected deceased household.',
+                                ])
+                                ->helperText(function ($get, $state) {
+                                    if (! $state || strlen($state) < 5) {
+                                        return '11-digit National Identity Number';
+                                    }
+
+                                    $query = Widow::where('nin', $state);
+                                    $user = auth()->user();
+
+                                    if ($user && ! $user->hasAnyRole(['admin', 'super_admin'])) {
+                                        $zoneId = $user->coordinatedZone?->id;
+
+                                        if ($zoneId) {
+                                            $query->whereHas('deceased', fn ($q) => $q->where('zone_id', $zoneId));
+                                        } else {
+                                            return '11-digit National Identity Number';
+                                        }
+                                    }
+
+                                    $existing = $query->with('deceased')->get();
+
+                                    if ($existing->isEmpty()) {
+                                        return '11-digit National Identity Number';
+                                    }
+
+                                    $info = $existing->map(fn ($w) => "{$w->reg_no} (".($w->deceased?->full_name ?: 'Deceased #'.$w->deceased_id).')')->implode(', ');
+
+                                    return "⚠️ Notice: This woman already has a widow record under another deceased household [{$info}]. Creating this record will establish a separate widow history for the selected deceased.";
+                                })
                                 ->placeholder('11-digit National Identity Number')
                                 ->maxLength(11)
                                 ->required(),

@@ -11,7 +11,7 @@ class RejectInterventionRequestAction
 {
     public static function make(): Action
     {
-        return Action::make('rejectRequest')
+        return Action::make('reject')
             ->label('Reject')
             ->icon('heroicon-m-x-circle')
             ->color('danger')
@@ -24,8 +24,7 @@ class RejectInterventionRequestAction
                     ->rows(3)
                     ->maxLength(2000),
             ])
-            ->visible(fn (InterventionRequest $record): bool =>
-                $record->canRejectRequest()
+            ->visible(fn (InterventionRequest $record): bool => $record->canRejectRequest()
                 && (auth()->user()?->hasAnyRole(['admin', 'super_admin'])
                     || auth()->user()?->can('verify_education_interventions')
                     || auth()->user()?->can('approve_healthcare_interventions')

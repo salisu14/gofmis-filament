@@ -43,7 +43,8 @@ class OrphanResource extends Resource
         return parent::getEloquentQuery()
             ->withoutGlobalScopes([
                 EligibleOrphanScope::class,
-            ]);
+            ])
+            ->operational();
     }
 
     public static function form(Schema $schema): Schema
@@ -111,7 +112,7 @@ class OrphanResource extends Resource
 
     public static function getRecordRouteBindingEloquentQuery(): Builder
     {
-        return parent::getRecordRouteBindingEloquentQuery()
+        return static::getModel()::query()
             ->withoutGlobalScopes([
                 EligibleOrphanScope::class,
                 SoftDeletingScope::class,

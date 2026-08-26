@@ -102,14 +102,88 @@ class IdCardsTable
             ->recordActions([
                 ActionGroup::make([
                     ViewAction::make(),
-                    EditAction::make(),
+                    EditAction::make()
+                        ->visible(fn (IdCard $record) => $record->status === 'draft'),
+
+                    Action::make('activate_single')
+                        ->label('Issue / Activate')
+                        ->icon('heroicon-o-check-circle')
+                        ->color('success')
+                        ->requiresConfirmation()
+                        ->modalHeading('Activate ID Card')
+                        ->modalDescription('This will issue and activate this ID card credential.')
+                        ->modalSubmitActionLabel('Yes, Activate')
+                        ->visible(fn (IdCard $record) => $record->status === 'draft')
+                        ->action(function (IdCard $record): void {
+                            if (! $record->beneficiaryIsEligible()) {
+                                Notification::make()
+                                    ->title('Cannot Activate Card')
+                                    ->body('This beneficiary is not currently eligible for an active ID card.')
+                                    ->danger()
+                                    ->send();
+
+                                return;
+                            }
+
+                            $record->activate();
+
+                            Notification::make()
+                                ->title('ID Card Activated')
+                                ->body("Card {$record->card_number} is now active.")
+                                ->success()
+                                ->send();
+                        }),
+
+                    Action::make('replace')
+                        ->label('Replace / Reissue')
+                        ->icon('heroicon-o-arrow-path-rounded-square')
+                        ->color('warning')
+                        ->requiresConfirmation()
+                        ->modalHeading('Replace ID Card')
+                        ->modalDescription('This will revoke the current active card and generate a new active replacement card. The original card history will be preserved.')
+                        ->modalSubmitActionLabel('Replace Card')
+                        ->schema([
+                            Textarea::make('reason')
+                                ->label('Replacement Reason')
+                                ->placeholder('e.g. Card reported lost / damaged by beneficiary')
+                                ->required()
+                                ->minLength(10),
+                        ])
+                        ->visible(fn (IdCard $record) => $record->status === 'active')
+                        ->action(function (IdCard $record, array $data): void {
+                            $beneficiary = $record->cardable;
+
+                            if (! $beneficiary || ! $record->beneficiaryIsEligible()) {
+                                Notification::make()
+                                    ->title('Cannot Replace Card')
+                                    ->body('Beneficiary is not currently eligible for a replacement ID card.')
+                                    ->danger()
+                                    ->send();
+
+                                return;
+                            }
+
+                            // Revoke old card
+                            $record->revoke('Replaced: '.$data['reason']);
+
+                            // Generate and activate new replacement card
+                            $genService = app(\App\Services\IdCardGenerationService::class);
+                            $newCard = $genService->generateCard($beneficiary, $record->template, false);
+                            $newCard->activate();
+
+                            Notification::make()
+                                ->title('ID Card Replaced')
+                                ->body("Old card {$record->card_number} revoked. New replacement card {$newCard->card_number} issued and activated.")
+                                ->success()
+                                ->send();
+                        }),
 
                     Action::make('preview')
                         ->label('Preview PDF')
                         ->icon('heroicon-o-eye')
                         ->color('info')
                         ->url(fn (IdCard $record): string => route('id-cards.preview', ['card' => $record]))
-                        ->openUrlInNewTab(), // Recommended so the user doesn't leave the admin panel
+                        ->openUrlInNewTab(),
 
                     Action::make('download')
                         ->label('Download PDF')
@@ -188,7 +262,21 @@ class IdCardsTable
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make(),
+                    DeleteBulkAction::make()
+                        ->action(function (\Illuminate\Database\Eloquent\Collection $records): void {
+                            $deletable = $records->filter(fn (IdCard $card) => $card->status === 'draft');
+                            $skipped = $records->count() - $deletable->count();
+
+                            $deletable->each->delete();
+
+                            if ($skipped > 0) {
+                                Notification::make()
+                                    ->warning()
+                                    ->title('Bulk Delete Protected')
+                                    ->body("{$skipped} issued, active, revoked, or expired ID card(s) were protected from deletion.")
+                                    ->send();
+                            }
+                        }),
 
                     BulkAction::make('print_selected')
                         ->label('Print Selected')

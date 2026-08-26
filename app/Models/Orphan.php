@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\Gender;
 use App\Enums\OrphanStatus;
 use App\Models\Scopes\EligibleOrphanScope;
+use App\Models\Concerns\HasProfilePhoto;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -16,7 +17,7 @@ use Illuminate\Support\Facades\Storage;
 
 class Orphan extends Model
 {
-    use HasUuids, SoftDeletes;
+    use HasProfilePhoto, HasUuids, SoftDeletes;
 
     protected $table = 'orphans';
 
@@ -62,6 +63,21 @@ class Orphan extends Model
         $this->attributes['picture_url'] = $value;
     }
 
+    public function getDisplayNameAttribute(): string
+    {
+        if (! empty($this->full_name)) {
+            return $this->full_name;
+        }
+
+        $name = trim(implode(' ', array_filter([
+            $this->first_name,
+            $this->middle_name,
+            $this->last_name,
+        ])));
+
+        return $name !== '' ? $name : ($this->reg_no ?? 'Orphan #'.$this->id);
+    }
+
     /**
      * Mark orphan (girl) as married and revoke eligibility.
      */
@@ -94,6 +110,52 @@ class Orphan extends Model
         ]);
 
         $this->revokeActiveBenefits($this->archiveReasonText($reason));
+    }
+
+    public function isOverAged(): bool
+    {
+        if ($this->gender !== Gender::MALE) {
+            return false;
+        }
+
+        if (! $this->birth_date) {
+            return $this->age >= 18;
+        }
+
+        return $this->birth_date->age >= 18;
+    }
+
+    public function isOperationalBeneficiary(): bool
+    {
+        if ($this->trashed()) {
+            return false;
+        }
+
+        $statusStr = $this->status instanceof OrphanStatus ? $this->status->value : (string) $this->status;
+
+        if (in_array($statusStr, [OrphanStatus::ARCHIVED->value, OrphanStatus::REJECTED->value, 'archived', 'rejected'], true)) {
+            return false;
+        }
+
+        if ($this->isOverAged()) {
+            return false;
+        }
+
+        if ($this->is_married) {
+            return false;
+        }
+
+        return true;
+    }
+
+    public function isEligibleForSupport(): bool
+    {
+        return $this->isOperationalBeneficiary() && (bool) $this->is_eligible;
+    }
+
+    public function getVulnerabilityStatusAttribute(): ?\App\Enums\VulnerabilityStatus
+    {
+        return $this->deceased?->vulnerability_status;
     }
 
     public function idCards(): MorphMany
@@ -160,6 +222,10 @@ class Orphan extends Model
 
     public function hasActiveSponsorship(): bool
     {
+        if ($this->relationLoaded('activeSponsorships')) {
+            return $this->activeSponsorships->isNotEmpty();
+        }
+
         return $this->activeSponsorships()->exists();
     }
 
@@ -192,6 +258,49 @@ class Orphan extends Model
         (new EligibleOrphanScope)->apply($query, $query->getModel());
 
         return $query;
+    }
+
+    public function scopeOperational(\Illuminate\Database\Eloquent\Builder $query): \Illuminate\Database\Eloquent\Builder
+    {
+        $cutoffDate = now()->subYears(18)->format('Y-m-d');
+
+        return $query
+            ->whereNotIn('status', [OrphanStatus::ARCHIVED->value, OrphanStatus::REJECTED->value, 'archived', 'rejected'])
+            ->where(function ($q) use ($cutoffDate) {
+                $q->where(function ($m) use ($cutoffDate) {
+                    $m->whereIn('gender', [Gender::MALE->value, 'MALE', 'male'])
+                        ->where('birth_date', '>', $cutoffDate);
+                })->orWhere(function ($f) {
+                    $f->whereIn('gender', [Gender::FEMALE->value, 'FEMALE', 'female'])
+                        ->where('is_married', false);
+                })->orWhereNull('gender');
+            });
+    }
+
+    public function scopeHistorical(\Illuminate\Database\Eloquent\Builder $query): \Illuminate\Database\Eloquent\Builder
+    {
+        $cutoffDate = now()->subYears(18)->format('Y-m-d');
+
+        return $query->where(function ($q) use ($cutoffDate) {
+            $q->whereIn('status', [OrphanStatus::ARCHIVED->value, OrphanStatus::REJECTED->value, 'archived', 'rejected'])
+                ->orWhere(function ($m) use ($cutoffDate) {
+                    $m->whereIn('gender', [Gender::MALE->value, 'MALE', 'male'])
+                        ->where('birth_date', '<=', $cutoffDate);
+                })->orWhere(function ($f) {
+                    $f->whereIn('gender', [Gender::FEMALE->value, 'FEMALE', 'female'])
+                        ->where('is_married', true);
+                });
+        });
+    }
+
+    public function hasHistoricalRecords(): bool
+    {
+        return $this->educations()->exists()
+            || $this->prescriptions()->exists()
+            || $this->interventionRequests()->exists()
+            || $this->interventions()->exists()
+            || $this->sponsorships()->exists()
+            || $this->idCards()->exists();
     }
 
     public function isEligibleForIntervention(): bool
@@ -233,12 +342,37 @@ class Orphan extends Model
             });
         });
 
+        $preventDelete = function (Orphan $orphan) {
+            $status = $orphan->status instanceof OrphanStatus ? $orphan->status : OrphanStatus::tryFrom((string) $orphan->status);
+
+            if ($status === OrphanStatus::ARCHIVED || ! $orphan->is_eligible) {
+                throw new \DomainException('Archived orphan records cannot be deleted as they preserve historical beneficiary records.');
+            }
+
+            if ($orphan->hasHistoricalRecords()) {
+                throw new \DomainException('Beneficiaries with historical records cannot be deleted.');
+            }
+        };
+
+        static::deleting($preventDelete);
+
         static::saving(function ($model) {
             if ($model->birth_date) {
                 $model->age = \Carbon\Carbon::parse($model->birth_date)->age;
             }
 
             $gender = $model->gender instanceof Gender ? $model->gender : Gender::tryFrom((string) $model->gender);
+
+            // Prevent silent reactivation of archived records
+            if ($model->exists) {
+                $originalStatus = $model->getOriginal('status');
+                $originalStatusValue = $originalStatus instanceof OrphanStatus ? $originalStatus : OrphanStatus::tryFrom((string) $originalStatus);
+
+                if ($originalStatusValue === OrphanStatus::ARCHIVED) {
+                    $model->status = OrphanStatus::ARCHIVED;
+                    $model->is_eligible = false;
+                }
+            }
 
             if (
                 ($gender === Gender::MALE && $model->age >= 18) ||

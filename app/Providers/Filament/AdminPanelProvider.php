@@ -53,6 +53,8 @@ class AdminPanelProvider extends PanelProvider
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
             ->pages([
                 Dashboard::class,
+                \App\Filament\Pages\Reports\PrescriptionReport::class,
+                \App\Filament\Pages\StockAvailability::class,
             ])
             ->authGuard('web')
             ->resources([
@@ -93,32 +95,64 @@ class AdminPanelProvider extends PanelProvider
                     );
                 }
 
-                // Deceased Module (admin + super-admin)
-                if ($user?->can('view_deceased')) {
-                    $builder = $builder->group(
-                        NavigationGroup::make('Deceased')
-                            ->items([
-                                NavigationItem::make('Deceased')
-                                    ->icon('heroicon-o-user-minus')
-                                    ->url('/admin/deceaseds')
-                                    ->isActiveWhen(fn () => request()->is('admin/deceaseds*')),
+                // Beneficiary Registration Module (admin + super-admin)
+                $hasDeceasedAccess = $user?->hasRole('super_admin') || $user?->can('view_deceased');
+                $hasWidowAccess = $user?->hasRole('super_admin') || $user?->can('view_widows') || $user?->can('view_deceased');
+                $hasOrphanAccess = $user?->hasRole('super_admin') || $user?->can('view_orphans') || $user?->can('view_deceased');
 
-                                NavigationItem::make('Widows')
-                                    ->icon('heroicon-o-heart')
-                                    ->url('/admin/widows')
-                                    ->isActiveWhen(fn () => request()->is('admin/widows*')),
+                if ($hasDeceasedAccess || $hasWidowAccess || $hasOrphanAccess) {
+                    $items = [];
 
-                                NavigationItem::make('Orphans')
-                                    ->icon('heroicon-o-user-group')
-                                    ->url('/admin/orphans')
-                                    ->isActiveWhen(fn () => request()->is('admin/orphans*')),
+                    if ($hasDeceasedAccess) {
+                        $items[] = NavigationItem::make('Deceased')
+                            ->icon('heroicon-o-user-minus')
+                            ->url('/admin/deceaseds')
+                            ->isActiveWhen(fn () => request()->is('admin/deceaseds*'));
+                    }
 
-                                NavigationItem::make('Zone Transfers')
-                                    ->icon('heroicon-o-arrows-right-left')
-                                    ->url('/admin/zone-transfers')
-                                    ->isActiveWhen(fn () => request()->is('admin/zone-transfers*')),
-                            ])
-                    );
+                    if ($hasWidowAccess) {
+                        $items[] = NavigationItem::make('Widows')
+                            ->icon('heroicon-o-heart')
+                            ->url('/admin/widows')
+                            ->isActiveWhen(fn () => request()->is('admin/widows*'));
+                    }
+
+                    if ($hasOrphanAccess) {
+                        $items[] = NavigationItem::make('Orphans')
+                            ->icon('heroicon-o-user-group')
+                            ->url('/admin/orphans')
+                            ->isActiveWhen(fn () => request()->is('admin/orphans*'));
+                    }
+
+                    if ($hasWidowAccess) {
+                        $items[] = NavigationItem::make('Widow History')
+                            ->icon('heroicon-o-clock')
+                            ->url('/admin/widow-histories')
+                            ->badge(fn () => (string) \App\Models\Widow::historical()->count(), color: 'gray')
+                            ->isActiveWhen(fn () => request()->is('admin/widow-histories*'));
+                    }
+
+                    if ($hasOrphanAccess) {
+                        $items[] = NavigationItem::make('Orphan History')
+                            ->icon('heroicon-o-archive-box')
+                            ->url('/admin/orphan-histories')
+                            ->badge(fn () => (string) \App\Models\Orphan::historical()->count(), color: 'gray')
+                            ->isActiveWhen(fn () => request()->is('admin/orphan-histories*'));
+                    }
+
+                    if ($hasDeceasedAccess) {
+                        $items[] = NavigationItem::make('Zone Transfers')
+                            ->icon('heroicon-o-arrows-right-left')
+                            ->url('/admin/zone-transfers')
+                            ->isActiveWhen(fn () => request()->is('admin/zone-transfers*'));
+                    }
+
+                    if (! empty($items)) {
+                        $builder = $builder->group(
+                            NavigationGroup::make('Beneficiary Registration')
+                                ->items($items)
+                        );
+                    }
                 }
 
                 // Education Module (admin + super-admin + verifier)
@@ -183,6 +217,11 @@ class AdminPanelProvider extends PanelProvider
                                     ->icon('heroicon-o-queue-list')
                                     ->url('/admin/items')
                                     ->isActiveWhen(fn () => request()->is('admin/items*')),
+
+                                NavigationItem::make('Stock Availability')
+                                    ->icon('heroicon-o-chart-bar')
+                                    ->url('/admin/stock-availability')
+                                    ->isActiveWhen(fn () => request()->is('admin/stock-availability*')),
                             ])
                     );
                 }
@@ -271,6 +310,19 @@ class AdminPanelProvider extends PanelProvider
                                     ->icon('heroicon-o-beaker')
                                     ->url('/admin/illnesses')
                                     ->isActiveWhen(fn () => request()->is('admin/illnesses*')),
+                            ])
+                    );
+                }
+
+                // Reports (admin + super-admin)
+                if ($user?->can('view_medicals') || $user?->isAdmin() || $user?->isSuperAdmin()) {
+                    $builder = $builder->group(
+                        NavigationGroup::make('Reports')
+                            ->items([
+                                NavigationItem::make('Healthcare Reports')
+                                    ->icon('heroicon-o-document-chart-bar')
+                                    ->url('/admin/reports/prescription-report')
+                                    ->isActiveWhen(fn () => request()->is('admin/reports/prescription-report*')),
                             ])
                     );
                 }

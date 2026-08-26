@@ -44,6 +44,8 @@ class WidowLoanResource extends Resource
         return [
             RelationManagers\SchedulesRelationManager::class,
             RelationManagers\RepaymentsRelationManager::class,
+            RelationManagers\HardshipRelationManager::class,
+            RelationManagers\RecoveryRelationManager::class,
         ];
     }
 
@@ -57,6 +59,40 @@ class WidowLoanResource extends Resource
         ];
     }
 
+    public static function canEdit(\Illuminate\Database\Eloquent\Model $record): bool
+    {
+        if (in_array($record->status, [\App\Enums\WidowLoanStatus::COMPLETED, \App\Enums\WidowLoanStatus::WRITTEN_OFF])) {
+            return false;
+        }
+        
+        $hasFinancialActivity = in_array($record->status, [
+            \App\Enums\WidowLoanStatus::DISBURSED,
+            \App\Enums\WidowLoanStatus::COMPLETED,
+            \App\Enums\WidowLoanStatus::WRITTEN_OFF,
+        ]) || $record->repayments()->exists() || $record->schedules()->exists();
+
+        if ($hasFinancialActivity) {
+            return false;
+        }
+
+        return parent::canEdit($record);
+    }
+
+    public static function canDelete(\Illuminate\Database\Eloquent\Model $record): bool
+    {
+        $hasFinancialActivity = in_array($record->status, [
+            \App\Enums\WidowLoanStatus::DISBURSED,
+            \App\Enums\WidowLoanStatus::COMPLETED,
+            \App\Enums\WidowLoanStatus::WRITTEN_OFF,
+        ]) || $record->repayments()->exists() || $record->schedules()->exists();
+
+        if ($hasFinancialActivity) {
+            return false;
+        }
+        
+        return parent::canDelete($record);
+    }
+
     public static function getRecordRouteBindingEloquentQuery(): Builder
     {
         return parent::getRecordRouteBindingEloquentQuery()
@@ -67,6 +103,6 @@ class WidowLoanResource extends Resource
 
     public function getActiveRelationManager(): int
     {
-        return (int)request()->query('relation', 0);
+        return (int) request()->query('relation', 0);
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\PrescriptionStatus;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -27,13 +28,32 @@ class Prescription extends Model
         'prescribable_id',
         'prescribable_type',
         'user_id',
+        'status',
+        'treated_at',
+        'treated_by_id',
+        'treatment_notes',
     ];
 
     protected $casts = [
         'lab_test_cost' => 'decimal:2',
         'drug_cost' => 'decimal:2',
         'prescription_date' => 'date',
+        'status' => PrescriptionStatus::class,
+        'treated_at' => 'datetime',
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (Prescription $model) {
+            $model->status ??= PrescriptionStatus::PENDING;
+        });
+
+        static::deleting(function (Prescription $model) {
+            if ($model->isTreated()) {
+                throw new \DomainException('Completed healthcare and treatment records cannot be deleted.');
+            }
+        });
+    }
 
     public static function totalCostQuery(): \Illuminate\Database\Query\Expression|\Illuminate\Contracts\Database\Query\Expression
     {
@@ -50,6 +70,12 @@ class Prescription extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    // The Staff who marked treatment as completed
+    public function treatedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'treated_by_id');
     }
 
     // Normalized illness reference
@@ -81,5 +107,31 @@ class Prescription extends Model
     public function getIllnessNameAttribute(): ?string
     {
         return $this->illnessModel?->name ?? $this->illness;
+    }
+
+    public function isTreated(): bool
+    {
+        $statusValue = $this->status instanceof PrescriptionStatus ? $this->status : PrescriptionStatus::tryFrom((string) $this->status);
+
+        return $statusValue === PrescriptionStatus::TREATED || ! is_null($this->treated_at);
+    }
+
+    public function isPending(): bool
+    {
+        return ! $this->isTreated() && $this->status !== PrescriptionStatus::CANCELLED;
+    }
+
+    public function markAsTreated(?string $notes = null, ?string $treatedAt = null, ?string $treatedByUserId = null): void
+    {
+        if ($this->isTreated()) {
+            throw new \DomainException('This healthcare request has already been marked as treated.');
+        }
+
+        $this->update([
+            'status' => PrescriptionStatus::TREATED,
+            'treated_at' => $treatedAt ? \Carbon\Carbon::parse($treatedAt) : now(),
+            'treated_by_id' => $treatedByUserId ?? auth()->id(),
+            'treatment_notes' => $notes ?? $this->treatment_notes,
+        ]);
     }
 }

@@ -31,6 +31,7 @@ class DatabaseSeeder extends Seeder
             IdCardTemplateSeeder::class,
             OrphanClassesTableSeeder::class,
             WelfarePackageSeeder::class,
+            InterventionTypeSeeder::class,
         ]);
     }
 }

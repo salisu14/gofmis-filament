@@ -52,6 +52,16 @@ class SponsorResource extends Resource
         ];
     }
 
+    public static function canDelete(\Illuminate\Database\Eloquent\Model $record): bool
+    {
+        /** @var Sponsor $record */
+        if ($record->sponsorships()->exists() || $record->allocations()->exists()) {
+            return false;
+        }
+
+        return parent::canDelete($record);
+    }
+
     public static function getRecordRouteBindingEloquentQuery(): Builder
     {
         return parent::getRecordRouteBindingEloquentQuery()

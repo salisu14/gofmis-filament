@@ -57,13 +57,14 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(\App\Models\User::class, \App\Policies\UserPolicy::class);
         Gate::policy(\App\Models\Role::class, \App\Policies\RolePolicy::class);
         Gate::policy(\App\Models\Permission::class, \App\Policies\PermissionPolicy::class);
+        Gate::policy(\App\Models\Orphan::class, \App\Policies\OrphanPolicy::class);
 
         Gate::before(function ($user, $ability, $arguments = []) {
-            // For security models (User, Role, Permission), ALWAYS fall back to policy to enforce hierarchy, self-destruction, and role demotion invariants.
+            // For security models (User, Role, Permission) and protected models (Orphan), ALWAYS fall back to policy to enforce invariants.
             $target = is_array($arguments) ? reset($arguments) : $arguments;
             if ($target) {
                 $class = is_object($target) ? get_class($target) : (is_string($target) ? $target : null);
-                if ($class && in_array($class, [\App\Models\User::class, \App\Models\Role::class, \App\Models\Permission::class], true)) {
+                if ($class && in_array($class, [\App\Models\User::class, \App\Models\Role::class, \App\Models\Permission::class, \App\Models\Orphan::class], true)) {
                     return null; // Fall back to policy
                 }
             }

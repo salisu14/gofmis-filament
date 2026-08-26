@@ -44,12 +44,11 @@ class WidowsTable
                     ->collapsible(),
             ])
             ->columns([
-                ImageColumn::make('picture_url')
-                    ->label('Image')
+                ImageColumn::make('profile_photo_url')
+                    ->label('Profile Photo')
                     ->circular()
-                    ->disk('public')
-                    ->visibility('public')
-                    ->checkFileExistence(false),
+                    ->checkFileExistence(false)
+                    ->defaultImageUrl(url('/images/placeholder-avatar.png')),
 
                 TextColumn::make('full_name')
                     ->label('Name')
@@ -147,36 +146,99 @@ class WidowsTable
                         ),
 
                     Action::make('markAsMarried')
-                        ->label('Mark Married')
+                        ->label('Mark as Remarried')
                         ->icon('heroicon-m-heart')
                         ->color('danger')
                         ->requiresConfirmation()
-                        ->modalHeading('Mark as Married')
-                        ->modalDescription('This will revoke all benefits and eligibility. This action cannot be undone.')
-                        ->modalSubmitActionLabel('Yes, Mark as Married')
+                        ->modalHeading('Mark as Remarried')
+                        ->modalDescription('This will mark the widow relationship under this household as remarried and revoke active benefits. All historical loans, repayments, and records remain preserved.')
+                        ->modalSubmitActionLabel('Yes, Mark as Remarried')
                         ->visible(fn ($record) => ! $record->is_married)
                         ->schema([
                             DatePicker::make('married_at')
-                                ->label('Marriage Date')
+                                ->label('Remarriage Date')
                                 ->default(now())
-                                ->required(),
+                                ->maxDate(now())
+                                ->required()
+                                ->rule(function ($record) {
+                                    return function (string $attribute, $value, \Closure $fail) use ($record) {
+                                        $date = \Illuminate\Support\Carbon::parse($value);
+
+                                        if ($date->isFuture()) {
+                                            $fail('Remarriage date cannot be in the future.');
+
+                                            return;
+                                        }
+
+                                        $dateOfDeath = $record->deceased?->date_of_death;
+
+                                        if ($dateOfDeath && $date->lt(\Illuminate\Support\Carbon::parse($dateOfDeath))) {
+                                            $fail('Remarriage date cannot be earlier than the deceased husband\'s date of death ('.\Illuminate\Support\Carbon::parse($dateOfDeath)->format('d M, Y').').');
+                                        }
+                                    };
+                                }),
                             Textarea::make('notes')
                                 ->label('Notes')
-                                ->placeholder('Optional notes about the marriage...')
+                                ->placeholder('Optional notes about the remarriage...')
                                 ->rows(2),
                         ])
                         ->action(function ($record, array $data) {
-                            $record->update([
-                                'is_married' => true,
-                                'married_at' => $data['married_at'] ?? now(),
-                            ]);
-
-                            // Call the model method to handle side effects
-                            $record->markAsMarried($data['notes'] ?? null);
+                            $record->markAsMarried(
+                                notes: $data['notes'] ?? null,
+                                marriedAt: $data['married_at'] ?? null
+                            );
 
                             Notification::make()
-                                ->title('Marked as Married')
-                                ->body("{$record->full_name} has been marked as married and removed from benefits.")
+                                ->title('Marked as Remarried')
+                                ->body("{$record->full_name} has been marked as remarried.")
+                                ->success()
+                                ->send();
+                        }),
+
+                    Action::make('reactivateAfterDivorce')
+                        ->label('Reactivate After Divorce')
+                        ->icon('heroicon-m-arrow-path')
+                        ->color('success')
+                        ->requiresConfirmation()
+                        ->modalHeading('Reactivate Widow After Divorce')
+                        ->modalDescription('This action should only be used when the later marriage ended in divorce. If the later husband died, do not reactivate this record; register/create the widow under the later deceased husband\'s household instead.')
+                        ->modalSubmitActionLabel('Yes, Reactivate')
+                        ->visible(fn ($record) => (bool) $record->is_married)
+                        ->schema([
+                            DatePicker::make('divorced_at')
+                                ->label('Divorce / Reactivation Date')
+                                ->default(now())
+                                ->maxDate(now())
+                                ->required()
+                                ->rule(function ($record) {
+                                    return function (string $attribute, $value, \Closure $fail) use ($record) {
+                                        $date = \Illuminate\Support\Carbon::parse($value);
+
+                                        if ($date->isFuture()) {
+                                            $fail('Divorce / reactivation date cannot be in the future.');
+
+                                            return;
+                                        }
+
+                                        if ($record->married_at && $date->lt(\Illuminate\Support\Carbon::parse($record->married_at))) {
+                                            $fail('Divorce date cannot be earlier than the recorded remarriage date ('.\Illuminate\Support\Carbon::parse($record->married_at)->format('d M, Y').').');
+                                        }
+                                    };
+                                }),
+                            Textarea::make('notes')
+                                ->label('Notes')
+                                ->placeholder('Optional notes about the divorce/reactivation...')
+                                ->rows(2),
+                        ])
+                        ->action(function ($record, array $data) {
+                            $record->reactivateAfterDivorce(
+                                notes: $data['notes'] ?? null,
+                                divorcedAt: $data['divorced_at'] ?? null
+                            );
+
+                            Notification::make()
+                                ->title('Widow Reactivated')
+                                ->body("{$record->full_name} has been reactivated following divorce.")
                                 ->success()
                                 ->send();
                         }),

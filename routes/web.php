@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\IdCardController;
 use App\Http\Controllers\IdCardDownloadController;
+use App\Http\Controllers\OrphanReportController;
 use App\Http\Controllers\WidowLoanRepaymentController;
 use App\Http\Controllers\WidowLoanWriteOffController;
 use Illuminate\Support\Facades\Route;
@@ -75,17 +76,52 @@ if (app()->environment('local')) {
     })->middleware('auth');
 }
 
+// Orphan Dossier Report Route
+Route::get('/orphans/{orphan}/report', [OrphanReportController::class, 'download'])
+    ->name('orphans.report.download')
+    ->middleware('auth');
+
 // Loan Repayment Receipt Download Route
 Route::get('/repayments/{repayment}/receipt', [WidowLoanRepaymentController::class, 'downloadReceipt'])
     ->name('repayments.receipt.download')
+    ->middleware('auth');
+
+Route::get('/repayments/{repayment}/thermal-receipt', [WidowLoanRepaymentController::class, 'downloadThermalReceipt'])
+    ->name('repayments.thermal-receipt.download')
     ->middleware('auth');
 
 Route::get('/loans/{loan}/statement', [WidowLoanRepaymentController::class, 'downloadStatement'])
     ->name('loans.statement.download')
     ->middleware('auth');
 
+Route::get('/loans/{loan}/weekly-thermal-report', [WidowLoanRepaymentController::class, 'downloadWeeklyThermalReport'])
+    ->name('loans.weekly-thermal.download')
+    ->middleware('auth');
+
 Route::get('/loans/write-off-documents/{writeOff}', [WidowLoanWriteOffController::class, 'downloadDocument'])
     ->name('loans.write-off-document.download')
+    ->middleware('auth');
+
+// Healthcare Prescription Document Routes
+Route::get('/prescriptions/{prescription}/preview', [\App\Http\Controllers\PrescriptionDocumentController::class, 'preview'])
+    ->name('prescriptions.preview')
+    ->middleware('auth');
+
+Route::get('/prescriptions/{prescription}/download', [\App\Http\Controllers\PrescriptionDocumentController::class, 'download'])
+    ->name('prescriptions.download')
+    ->middleware('auth');
+
+Route::get('/prescriptions/{prescription}/referral/preview', [\App\Http\Controllers\PrescriptionDocumentController::class, 'referralPreview'])
+    ->name('prescriptions.referral.preview')
+    ->middleware('auth');
+
+Route::get('/prescriptions/{prescription}/referral/download', [\App\Http\Controllers\PrescriptionDocumentController::class, 'referralDownload'])
+    ->name('prescriptions.referral.download')
+    ->middleware('auth');
+
+// Healthcare Period Report PDF Export Route
+Route::get('/admin/reports/prescription-report/pdf', [\App\Http\Controllers\PrescriptionReportController::class, 'exportPdf'])
+    ->name('reports.prescription-report.pdf')
     ->middleware('auth');
 
 Route::middleware(['auth'])->group(function () {

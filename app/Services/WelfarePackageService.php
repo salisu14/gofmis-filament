@@ -34,8 +34,8 @@ class WelfarePackageService
      */
     public function updatePackage(WelfarePackage $package, array $data, array $items = []): WelfarePackage
     {
-        if (!$package->isDraft()) {
-            throw new RuntimeException('Only draft packages can be edited.');
+        if (! $package->isCompositionEditable()) {
+            throw new RuntimeException('This package cannot be edited. Package composition is locked once nominations exist or when the package is Closed.');
         }
 
         return DB::transaction(function () use ($package, $data, $items) {
@@ -51,41 +51,21 @@ class WelfarePackageService
 
     public function openPackage(WelfarePackage $package): WelfarePackage
     {
-        if (!$package->canBeOpened()) {
-            throw new RuntimeException("Cannot open package with status: {$package->status->value}");
-        }
-
-        $package->update([
-            'status' => WelfarePackageStatus::OPEN,
-            'approved_by' => auth()->id(),
-            'approved_at' => now(),
-        ]);
+        app(\App\Services\Welfare\WelfarePackageLifecycleService::class)->openPackage($package);
 
         return $package->fresh();
     }
 
     public function closePackage(WelfarePackage $package): WelfarePackage
     {
-        if (!$package->canBeClosed()) {
-            throw new RuntimeException("Cannot close package with status: {$package->status->value}");
-        }
-
-        $package->update([
-            'status' => WelfarePackageStatus::CLOSED,
-        ]);
+        app(\App\Services\Welfare\WelfarePackageLifecycleService::class)->closePackage($package);
 
         return $package->fresh();
     }
 
     public function reopenPackage(WelfarePackage $package): WelfarePackage
     {
-        if (!$package->canBeReopened()) {
-            throw new RuntimeException('Only closed packages can be reopened.');
-        }
-
-        $package->update([
-            'status' => WelfarePackageStatus::OPEN,
-        ]);
+        app(\App\Services\Welfare\WelfarePackageLifecycleService::class)->reopenPackage($package);
 
         return $package->fresh();
     }
@@ -133,8 +113,8 @@ class WelfarePackageService
 
     public function syncItems(WelfarePackage $package, array $items): void
     {
-        if (!$package->isDraft()) {
-            throw new RuntimeException('Items can only be modified for draft packages.');
+        if (! $package->isCompositionEditable()) {
+            throw new RuntimeException('Items can only be modified while the package composition is editable (Draft, or Open with zero nominations).');
         }
 
         // Delete existing items not in the new list

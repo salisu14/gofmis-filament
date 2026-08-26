@@ -79,6 +79,7 @@ class InterventionsRelationManager extends RelationManager
                             ->options(function (RelationManager $livewire) {
                                 return $livewire->getOwnerRecord()->items->mapWithKeys(function ($item) {
                                     $remaining = $item->quantity_requested - $item->quantity_fulfilled;
+
                                     return [$item->id => "{$item->item_name} (Remaining: {$remaining})"];
                                 });
                             })
@@ -201,25 +202,53 @@ class InterventionsRelationManager extends RelationManager
                                 ]);
 
                                 // 5. Create Intervention Items & Update Fulfilled Quantities
-                                // 5. Create Intervention Items & Update Fulfilled Quantities
                                 foreach ($deliveredItems as $itemData) {
-                                    // Find the original requested item to inherit its snapshot data
-                                    $requestItem = InterventionRequestItem::find($itemData['intervention_request_item_id']);
+                                    $qtyDelivered = (int) ($itemData['quantity_delivered'] ?? 1);
+
+                                    $requestItem = InterventionRequestItem::where('id', $itemData['intervention_request_item_id'])
+                                        ->lockForUpdate()
+                                        ->first();
 
                                     if ($requestItem) {
-                                        // Record the specific items handed out (Snapshot pattern)
+                                        $remaining = $requestItem->quantity_requested - $requestItem->quantity_fulfilled;
+
+                                        if ($qtyDelivered > $remaining) {
+                                            throw \Illuminate\Validation\ValidationException::withMessages([
+                                                'delivered_items' => "Cannot deliver {$qtyDelivered} of {$requestItem->item_name}. Only {$remaining} item(s) remaining for fulfilment.",
+                                            ]);
+                                        }
+
                                         \App\Models\InterventionItem::create([
                                             'intervention_id' => $intervention->id,
                                             'intervention_request_item_id' => $requestItem->id,
-                                            'item_name' => $requestItem->item_name, // ✅ Inherit the name
-                                            'specification' => $requestItem->specification, // ✅ Inherit the spec
-                                            'quantity' => $itemData['quantity_delivered'], // ✅ Map to the model's 'quantity' column
-                                            // 'item_id' => $requestItem->item_id, // Uncomment if you ran the item_id migration
+                                            'item_name' => $requestItem->item_name,
+                                            'specification' => $requestItem->specification,
+                                            'quantity' => $qtyDelivered,
                                         ]);
 
-                                        // Atomically increment the fulfilled count on the parent request item
-                                        InterventionRequestItem::where('id', $itemData['intervention_request_item_id'])
-                                            ->increment('quantity_fulfilled', $itemData['quantity_delivered']);
+                                        $requestItem->increment('quantity_fulfilled', $qtyDelivered);
+                                    }
+                                }
+
+                                // 6. Update parent request status based on fulfilment rules
+                                $parentRequest = $this->getOwnerRecord()->fresh();
+                                if ($parentRequest->items()->count() > 0) {
+                                    $allFulfilled = $parentRequest->items->every(fn ($i) => $i->quantity_fulfilled >= $i->quantity_requested);
+                                    $anyFulfilled = $parentRequest->items->some(fn ($i) => $i->quantity_fulfilled > 0);
+
+                                    if ($allFulfilled) {
+                                        $parentRequest->update(['status' => 'fulfilled']);
+                                    } elseif ($anyFulfilled) {
+                                        $parentRequest->update(['status' => 'partially_fulfilled']);
+                                    }
+                                } else {
+                                    $totalDisbursed = (float) $parentRequest->interventions()->sum('amount');
+                                    $requestedAmount = (float) $parentRequest->requested_amount;
+
+                                    if ($requestedAmount > 0 && $totalDisbursed >= $requestedAmount) {
+                                        $parentRequest->update(['status' => 'fulfilled']);
+                                    } elseif ($totalDisbursed > 0) {
+                                        $parentRequest->update(['status' => 'partially_fulfilled']);
                                     }
                                 }
 

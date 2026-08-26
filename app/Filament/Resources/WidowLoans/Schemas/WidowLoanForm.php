@@ -120,6 +120,8 @@ class WidowLoanForm
                                 ->getOptionLabelFromRecordUsing(fn ($record) => "{$record->account_name} ({$record->account_number})")
                                 ->searchable()
                                 ->preload()
+                                ->disabled(fn ($record) => $record && ($record->getOriginal('status') === WidowLoanStatus::DISBURSED || $record->repayments()->exists()))
+                                ->dehydrated()
                                 ->required(),
 
                             Select::make('disbursement_bank_id')
@@ -129,6 +131,8 @@ class WidowLoanForm
                                 ->getOptionLabelFromRecordUsing(fn ($record) => "{$record->account_name} ({$record->account_number})")
                                 ->searchable()
                                 ->preload()
+                                ->disabled(fn ($record) => $record && ($record->getOriginal('status') === WidowLoanStatus::DISBURSED || $record->repayments()->exists()))
+                                ->dehydrated()
                                 ->nullable(),
 
                             Select::make('repayment_bank_id')
@@ -145,6 +149,8 @@ class WidowLoanForm
                                 )
                                 ->searchable()
                                 ->preload()
+                                ->disabled(fn ($record) => $record && ($record->getOriginal('status') === WidowLoanStatus::DISBURSED || $record->repayments()->exists()))
+                                ->dehydrated()
                                 ->nullable(),
                         ]),
 
@@ -154,6 +160,8 @@ class WidowLoanForm
                                 ->prefix('₦')
                                 ->required()
                                 ->live(onBlur: true)
+                                ->disabled(fn ($record) => $record && ($record->getOriginal('status') === WidowLoanStatus::DISBURSED || $record->repayments()->exists()))
+                                ->dehydrated()
                                 ->afterStateUpdated(fn ($state, $set) => $set('total_payable', (float) $state)),
 
                             Select::make('repayment_frequency')
@@ -162,6 +170,8 @@ class WidowLoanForm
                                 ->required()
                                 ->default(LoanRepaymentFrequency::WEEKLY)
                                 ->native(false)
+                                ->disabled(fn ($record) => $record && ($record->getOriginal('status') === WidowLoanStatus::DISBURSED || $record->repayments()->exists()))
+                                ->dehydrated()
                                 ->live(),
                         ]),
 
@@ -173,6 +183,8 @@ class WidowLoanForm
                                 ->default(12)
                                 ->required()
                                 ->live(onBlur: true)
+                                ->disabled(fn ($record) => $record && ($record->getOriginal('status') === WidowLoanStatus::DISBURSED || $record->repayments()->exists()))
+                                ->dehydrated()
                                 ->afterStateUpdated(function ($state, $get, $set) {
                                     $principal = (float) $get('total_payable');
                                     $duration = (int) $state;

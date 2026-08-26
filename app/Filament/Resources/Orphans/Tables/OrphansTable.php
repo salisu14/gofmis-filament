@@ -45,6 +45,7 @@ class OrphansTable
     public static function configure(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(fn (Builder $query) => $query->with(['activeSponsorships.sponsor']))
             ->persistFiltersInSession()
             ->persistSortInSession()
             ->deferLoading()
@@ -64,13 +65,11 @@ class OrphansTable
                     ->collapsible(),
             ])
             ->columns([
-                ImageColumn::make('picture_url')
-                    ->label('Image')
+                ImageColumn::make('profile_photo_url')
+                    ->label('Profile Photo')
                     ->circular()
-                    ->disk('public')
-                    ->visibility('public')
                     ->checkFileExistence(false)
-                    ->defaultImageUrl('https://via.placeholder.com/40'),
+                    ->defaultImageUrl(url('/images/placeholder-avatar.png')),
                 TextColumn::make('full_name')
                     ->label('Name')
                     ->searchable(['first_name', 'last_name', 'middle_name'])
@@ -89,6 +88,12 @@ class OrphansTable
                     ->state(fn ($record) => $record->birth_date?->age)
                     ->sortable('birth_date')
                     ->alignCenter(),
+                TextColumn::make('sponsorship_status')
+                    ->label('Sponsorship')
+                    ->state(fn (Orphan $record): string => $record->hasActiveSponsorship() ? 'Sponsored' : 'Not Sponsored')
+                    ->badge()
+                    ->color(fn (string $state): string => $state === 'Sponsored' ? 'success' : 'gray')
+                    ->toggleable(),
                 TextColumn::make('deceased.full_name')
                     ->label('Parent')
                     ->searchable()
@@ -294,6 +299,14 @@ class OrphansTable
                             }
                         }),
 
+                    // Orphan Dossier Report Action
+                    Action::make('downloadDossier')
+                        ->label('Download Dossier')
+                        ->icon('heroicon-o-document-arrow-down')
+                        ->color('secondary')
+                        ->url(fn (Orphan $record): string => route('orphans.report.download', ['orphan' => $record]))
+                        ->openUrlInNewTab(),
+
                     // ID Card Actions
                     GenerateIdCardAction::make(),
 
@@ -358,13 +371,42 @@ class OrphansTable
                                 ->send();
                         }),
 
-                    DeleteAction::make(),
+                    DeleteAction::make()
+                        ->visible(fn (Orphan $record): bool => $record->status !== OrphanStatus::ARCHIVED && $record->is_eligible && ! $record->hasHistoricalRecords()),
                 ]),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make(),
-                    ForceDeleteBulkAction::make(),
+                    DeleteBulkAction::make()
+                        ->action(function (\Illuminate\Database\Eloquent\Collection $records) {
+                            $deletable = $records->filter(fn (Orphan $record) => $record->status !== OrphanStatus::ARCHIVED && $record->is_eligible && ! $record->hasHistoricalRecords());
+                            $skipped = $records->count() - $deletable->count();
+
+                            $deletable->each->delete();
+
+                            if ($skipped > 0) {
+                                Notification::make()
+                                    ->warning()
+                                    ->title('Bulk Delete Warning')
+                                    ->body("{$skipped} archived or historical orphan record(s) were protected from deletion.")
+                                    ->send();
+                            }
+                        }),
+                    ForceDeleteBulkAction::make()
+                        ->action(function (\Illuminate\Database\Eloquent\Collection $records) {
+                            $deletable = $records->filter(fn (Orphan $record) => $record->status !== OrphanStatus::ARCHIVED && $record->is_eligible && ! $record->hasHistoricalRecords());
+                            $skipped = $records->count() - $deletable->count();
+
+                            $deletable->each->forceDelete();
+
+                            if ($skipped > 0) {
+                                Notification::make()
+                                    ->warning()
+                                    ->title('Bulk Force Delete Warning')
+                                    ->body("{$skipped} archived or historical orphan record(s) were protected from force deletion.")
+                                    ->send();
+                            }
+                        }),
                     RestoreBulkAction::make(),
                 ]),
             ]);

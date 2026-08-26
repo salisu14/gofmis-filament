@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasProfilePhoto;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -12,7 +14,7 @@ use Illuminate\Support\Facades\Storage;
 
 class Widow extends Model
 {
-    use HasUuids, SoftDeletes;
+    use HasProfilePhoto, HasUuids, SoftDeletes;
 
     protected $table = 'widows';
 
@@ -31,12 +33,14 @@ class Widow extends Model
         'child_sequence',
         'full_name',
         'married_at',
+        'divorced_at',
     ];
 
     protected $casts = [
         'is_eligible' => 'boolean',
         'is_married' => 'boolean',
         'married_at' => 'datetime',
+        'divorced_at' => 'datetime',
         'skills' => 'array',
     ];
 
@@ -49,31 +53,142 @@ class Widow extends Model
         $this->attributes['picture_url'] = $value;
     }
 
+    public function getDisplayNameAttribute(): string
+    {
+        if (! empty($this->full_name)) {
+            return $this->full_name;
+        }
+
+        $name = trim(implode(' ', array_filter([
+            $this->first_name,
+            $this->middle_name,
+            $this->last_name,
+        ])));
+
+        return $name !== '' ? $name : ($this->reg_no ?? 'Widow #'.$this->id);
+    }
+
     /**
      * Mark widow as married and revoke eligibility.
      */
-    public function markAsMarried(?string $notes = null): void
+    public function markAsMarried(?string $notes = null, ?string $marriedAt = null): void
     {
+        $date = $marriedAt ? \Illuminate\Support\Carbon::parse($marriedAt) : now();
+
+        if ($date->isFuture()) {
+            throw new \InvalidArgumentException('Remarriage date cannot be in the future.');
+        }
+
+        if ($this->deceased?->date_of_death && $date->lt(\Illuminate\Support\Carbon::parse($this->deceased->date_of_death))) {
+            throw new \InvalidArgumentException('Remarriage date cannot be earlier than the deceased husband\'s date of death.');
+        }
+
         $this->update([
             'is_married' => true,
-            'married_at' => now(),
+            'married_at' => $date,
             'is_eligible' => false,
         ]);
 
-        // Deactivate ID cards
-        $this->idCards()->where('status', 'active')->update(['status' => 'inactive']);
-
-        // Cancel pending intervention requests
-        $this->interventionRequests()
-            ->whereIn('status', ['pending', 'draft'])
-            ->update(['status' => 'cancelled', 'notes' => 'Beneficiary got married']);
+        // Revoke active ID cards
+        $this->idCards()
+            ->where('status', 'active')
+            ->update([
+                'status' => 'revoked',
+                'revocation_reason' => 'Beneficiary remarried',
+            ]);
 
         // Log the event
         activity()
             ->performedOn($this)
             ->causedBy(auth()->user())
-            ->withProperties(['notes' => $notes])
-            ->log('widow_marked_married');
+            ->withProperties([
+                'notes' => $notes,
+                'married_at' => $this->married_at?->toIso8601String(),
+                'event_type' => 'REMARRIED',
+            ])
+            ->log('REMARRIED');
+    }
+
+    /**
+     * Reactivate widow relationship under original deceased after divorce.
+     */
+    public function reactivateAfterDivorce(?string $notes = null, ?string $divorcedAt = null): void
+    {
+        $date = $divorcedAt ? \Illuminate\Support\Carbon::parse($divorcedAt) : now();
+
+        if ($date->isFuture()) {
+            throw new \InvalidArgumentException('Divorce / reactivation date cannot be in the future.');
+        }
+
+        if ($this->married_at && $date->lt(\Illuminate\Support\Carbon::parse($this->married_at))) {
+            throw new \InvalidArgumentException('Divorce date cannot be earlier than the recorded remarriage date.');
+        }
+
+        // Remove marital status restriction
+        $this->update([
+            'is_married' => false,
+            'divorced_at' => $date,
+        ]);
+
+        // Recalculate eligibility based on remaining domain rules (preserves independent blockers)
+        $this->recalculateEligibility();
+
+        // Log the event
+        activity()
+            ->performedOn($this)
+            ->causedBy(auth()->user())
+            ->withProperties([
+                'notes' => $notes,
+                'divorced_at' => $this->divorced_at?->toIso8601String(),
+                'event_type' => 'REACTIVATED_AFTER_DIVORCE',
+                'is_eligible' => $this->is_eligible,
+            ])
+            ->log('REACTIVATED_AFTER_DIVORCE');
+    }
+
+    /**
+     * Recalculate overall eligibility based on domain business rules.
+     * Preserves independent disqualifying conditions (e.g. denied loan reapplication after write-off).
+     */
+    public function recalculateEligibility(): bool
+    {
+        // Marital status is a strict disqualifier
+        if ($this->is_married) {
+            $this->update(['is_eligible' => false]);
+
+            return false;
+        }
+
+        // Check independent loan write-off restriction
+        $hasDeniedWriteOff = $this->widowLoans()
+            ->where('status', \App\Enums\WidowLoanStatus::WRITTEN_OFF->value)
+            ->where('reapplication_allowed', false)
+            ->exists();
+
+        if ($hasDeniedWriteOff) {
+            $this->update(['is_eligible' => false]);
+
+            return false;
+        }
+
+        $this->update(['is_eligible' => true]);
+
+        return true;
+    }
+
+    public function isOperationalBeneficiary(): bool
+    {
+        return ! $this->is_married && ! $this->trashed();
+    }
+
+    public function isEligibleForSupport(): bool
+    {
+        return $this->isOperationalBeneficiary() && (bool) $this->is_eligible;
+    }
+
+    public function getVulnerabilityStatusAttribute(): ?\App\Enums\VulnerabilityStatus
+    {
+        return $this->deceased?->vulnerability_status;
     }
 
     public function idCards(): MorphMany
@@ -148,6 +263,16 @@ class Widow extends Model
         return true;
     }
 
+    public function scopeOperational(Builder $query): Builder
+    {
+        return $query->where('is_married', false);
+    }
+
+    public function scopeHistorical(Builder $query): Builder
+    {
+        return $query->where('is_married', true);
+    }
+
     protected static function booted(): void
     {
         parent::booted();
@@ -177,6 +302,24 @@ class Widow extends Model
                 $model->middle_name,
                 $model->last_name,
             ])));
+        });
+
+        static::created(function (Widow $widow) {
+            $existingCount = static::withoutGlobalScopes()
+                ->where('nin', $widow->nin)
+                ->where('id', '!=', $widow->id)
+                ->count();
+
+            $eventType = $existingCount > 0 ? 'NEW_WIDOW_HOUSEHOLD_CREATED' : 'REGISTERED_AS_WIDOW';
+
+            activity()
+                ->performedOn($widow)
+                ->causedBy(auth()->user())
+                ->withProperties([
+                    'deceased_id' => $widow->deceased_id,
+                    'event_type' => $eventType,
+                ])
+                ->log($eventType);
         });
 
         static::updating(function ($model) {

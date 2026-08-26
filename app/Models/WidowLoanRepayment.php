@@ -57,22 +57,64 @@ class WidowLoanRepayment extends Model
         return $this->belongsTo(Transaction::class);
     }
 
+    public function getTotalPaidUpToThisAttribute(): float
+    {
+        if (!$this->widowLoan) {
+            return 0;
+        }
+
+        return (float) $this->widowLoan->repayments()
+            ->where(function ($query) {
+                $query->where('paid_at', '<', $this->paid_at)
+                      ->orWhere(function ($q) {
+                          $q->where('paid_at', $this->paid_at)
+                            ->where(function ($q2) {
+                                $q2->where('created_at', '<=', $this->created_at)
+                                   ->orWhere('id', $this->id);
+                            });
+                      });
+            })
+            ->sum('amount');
+    }
+
     public function getBalanceAfterAttribute(): float
     {
-        // Safety check in case relationship isn't loaded
         if (!$this->widowLoan) {
             return 0;
         }
 
         $totalPayable = (float) $this->widowLoan->total_payable;
+        return max(0, $totalPayable - $this->total_paid_up_to_this);
+    }
 
-        // Sum all repayments made up to and including this one's date/time
-        $totalPaidUpToThis = $this->widowLoan->repayments()
-            ->where('paid_at', '<=', $this->paid_at)
-            ->where('created_at', '<=', $this->created_at)
-            ->sum('amount');
+    public function getInstallmentContext(): array
+    {
+        if (!$this->widowLoan) {
+            return ['n' => 1, 'm' => 1];
+        }
 
-        return max(0, $totalPayable - (float) $totalPaidUpToThis);
+        $schedules = $this->widowLoan->schedules()
+            ->whereNull('superseded_at')
+            ->orderBy('installment_number')
+            ->get();
+
+        $m = max(1, $schedules->count());
+        $totalPaidUpToThis = $this->total_paid_up_to_this;
+
+        $requiredTotal = 0;
+        $n = 1;
+
+        foreach ($schedules as $schedule) {
+            $requiredTotal += (float) $schedule->amount_due;
+            $n = $schedule->installment_number;
+            // If the total paid so far is less than or equal to the required total for THIS schedule,
+            // then THIS is the active installment we are paying towards.
+            if ($totalPaidUpToThis <= $requiredTotal) {
+                break;
+            }
+        }
+
+        return ['n' => min($n, $m), 'm' => $m];
     }
 
     protected static function booted(): void
@@ -86,5 +128,29 @@ class WidowLoanRepayment extends Model
         static::deleted(function (WidowLoanRepayment $repayment) {
             $repayment->widowLoan->refreshBalance();
         });
+
+        // Prevent modification of existing/posted repayments
+        static::updating(function (WidowLoanRepayment $repayment) {
+            if ((!app()->runningInConsole() || app()->runningUnitTests()) && !request()->routeIs('*.transactions.*')) {
+                throw new \RuntimeException("Posted financial repayments cannot be edited.");
+            }
+        });
+
+        static::deleting(function (WidowLoanRepayment $repayment) {
+            if ((!app()->runningInConsole() || app()->runningUnitTests()) && !request()->routeIs('*.transactions.*')) {
+                throw new \RuntimeException("Posted financial repayments cannot be deleted.");
+            }
+        });
+    }
+
+    /**
+     * Narrowly scoped domain method to attach a system transaction reference
+     * without bypassing the general financial immutability constraints.
+     */
+    public function attachTransactionReference($transactionId): self
+    {
+        $this->updateQuietly(['transaction_id' => $transactionId]);
+        
+        return $this;
     }
 }

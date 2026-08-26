@@ -29,7 +29,17 @@ class MfaSettings extends Component
     {
         $user = Auth::user();
         if (! $user) {
-            return redirect()->to('/admin/login');
+            $intended = session()->get('url.intended', '');
+            $referer = request()->header('Referer', '');
+
+            if (str_contains($intended, '/coordinator') || str_contains($referer, '/coordinator')) {
+                return redirect()->route('filament.coordinator.auth.login');
+            }
+            if (str_contains($intended, '/imprest') || str_contains($referer, '/imprest')) {
+                return redirect()->route('filament.imprest.auth.login');
+            }
+
+            return redirect()->route('filament.admin.auth.login');
         }
 
         // If user is not verified but requires MFA or has it enabled, redirect to challenge

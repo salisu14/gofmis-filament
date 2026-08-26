@@ -64,23 +64,25 @@ class ReconcileWidowLoans extends Command
                 $issues[] = 'Total paid (₦'.number_format($loan->total_paid, 2).') exceeds total payable (₦'.number_format($loan->total_payable, 2).')';
             }
 
-            // 5. Schedule totals inconsistent with loan obligation
-            $currentMaxVersion = $loan->schedules()->max('schedule_version') ?: 1;
+            // 5. Schedule totals inconsistent with loan obligation (only for disbursed or completed loans)
+            if (in_array($loan->status, [WidowLoanStatus::DISBURSED, WidowLoanStatus::COMPLETED, WidowLoanStatus::DEFAULTED, WidowLoanStatus::WRITTEN_OFF], true)) {
+                $currentMaxVersion = $loan->schedules()->max('schedule_version') ?: 1;
 
-            // Sum of current version schedules + paid schedules from superseded versions
-            $currentSchedulesSum = (float) $loan->schedules()
-                ->where('schedule_version', $currentMaxVersion)
-                ->sum('amount_due');
+                // Sum of current version schedules + paid schedules from superseded versions
+                $currentSchedulesSum = (float) $loan->schedules()
+                    ->where('schedule_version', $currentMaxVersion)
+                    ->sum('amount_due');
 
-            $paidSupersededSum = (float) $loan->schedules()
-                ->where('schedule_version', '<', $currentMaxVersion)
-                ->where('is_paid', true)
-                ->sum('amount_due');
+                $paidSupersededSum = (float) $loan->schedules()
+                    ->where('schedule_version', '<', $currentMaxVersion)
+                    ->where('is_paid', true)
+                    ->sum('amount_due');
 
-            $expectedTotal = $currentSchedulesSum + $paidSupersededSum;
+                $expectedTotal = $currentSchedulesSum + $paidSupersededSum;
 
-            if (abs($expectedTotal - (float) $loan->total_payable) > 0.05) {
-                $issues[] = 'Schedule totals (₦'.number_format($expectedTotal, 2).') inconsistent with total payable (₦'.number_format($loan->total_payable, 2).')';
+                if (abs($expectedTotal - (float) $loan->total_payable) > 0.05) {
+                    $issues[] = 'Schedule totals (₦'.number_format($expectedTotal, 2).') inconsistent with total payable (₦'.number_format($loan->total_payable, 2).')';
+                }
             }
 
             // 6. Paid schedule mismatches

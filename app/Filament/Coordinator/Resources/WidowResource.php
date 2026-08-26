@@ -38,6 +38,11 @@ class WidowResource extends Resource
     /**
      * Zone Scoping Logic
      */
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()->operational();
+    }
+
     protected static function applyZoneScope(Builder $query, string $zoneId): Builder
     {
         return $query->whereHas('deceased', fn (Builder $q) => $q->where('zone_id', $zoneId));
@@ -121,7 +126,39 @@ class WidowResource extends Resource
                         Grid::make(3)->schema([
                             Forms\Components\TextInput::make('nin')
                                 ->label('NIN')
-                                ->unique(ignoreRecord: true)
+                                ->live(onBlur: true)
+                                ->unique(table: 'widows', column: 'nin', ignoreRecord: true, modifyRuleUsing: fn ($rule, $get) => $rule->where('deceased_id', $get('deceased_id')))
+                                ->validationMessages([
+                                    'unique' => 'This widow (NIN) is already registered under the selected deceased household.',
+                                ])
+                                ->helperText(function ($get, $state) {
+                                    if (! $state || strlen($state) < 5) {
+                                        return '11-digit identity number';
+                                    }
+
+                                    $query = Widow::where('nin', $state);
+                                    $user = auth()->user();
+
+                                    if ($user && ! $user->hasAnyRole(['admin', 'super_admin'])) {
+                                        $zoneId = $user->coordinatedZone?->id;
+
+                                        if ($zoneId) {
+                                            $query->whereHas('deceased', fn ($q) => $q->where('zone_id', $zoneId));
+                                        } else {
+                                            return '11-digit identity number';
+                                        }
+                                    }
+
+                                    $existing = $query->with('deceased')->get();
+
+                                    if ($existing->isEmpty()) {
+                                        return '11-digit identity number';
+                                    }
+
+                                    $info = $existing->map(fn ($w) => "{$w->reg_no} (".($w->deceased?->full_name ?: 'Deceased #'.$w->deceased_id).')')->implode(', ');
+
+                                    return "⚠️ Notice: This woman already has a widow record under another deceased household [{$info}]. Creating this record will establish a separate widow history for the selected deceased.";
+                                })
                                 ->placeholder('11-digit identity number')
                                 ->maxLength(11)
                                 ->required(),
@@ -193,6 +230,11 @@ class WidowResource extends Resource
             ]);
     }
 
+    public static function infolist(Schema $schema): Schema
+    {
+        return \App\Filament\Resources\Widows\Schemas\WidowInfolist::configure($schema);
+    }
+
     /* -------------------------------------------------------------------------
      | TABLE CONFIGURATION
      ------------------------------------------------------------------------- */
@@ -201,11 +243,9 @@ class WidowResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\ImageColumn::make('picture_url')
-                    ->label('')
+                Tables\Columns\ImageColumn::make('profile_photo_url')
+                    ->label('Profile Photo')
                     ->circular()
-                    ->disk('public')
-                    ->visibility('public')
                     ->checkFileExistence(false),
 
                 Tables\Columns\TextColumn::make('full_name')
@@ -256,36 +296,99 @@ class WidowResource extends Resource
                 EditAction::make(),
 
                 Action::make('markAsMarried')
-                    ->label('Mark Married')
+                    ->label('Mark as Remarried')
                     ->icon('heroicon-m-heart')
                     ->color('danger')
                     ->requiresConfirmation()
-                    ->modalHeading('Mark as Married')
-                    ->modalDescription('This will revoke all benefits and eligibility. This action cannot be undone.')
-                    ->modalSubmitActionLabel('Yes, Mark as Married')
+                    ->modalHeading('Mark as Remarried')
+                    ->modalDescription('This will mark the widow relationship under this household as remarried and revoke active benefits. All historical loans, repayments, and records remain preserved.')
+                    ->modalSubmitActionLabel('Yes, Mark as Remarried')
                     ->visible(fn ($record) => ! $record->is_married)
                     ->schema([
                         DatePicker::make('married_at')
-                            ->label('Marriage Date')
+                            ->label('Remarriage Date')
                             ->default(now())
-                            ->required(),
+                            ->maxDate(now())
+                            ->required()
+                            ->rule(function ($record) {
+                                return function (string $attribute, $value, \Closure $fail) use ($record) {
+                                    $date = \Illuminate\Support\Carbon::parse($value);
+
+                                    if ($date->isFuture()) {
+                                        $fail('Remarriage date cannot be in the future.');
+
+                                        return;
+                                    }
+
+                                    $dateOfDeath = $record->deceased?->date_of_death;
+
+                                    if ($dateOfDeath && $date->lt(\Illuminate\Support\Carbon::parse($dateOfDeath))) {
+                                        $fail('Remarriage date cannot be earlier than the deceased husband\'s date of death ('.\Illuminate\Support\Carbon::parse($dateOfDeath)->format('d M, Y').').');
+                                    }
+                                };
+                            }),
                         Textarea::make('notes')
                             ->label('Notes')
-                            ->placeholder('Optional notes about the marriage...')
+                            ->placeholder('Optional notes about the remarriage...')
                             ->rows(2),
                     ])
                     ->action(function ($record, array $data) {
-                        $record->update([
-                            'is_married' => true,
-                            'married_at' => $data['married_at'] ?? now(),
-                        ]);
-
-                        // Call the model method to handle side effects
-                        $record->markAsMarried($data['notes'] ?? null);
+                        $record->markAsMarried(
+                            notes: $data['notes'] ?? null,
+                            marriedAt: $data['married_at'] ?? null
+                        );
 
                         Notification::make()
-                            ->title('Marked as Married')
-                            ->body("{$record->full_name} has been marked as married and removed from benefits.")
+                            ->title('Marked as Remarried')
+                            ->body("{$record->full_name} has been marked as remarried.")
+                            ->success()
+                            ->send();
+                    }),
+
+                Action::make('reactivateAfterDivorce')
+                    ->label('Reactivate After Divorce')
+                    ->icon('heroicon-m-arrow-path')
+                    ->color('success')
+                    ->requiresConfirmation()
+                    ->modalHeading('Reactivate Widow After Divorce')
+                    ->modalDescription('This action should only be used when the later marriage ended in divorce. If the later husband died, do not reactivate this record; register/create the widow under the later deceased husband\'s household instead.')
+                    ->modalSubmitActionLabel('Yes, Reactivate')
+                    ->visible(fn ($record) => (bool) $record->is_married)
+                    ->schema([
+                        DatePicker::make('divorced_at')
+                            ->label('Divorce / Reactivation Date')
+                            ->default(now())
+                            ->maxDate(now())
+                            ->required()
+                            ->rule(function ($record) {
+                                return function (string $attribute, $value, \Closure $fail) use ($record) {
+                                    $date = \Illuminate\Support\Carbon::parse($value);
+
+                                    if ($date->isFuture()) {
+                                        $fail('Divorce / reactivation date cannot be in the future.');
+
+                                        return;
+                                    }
+
+                                    if ($record->married_at && $date->lt(\Illuminate\Support\Carbon::parse($record->married_at))) {
+                                        $fail('Divorce date cannot be earlier than the recorded remarriage date ('.\Illuminate\Support\Carbon::parse($record->married_at)->format('d M, Y').').');
+                                    }
+                                };
+                            }),
+                        Textarea::make('notes')
+                            ->label('Notes')
+                            ->placeholder('Optional notes about the divorce/reactivation...')
+                            ->rows(2),
+                    ])
+                    ->action(function ($record, array $data) {
+                        $record->reactivateAfterDivorce(
+                            notes: $data['notes'] ?? null,
+                            divorcedAt: $data['divorced_at'] ?? null
+                        );
+
+                        Notification::make()
+                            ->title('Widow Reactivated')
+                            ->body("{$record->full_name} has been reactivated following divorce.")
                             ->success()
                             ->send();
                     }),
@@ -327,5 +430,13 @@ class WidowResource extends Resource
             'edit' => \App\Filament\Coordinator\Resources\WidowResource\Pages\EditWidow::route('/{record}/edit'),
             'view' => \App\Filament\Coordinator\Resources\WidowResource\Pages\ViewWidow::route('/{record}'),
         ];
+    }
+
+    public static function getRecordRouteBindingEloquentQuery(): Builder
+    {
+        return static::getModel()::query()
+            ->withoutGlobalScopes([
+                SoftDeletingScope::class,
+            ]);
     }
 }

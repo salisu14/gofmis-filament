@@ -12,6 +12,7 @@ class ProjectService
 {
     /**
      * Approve a project
+     *
      * @throws \Throwable
      */
     public function approveProject(Project $project): void
@@ -36,6 +37,7 @@ class ProjectService
 
     /**
      * Start project work
+     *
      * @throws \Throwable
      */
     public function startProject(Project $project): void
@@ -53,6 +55,7 @@ class ProjectService
 
     /**
      * Complete project
+     *
      * @throws \Throwable
      */
     public function completeProject(Project $project): void
@@ -81,6 +84,7 @@ class ProjectService
 
     /**
      * Put project on hold
+     *
      * @throws \Throwable
      */
     public function holdProject(Project $project, string $reason): void
@@ -89,7 +93,7 @@ class ProjectService
 
             $project->update([
                 'status' => ProjectStatus::ON_HOLD,
-                'notes' => trim($project->notes . "\n\n[HOLD " . now()->format('Y-m-d') . "] " . $reason),
+                'notes' => trim($project->notes."\n\n[HOLD ".now()->format('Y-m-d').'] '.$reason),
             ]);
         });
     }
@@ -119,6 +123,7 @@ class ProjectService
 
         $data = collect($defaults)->map(function ($milestone, $index) use ($project) {
             return [
+                'id' => (string) \Illuminate\Support\Str::uuid(),
                 'project_id' => $project->id,
                 'title' => $milestone['title'],
                 'description' => $milestone['description'],
@@ -176,6 +181,7 @@ class ProjectService
 
     /**
      * Recalculate budgets (optimized)
+     *
      * @throws \Throwable
      */
     public function recalculateBudget(Project $project): void

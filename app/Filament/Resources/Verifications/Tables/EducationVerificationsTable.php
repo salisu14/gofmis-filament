@@ -2,13 +2,11 @@
 
 namespace App\Filament\Resources\Verifications\Tables;
 
-use App\Models\InterventionRequest;
-use Filament\Actions\Action;
-use Filament\Actions\ActionGroup;
-use Filament\Actions\EditAction;
-use Filament\Forms\Components\Textarea;
+use App\Filament\Actions\ApproveInterventionRequestAction;
+use App\Filament\Actions\RejectInterventionRequestAction;
+use App\Filament\Actions\StartInterventionRequestReviewAction;
+use App\Filament\Actions\VerifyEducationRequestAction;
 use Filament\Actions\ViewAction;
-use Filament\Notifications\Notification;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
@@ -24,7 +22,7 @@ class EducationVerificationsTable
                     ->searchable()
                     ->sortable()
                     ->weight('bold')
-                    ->description(fn($record) => "Reg: {$record->orphan?->reg_no}"),
+                    ->description(fn ($record) => "Reg: {$record->orphan?->reg_no}"),
 
                 TextColumn::make('orphan.deceased.zone.name')
                     ->label('Zone')
@@ -48,6 +46,7 @@ class EducationVerificationsTable
                         'approved' => 'success',
                         'under_review' => 'info',
                         'rejected' => 'danger',
+                        'fulfilled' => 'success',
                         default => 'warning',
                     }),
 
@@ -80,56 +79,10 @@ class EducationVerificationsTable
             ])
             ->recordActions([
                 ViewAction::make(),
-
-                EditAction::make()
-                    ->label('Verify')
-                    ->icon('heroicon-m-check-badge')
-                    ->color('primary')
-                    ->visible(fn($record) => in_array($record->status, ['pending', 'under_review'], true)),
-
-                ActionGroup::make([
-                    Action::make('quick_approve')
-                        ->label('Quick Approve')
-                        ->icon('heroicon-m-check-circle')
-                        ->color('success')
-                        ->requiresConfirmation()
-                        ->modalHeading('Confirm Quick Approval')
-                        ->modalDescription(fn($record) => "Approve education request for {$record->orphan?->full_name} and skip detailed audit?")
-                        ->visible(fn($record) => in_array($record->status, ['pending', 'under_review']))
-                        ->action(function (InterventionRequest $record) {
-                            $record->markVerified(auth()->id());
-                            $record->approveRequest(auth()->id());
-
-                            Notification::make()
-                                ->title('Request Approved')
-                                ->body("The request for {$record->orphan?->full_name} has been marked as verified.")
-                                ->success()
-                                ->send();
-                        }),
-
-                    Action::make('quick_reject')
-                        ->label('Quick Reject')
-                        ->icon('heroicon-m-x-circle')
-                        ->color('danger')
-                        ->requiresConfirmation()
-                        ->modalHeading('Confirm Quick Rejection')
-                        ->schema([
-                            Textarea::make('rejection_reason')
-                                ->label('Reason')
-                                ->required()
-                                ->rows(3),
-                        ])
-                        ->visible(fn($record) => in_array($record->status, ['pending', 'under_review']))
-                        ->action(function (InterventionRequest $record, array $data) {
-                            $record->rejectRequest($data['rejection_reason'], auth()->id());
-
-                            Notification::make()
-                                ->title('Request Rejected')
-                                ->body("The request for {$record->orphan?->full_name} has been declined.")
-                                ->danger()
-                                ->send();
-                        }),
-                ]),
+                StartInterventionRequestReviewAction::make(),
+                VerifyEducationRequestAction::make(),
+                ApproveInterventionRequestAction::make(),
+                RejectInterventionRequestAction::make(),
             ])
             ->defaultSort('request_date', 'desc');
     }

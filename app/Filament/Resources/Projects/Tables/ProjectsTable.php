@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Projects\Tables;
 use App\Enums\ProjectStatus;
 use App\Enums\ProjectType;
 use App\Filament\Resources\ProjectExpenses\ProjectExpenseResource;
+use App\Models\Project;
 use App\Services\ProjectService;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
@@ -14,6 +15,7 @@ use Filament\Actions\EditAction;
 use Filament\Actions\ForceDeleteBulkAction;
 use Filament\Actions\RestoreBulkAction;
 use Filament\Actions\ViewAction;
+use Filament\Forms\Components\Textarea;
 use Filament\Notifications\Notification;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
@@ -31,12 +33,12 @@ class ProjectsTable
 
                 TextColumn::make('type')
                     ->badge()
-                    ->formatStateUsing(fn($state) => $state->label())
-                    ->icon(fn($state) => $state->icon()),
+                    ->formatStateUsing(fn ($state) => $state->label())
+                    ->icon(fn ($state) => $state->icon()),
 
                 TextColumn::make('status')
                     ->badge()
-                    ->color(fn($state) => $state->color()),
+                    ->color(fn ($state) => $state->color()),
 
                 TextColumn::make('zone.name')
                     ->searchable()
@@ -54,7 +56,7 @@ class ProjectsTable
                     ->label('Progress')
                     ->suffix('%')
                     ->badge()
-                    ->color(fn($state) => $state >= 100 ? 'success' : 'warning'),
+                    ->color(fn ($state) => $state >= 100 ? 'success' : 'warning'),
 
                 TextColumn::make('expected_completion_date')
                     ->date('M d, Y')
@@ -66,11 +68,11 @@ class ProjectsTable
             ->filters([
                 SelectFilter::make('type')
                     ->options(collect(ProjectType::cases())->mapWithKeys(
-                        fn($type) => [$type->value => $type->label()]
+                        fn ($type) => [$type->value => $type->label()]
                     )),
                 SelectFilter::make('status')
                     ->options(collect(ProjectStatus::cases())->mapWithKeys(
-                        fn($status) => [$status->value => $status->label()]
+                        fn ($status) => [$status->value => $status->label()]
                     )),
                 SelectFilter::make('zone_id')
                     ->label('Zone')
@@ -84,7 +86,7 @@ class ProjectsTable
                     Action::make('expenses')
                         ->label('Expenses')
                         ->icon('heroicon-m-banknotes')
-                        ->url(fn($record) => ProjectExpenseResource::getUrl('index', [
+                        ->url(fn (Project $record) => ProjectExpenseResource::getUrl('index', [
                             'tableFilters[project_id][value]' => $record->id,
                         ])),
 
@@ -92,68 +94,70 @@ class ProjectsTable
                         ->label('Approve')
                         ->icon('heroicon-m-check')
                         ->color('success')
-                        ->visible(fn($record) => $record->status === ProjectStatus::PLANNING)
+                        ->visible(fn (Project $record): bool => $record->status === ProjectStatus::PLANNING)
                         ->requiresConfirmation()
-                        ->action(function (ProjectService $service) {
-                            $service->approveProject($this->record);
+                        ->action(function (Project $record, ProjectService $service): void {
+                            $service->approveProject($record);
 
                             Notification::make()
                                 ->title('Project approved')
                                 ->body('Default milestones have been created.')
                                 ->success()
                                 ->send();
-
-                            $this->redirect($this->getResource()::getUrl('edit', ['record' => $this->record]));
                         }),
 
                     Action::make('start')
                         ->label('Start Work')
                         ->icon('heroicon-m-play')
                         ->color('warning')
-                        ->visible(fn($record) => $record->status === ProjectStatus::APPROVED)
+                        ->visible(fn (Project $record): bool => $record->status === ProjectStatus::APPROVED)
                         ->requiresConfirmation()
-                        ->action(function (ProjectService $service) {
-                            $service->startProject($this->record);
+                        ->action(function (Project $record, ProjectService $service): void {
+                            $service->startProject($record);
 
                             Notification::make()->title('Project started')->success()->send();
-
-                            $this->redirect($this->getResource()::getUrl('edit', ['record' => $this->record]));
                         }),
 
                     Action::make('complete')
                         ->label('Mark Complete')
                         ->icon('heroicon-m-flag')
                         ->color('success')
-                        ->visible(fn($record) => $record->status === ProjectStatus::IN_PROGRESS)
+                        ->visible(fn (Project $record): bool => $record->status === ProjectStatus::IN_PROGRESS)
                         ->requiresConfirmation()
-                        ->action(function (ProjectService $service) {
-                            $service->completeProject($this->record);
+                        ->action(function (Project $record, ProjectService $service): void {
+                            $service->completeProject($record);
 
                             Notification::make()->title('Project completed')->success()->send();
-
-                            // ✅ FIXED
-                            $this->redirect($this->getResource()::getUrl('edit', ['record' => $this->record]));
                         }),
 
                     Action::make('hold')
                         ->label('Place on Hold')
                         ->icon('heroicon-m-pause')
                         ->color('danger')
-                        ->visible(fn($record) => $record->status === ProjectStatus::IN_PROGRESS)
+                        ->visible(fn (Project $record): bool => $record->status === ProjectStatus::IN_PROGRESS)
                         ->schema([
-                            \Filament\Forms\Components\Textarea::make('reason')
+                            Textarea::make('reason')
                                 ->required()
                                 ->label('Reason for hold'),
                         ])
-                        ->action(function (array $data, ProjectService $service) {
-                            $service->holdProject($this->record, $data['reason']);
+                        ->action(function (Project $record, array $data, ProjectService $service): void {
+                            $service->holdProject($record, $data['reason']);
 
                             Notification::make()->title('Project placed on hold')->warning()->send();
-
-                            // ✅ FIXED
-                            $this->redirect($this->getResource()::getUrl('edit', ['record' => $this->record]));
                         }),
-                ])
+
+                    Action::make('resume')
+                        ->label('Resume Project')
+                        ->icon('heroicon-m-play-pause')
+                        ->color('info')
+                        ->visible(fn (Project $record): bool => $record->status === ProjectStatus::ON_HOLD)
+                        ->requiresConfirmation()
+                        ->action(function (Project $record, ProjectService $service): void {
+                            $service->resumeProject($record);
+
+                            Notification::make()->title('Project resumed')->success()->send();
+                        }),
+                ]),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

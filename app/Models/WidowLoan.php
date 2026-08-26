@@ -34,6 +34,55 @@ class WidowLoan extends Model
             }
         });
 
+        static::updating(function ($loan) {
+            $isCompleted = in_array($loan->getOriginal('status'), [
+                WidowLoanStatus::COMPLETED,
+                WidowLoanStatus::WRITTEN_OFF,
+            ]);
+
+            // If it's already completed/settled, prevent standard edits unless it's system updates
+            if ($isCompleted && !app()->runningInConsole() && !request()->routeIs('*.transactions.*')) {
+                // Actually, the requirement says "ordinary Edit action must not be available".
+                // We'll enforce that via Filament / Policies mostly, but we can also block it here.
+                // However, we don't want to break background jobs.
+            }
+
+            // Lock financially material fields if disbursed or has repayments
+            $hasFinancialActivity = $loan->getOriginal('status') === WidowLoanStatus::DISBURSED 
+                || $loan->repayments()->exists();
+
+            if ($hasFinancialActivity) {
+                $financialFields = [
+                    'widow_id', 
+                    'principal_amount', 
+                    'total_payable', 
+                    'duration_months', 
+                    'repayment_frequency', 
+                    'bank_account_id', 
+                    'disbursement_bank_id', 
+                    'repayment_bank_id'
+                ];
+
+                foreach ($financialFields as $field) {
+                    if ($loan->isDirty($field)) {
+                        throw new \RuntimeException("Cannot modify financial term '{$field}' on a loan that has already been disbursed or has financial activity.");
+                    }
+                }
+            }
+        });
+
+        static::deleting(function ($loan) {
+            $hasFinancialActivity = in_array($loan->getOriginal('status'), [
+                \App\Enums\WidowLoanStatus::DISBURSED,
+                \App\Enums\WidowLoanStatus::COMPLETED,
+                \App\Enums\WidowLoanStatus::WRITTEN_OFF,
+            ]) || $loan->repayments()->exists() || $loan->schedules()->exists();
+
+            if ($hasFinancialActivity) {
+                throw new \RuntimeException("Cannot delete a loan that has already been financially active or scheduled.");
+            }
+        });
+
         // -------------------------------------------------------
         // Zone-based global scope — coordinators only see loans
         // for widows that belong to their own zone.
@@ -264,7 +313,8 @@ class WidowLoan extends Model
      */
     public function canSubmitForApproval(): bool
     {
-        return $this->status === WidowLoanStatus::DRAFT && ! $this->isAwaitingApproval();
+        return ($this->status === WidowLoanStatus::DRAFT || ($this->status === WidowLoanStatus::PENDING && ! $this->approvalFlow))
+            && ! $this->isAwaitingApproval();
     }
 
     /**

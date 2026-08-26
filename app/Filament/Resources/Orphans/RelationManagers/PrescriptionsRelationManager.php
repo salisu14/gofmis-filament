@@ -62,7 +62,32 @@ class PrescriptionsRelationManager extends RelationManager
                 CreateAction::make()
                     ->label('New Prescription')
                     ->icon('heroicon-m-plus')
-                    ->modalWidth('4xl'),
+                    ->modalWidth('4xl')
+                    ->using(function (array $data, RelationManager $livewire): \App\Models\Prescription {
+                        $orphan = $livewire->getOwnerRecord();
+                        $medications = $data['medications'] ?? [];
+                        unset($data['medications']);
+
+                        $data['user_id'] = $data['user_id'] ?? auth()->id();
+                        $data['prescription_date'] = $data['prescription_date'] ?? now()->toDateString();
+                        $data['lab_test_cost'] = $data['lab_test_cost'] ?? 0;
+                        $data['drug_cost'] = $data['drug_cost'] ?? 0;
+
+                        if (\Illuminate\Support\Facades\Schema::hasColumn('prescriptions', 'illness')) {
+                            $illness = \App\Models\Illness::find($data['illness_id'] ?? null);
+                            $data['illness'] = $illness?->name ?? 'Unspecified diagnosis';
+                        }
+
+                        $prescription = new \App\Models\Prescription($data);
+                        $prescription->prescribable()->associate($orphan);
+                        $prescription->save();
+
+                        if (! empty($medications)) {
+                            $prescription->medications()->sync($medications);
+                        }
+
+                        return $prescription;
+                    }),
             ])
             ->recordActions([
                 ViewAction::make(),

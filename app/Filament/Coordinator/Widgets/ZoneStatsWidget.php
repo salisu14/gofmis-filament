@@ -1,4 +1,5 @@
 <?php
+
 // app/Filament/Coordinator/Widgets/ZoneStatsWidget.php
 
 namespace App\Filament\Coordinator\Widgets;
@@ -13,6 +14,7 @@ use Filament\Widgets\StatsOverviewWidget\Stat;
 class ZoneStatsWidget extends BaseWidget
 {
     protected static ?int $sort = 1;
+
     protected int|string|array $columnSpan = 'full';
 
     protected function getStats(): array
@@ -24,7 +26,7 @@ class ZoneStatsWidget extends BaseWidget
         $zoneName = $user?->coordinatedZone?->name ?? 'Unknown Zone';
 
         // If no zone assigned, show empty stats
-        if (!$zoneId) {
+        if (! $zoneId) {
             return [
                 Stat::make($zoneName, 'Your Zone')
                     ->description($user?->name ?? 'No User')
@@ -62,24 +64,23 @@ class ZoneStatsWidget extends BaseWidget
                 ->color('gray'),
 
             Stat::make('Orphans', number_format(
-                Orphan::whereHas('deceased', fn($q) => $q->where('zone_id', $zoneId))
-                    ->where('is_eligible', true)->count()
+                Orphan::whereHas('deceased', fn ($q) => $q->where('zone_id', $zoneId))
+                    ->operational()->count()
             ))
-                ->description('Eligible')
+                ->description('Active Operational')
                 ->descriptionIcon('heroicon-m-users')
                 ->color('info'),
 
             Stat::make('Widows', number_format(
-                Widow::whereHas('deceased', fn($q) => $q->where('zone_id', $zoneId))
-                    ->where('is_eligible', true)->count()
+                Widow::whereHas('deceased', fn ($q) => $q->where('zone_id', $zoneId))
+                    ->operational()->count()
             ))
-                ->description('Eligible')
+                ->description('Active Operational')
                 ->descriptionIcon('heroicon-m-heart')
                 ->color('warning'),
 
             Stat::make('Active Loans', number_format(
-                WidowLoan::whereHas('widow', fn($q) => $q->whereHas('deceased', fn($q2) =>
-                $q2->where('zone_id', $zoneId)
+                WidowLoan::whereHas('widow', fn ($q) => $q->whereHas('deceased', fn ($q2) => $q2->where('zone_id', $zoneId)
                 ))->whereIn('status', ['approved', 'disbursed'])->count()
             ))
                 ->description('In your zone')

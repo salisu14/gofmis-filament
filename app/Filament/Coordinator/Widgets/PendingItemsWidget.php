@@ -41,7 +41,9 @@ class PendingItemsWidget extends Widget
                 ->whereHas('type', fn ($q) => $q->where('name', 'like', '%education%'))
                 ->count(),
             'healthcare' => \App\Models\Prescription::whereMonth('created_at', now()->month)->count(),
-            'welfare' => WelfareBeneficiary::where('status', BeneficiaryStatus::PENDING)->count(),
+            'welfare' => WelfareBeneficiary::where('status', BeneficiaryStatus::PENDING)
+                ->whereHas('deceased', fn ($q) => $q->where('zone_id', $zoneId))
+                ->count(),
         ];
 
         // Recent pending items
@@ -55,7 +57,7 @@ class PendingItemsWidget extends Widget
             ->each(fn ($item) => $items->push([
                 'type' => 'loan',
                 'label' => 'Loan Request',
-                'name' => $item->widow?->full_name ?? 'Unknown',
+                'name' => $item->widow?->display_name ?? 'Unknown',
                 'detail' => '₦'.number_format($item->principal_amount, 2),
                 'status' => 'Pending Approval',
                 'color' => 'warning',
@@ -73,7 +75,7 @@ class PendingItemsWidget extends Widget
             ->each(fn ($item) => $items->push([
                 'type' => 'education',
                 'label' => 'Education Request',
-                'name' => $item->orphan?->full_name ?? 'Unknown',
+                'name' => $item->orphan?->display_name ?? 'Unknown',
                 'detail' => $item->type?->name ?? '',
                 'status' => 'Pending',
                 'color' => 'info',
@@ -83,14 +85,15 @@ class PendingItemsWidget extends Widget
             ]));
 
         WelfareBeneficiary::where('status', BeneficiaryStatus::PENDING)
+            ->whereHas('deceased', fn ($q) => $q->where('zone_id', $zoneId))
             ->with('deceased', 'welfarePackage')
             ->latest()
             ->limit(3)
             ->get()
             ->each(fn ($item) => $items->push([
                 'type' => 'welfare',
-                'label' => 'Welfare Request',
-                'name' => $item->deceased?->full_name ?? 'Unknown',
+                'label' => 'Welfare Nomination',
+                'name' => $item->deceased?->display_name ?? 'Unknown',
                 'detail' => $item->welfarePackage?->name ?? '',
                 'status' => 'Pending',
                 'color' => 'warning',

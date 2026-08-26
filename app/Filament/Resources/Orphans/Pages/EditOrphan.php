@@ -17,8 +17,10 @@ class EditOrphan extends EditRecord
     {
         return [
             ViewAction::make(),
-            DeleteAction::make(),
-            ForceDeleteAction::make(),
+            DeleteAction::make()
+                ->visible(fn ($record) => $record->status !== \App\Enums\OrphanStatus::ARCHIVED && $record->is_eligible && ! $record->hasHistoricalRecords()),
+            ForceDeleteAction::make()
+                ->visible(fn ($record) => $record->status !== \App\Enums\OrphanStatus::ARCHIVED && $record->is_eligible && ! $record->hasHistoricalRecords()),
             RestoreAction::make(),
         ];
     }

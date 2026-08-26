@@ -111,6 +111,115 @@ class WidowLoanInfolist
                         ]),
                     ]),
 
+                Section::make('Delinquency & Recovery Overview')
+                    ->description('Operational performance status, aging metrics, hardship relief, and recovery tracking.')
+                    ->icon('heroicon-m-exclamation-triangle')
+                    ->schema([
+                        Grid::make(4)->schema([
+                            TextEntry::make('performance_status')
+                                ->label('Performance Status')
+                                ->badge(),
+
+                            TextEntry::make('days_past_due')
+                                ->label('Days Past Due (DPD)')
+                                ->state(fn (WidowLoan $record) => (int) $record->days_past_due)
+                                ->formatStateUsing(fn ($state) => $state > 0 ? "{$state} Days" : '0 Days (Current)')
+                                ->color(fn ($state) => $state > 0 ? 'danger' : 'success')
+                                ->weight('bold'),
+
+                            TextEntry::make('overdue_amount')
+                                ->label('Overdue Amount')
+                                ->money('NGN')
+                                ->state(fn (WidowLoan $record) => (float) $record->overdue_amount)
+                                ->color(fn ($state) => $state > 0 ? 'danger' : 'gray')
+                                ->weight('bold'),
+
+                            TextEntry::make('arrears_installments')
+                                ->label('Arrears Installments')
+                                ->state(fn (WidowLoan $record) => (int) $record->arrears_installments)
+                                ->placeholder('0'),
+
+                            TextEntry::make('first_overdue_at')
+                                ->label('First Overdue Date')
+                                ->dateTime()
+                                ->placeholder('None'),
+
+                            TextEntry::make('last_payment_at')
+                                ->label('Last Repayment Date')
+                                ->dateTime()
+                                ->placeholder('No Repayments Recorded'),
+
+                            TextEntry::make('defaulted_at')
+                                ->label('Defaulted On')
+                                ->dateTime()
+                                ->placeholder('Not Defaulted')
+                                ->color(fn ($state) => $state ? 'danger' : 'gray'),
+
+                            TextEntry::make('default_reason')
+                                ->label('Default Narrative')
+                                ->placeholder('—')
+                                ->visible(fn (WidowLoan $record) => filled($record->default_reason)),
+
+                            TextEntry::make('recovery_status')
+                                ->label('Recovery Case Status')
+                                ->badge()
+                                ->placeholder('No Open Case'),
+
+                            TextEntry::make('last_recovery_action_at')
+                                ->label('Last Recovery Action')
+                                ->dateTime()
+                                ->placeholder('—'),
+
+                            TextEntry::make('next_recovery_action_at')
+                                ->label('Next Recovery Action Due')
+                                ->dateTime()
+                                ->placeholder('—'),
+
+                            IconEntry::make('hardship_active')
+                                ->label('Active Hardship Relief')
+                                ->boolean(),
+                        ]),
+
+                        Grid::make(2)->schema([
+                            TextEntry::make('active_relief_dates')
+                                ->label('Current Relief Period Window')
+                                ->state(function (WidowLoan $record) {
+                                    $activeRelief = $record->reliefPeriods()
+                                        ->where('status', 'active')
+                                        ->whereDate('starts_at', '<=', now())
+                                        ->whereDate('ends_at', '>=', now())
+                                        ->first();
+
+                                    if (! $activeRelief) {
+                                        return 'None Active';
+                                    }
+
+                                    return "{$activeRelief->starts_at->format('M d, Y')} — {$activeRelief->ends_at->format('M d, Y')} ({$activeRelief->reason})";
+                                })
+                                ->badge()
+                                ->color(fn ($state) => $state === 'None Active' ? 'gray' : 'warning'),
+
+                            TextEntry::make('open_recovery_case_info')
+                                ->label('Open Recovery Priority')
+                                ->state(function (WidowLoan $record) {
+                                    $case = $record->recoveryCases()
+                                        ->whereNotIn('status', [
+                                            \App\Enums\WidowLoanRecoveryStatus::CLOSED,
+                                            \App\Enums\WidowLoanRecoveryStatus::RESOLVED,
+                                        ])
+                                        ->first();
+
+                                    if (! $case) {
+                                        return 'No Active Case';
+                                    }
+
+                                    return ucfirst($case->priority).' Priority (Opened '.$case->opened_at->format('M d, Y').')';
+                                })
+                                ->badge()
+                                ->color(fn ($state) => str_contains($state, 'High') ? 'danger' : (str_contains($state, 'Medium') ? 'warning' : 'gray')),
+                        ]),
+                    ]),
+
                 Section::make('Disbursement & Collection')
                     ->description('Fund release timeline and widow confirmation of receipt.')
                     ->icon('heroicon-m-scale')
