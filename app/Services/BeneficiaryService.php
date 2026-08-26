@@ -4,52 +4,42 @@ namespace App\Services;
 
 use App\Enums\BeneficiaryStatus;
 use App\Enums\CollectionStatus;
+use App\Models\User;
 use App\Models\WelfareBeneficiary;
 use App\Models\WelfarePackage;
+use App\Services\Welfare\WelfareNominationService;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 use RuntimeException;
 
 class BeneficiaryService
 {
+    public function __construct(
+        protected WelfareNominationService $nominationService
+    ) {}
+
     /**
-     * @throws \Throwable
+     * Single-nomination API. Delegates to the canonical nomination authority.
+     *
+     * Kept for backward compatibility; it is not used by any Filament path.
      */
     public function suggestBeneficiary(WelfarePackage $package, string $deceasedId, ?string $suggestedBy = null): WelfareBeneficiary
     {
-        if (! $package->isOpen()) {
-            throw new RuntimeException('Can only suggest beneficiaries for open packages.');
+        $user = $suggestedBy
+            ? User::find($suggestedBy)
+            : auth()->user();
+
+        if (! $user) {
+            throw new InvalidArgumentException('A nominating user is required.');
         }
 
-        if (now()->isAfter($package->end_date)) {
-            throw new RuntimeException('This welfare package has ended.');
-        }
-
-        if (WelfareBeneficiary::where('welfare_package_id', $package->id)->where('deceased_id', $deceasedId)->exists()) {
+        try {
+            return $this->nominationService->nominateSingle($package->id, $deceasedId, $user);
+        } catch (RuntimeException $e) {
             throw \Illuminate\Validation\ValidationException::withMessages([
-                'deceased_id' => 'This family already has a welfare request/allocation for the selected package.',
+                'deceased_id' => $e->getMessage(),
             ]);
         }
-
-        return DB::transaction(function () use ($package, $deceasedId, $suggestedBy) {
-            try {
-                return WelfareBeneficiary::create([
-                    'welfare_package_id' => $package->id,
-                    'deceased_id' => $deceasedId,
-                    'suggested_by' => $suggestedBy ?? auth()->id(),
-                    'status' => BeneficiaryStatus::PENDING,
-                    'collection_status' => CollectionStatus::NOT_COLLECTED,
-                ]);
-            } catch (\Illuminate\Database\UniqueConstraintViolationException|\Illuminate\Database\QueryException $e) {
-                if (str_contains($e->getMessage(), 'unique_package_deceased') || str_contains($e->getMessage(), 'UNIQUE constraint failed')) {
-                    throw \Illuminate\Validation\ValidationException::withMessages([
-                        'deceased_id' => 'This family already has a welfare request/allocation for the selected package.',
-                    ]);
-                }
-
-                throw $e;
-            }
-        });
     }
 
     public function approveBeneficiary(WelfareBeneficiary $beneficiary, ?string $approvedBy = null): WelfareBeneficiary
@@ -62,6 +52,8 @@ class BeneficiaryService
             }
 
             $locked->markAsApproved($approvedBy);
+
+            \App\Events\BeneficiaryApproved::dispatch($locked);
 
             return $locked->fresh();
         });
@@ -86,8 +78,25 @@ class BeneficiaryService
         });
     }
 
+    /**
+     * Canonical single collection. Requires ADMIN fulfilment authorization
+     * (super_admin allowed by the repository Gate::before convention) and
+     * enforces eligibility revalidation + stock availability transactionally.
+     */
     public function collectPackage(WelfareBeneficiary $beneficiary, ?string $notes = null, ?string $collectedBy = null): WelfareBeneficiary
     {
+        $user = $collectedBy
+            ? User::find($collectedBy)
+            : auth()->user();
+
+        if (! $user) {
+            throw new InvalidArgumentException('A collecting user is required.');
+        }
+
+        if (! $user->hasAnyRole(['admin', 'super_admin'])) {
+            throw new RuntimeException('Only administrators can fulfil welfare collections.');
+        }
+
         return DB::transaction(function () use ($beneficiary, $notes, $collectedBy) {
             $locked = WelfareBeneficiary::where('id', $beneficiary->id)->lockForUpdate()->first();
 
@@ -95,7 +104,7 @@ class BeneficiaryService
                 throw new RuntimeException('This package cannot be collected. Ensure beneficiary is approved and not already collected.');
             }
 
-            $locked->markAsCollected($notes, $collectedBy);
+            $locked->collect($notes, $collectedBy);
 
             return $locked->fresh();
         });
@@ -111,19 +120,49 @@ class BeneficiaryService
             ]);
     }
 
+    /**
+     * Bulk collection iterates the canonical single-record operation so bulk
+     * and single collection share identical business semantics (eligibility
+     * revalidation, stock posting, event dispatch, locking).
+     *
+     * @return int number of successfully collected records
+     */
     public function bulkCollect(array $beneficiaryIds, ?string $notes = null, ?string $collectedBy = null): int
     {
-        $now = now();
-        $userId = $collectedBy ?? auth()->id();
+        $user = $collectedBy
+            ? User::find($collectedBy)
+            : auth()->user();
 
-        return WelfareBeneficiary::whereIn('id', $beneficiaryIds)
-            ->readyForCollection()
-            ->update([
-                'collection_status' => CollectionStatus::COLLECTED,
-                'collected_at' => $now,
-                'collected_by' => $userId,
-                'collection_notes' => $notes,
-            ]);
+        if (! $user) {
+            throw new InvalidArgumentException('A collecting user is required.');
+        }
+
+        if (! $user->hasAnyRole(['admin', 'super_admin'])) {
+            throw new RuntimeException('Only administrators can fulfil welfare collections.');
+        }
+
+        $collected = 0;
+
+        DB::transaction(function () use ($beneficiaryIds, $notes, $collectedBy, &$collected) {
+            foreach ($beneficiaryIds as $id) {
+                $locked = WelfareBeneficiary::where('id', $id)->lockForUpdate()->first();
+
+                if (! $locked || ! $locked->canBeCollected()) {
+                    continue;
+                }
+
+                try {
+                    $locked->collect($notes, $collectedBy);
+                    $collected++;
+                } catch (RuntimeException $e) {
+                    // Skip ineligible / insufficient-stock records; keep the
+                    // remainder consistent. The caller is notified via count.
+                    continue;
+                }
+            }
+        });
+
+        return $collected;
     }
 
     public function getBeneficiaryDetails(WelfareBeneficiary $beneficiary): array

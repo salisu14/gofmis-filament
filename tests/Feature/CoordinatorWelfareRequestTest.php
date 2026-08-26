@@ -159,11 +159,9 @@ test('6. valid welfare request can be submitted by coordinator', function () {
     $this->actingAs($this->coordinator);
 
     Livewire::test(CreateWelfareRequest::class)
-        ->fillForm([
-            'welfare_package_id' => (string) $this->package->id,
-            'deceased_id' => (string) $ownDeceased->id,
-            'collection_notes' => 'Urgent assistance needed',
-        ])
+        ->set('data.welfare_package_id', (string) $this->package->id)
+        ->set('data.deceased_id', (string) $ownDeceased->id)
+        ->set('data.collection_notes', 'Urgent assistance needed')
         ->call('create')
         ->assertHasNoFormErrors();
 

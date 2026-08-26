@@ -160,6 +160,7 @@ class WelfarePackagesTable
                     Action::make('duplicate')
                         ->label('Duplicate')
                         ->icon('heroicon-o-document-duplicate')
+                        ->visible(fn (WelfarePackage $record): bool => auth()->user()?->can('duplicate', $record) ?? false)
                         ->schema([
                             TextInput::make('new_name')
                                 ->required()

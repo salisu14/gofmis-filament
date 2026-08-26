@@ -39,15 +39,22 @@ function makeDraftPackage(User $admin, bool $withItems = false): WelfarePackage
     ]);
 
     if ($withItems) {
-        // Raw insert to bypass item/category FK in SQLite :memory: test env
-        DB::table('welfare_package_items')->insert([
-            'id'                  => \Illuminate\Support\Str::uuid()->toString(),
+        $category = \App\Models\Category::create([
+            'name'       => 'Test Category ' . uniqid(),
+            'user_id'    => $admin->id,
+        ]);
+
+        $item = \App\Models\Item::create([
+            'name'        => 'Test Item ' . uniqid(),
+            'category_id' => $category->id,
+            'user_id'     => $admin->id,
+        ]);
+
+        \App\Models\WelfarePackageItem::create([
             'welfare_package_id'  => $pkg->id,
-            'item_id'             => \Illuminate\Support\Str::uuid()->toString(),
-            'category_id'         => \Illuminate\Support\Str::uuid()->toString(),
+            'item_id'             => $item->id,
+            'category_id'         => $category->id,
             'quantity_per_family' => 1,
-            'created_at'          => now(),
-            'updated_at'          => now(),
         ]);
     }
 
@@ -78,6 +85,37 @@ function makeClosedPackage(User $admin): WelfarePackage
     return $pkg;
 }
 
+function makeClosedPackageWithItems(User $admin): WelfarePackage
+{
+    $pkg = WelfarePackage::create([
+        'name'       => 'Closed Package With Items',
+        'status'     => WelfarePackageStatus::CLOSED,
+        'created_by' => $admin->id,
+        'start_date' => now()->toDateString(),
+        'end_date'   => now()->addMonth()->toDateString(),
+    ]);
+
+    $category = \App\Models\Category::create([
+        'name'    => 'Closed Test Category ' . uniqid(),
+        'user_id' => $admin->id,
+    ]);
+
+    $item = \App\Models\Item::create([
+        'name'        => 'Closed Test Item ' . uniqid(),
+        'category_id' => $category->id,
+        'user_id'     => $admin->id,
+    ]);
+
+    \App\Models\WelfarePackageItem::create([
+        'welfare_package_id'  => $pkg->id,
+        'item_id'             => $item->id,
+        'category_id'         => $category->id,
+        'quantity_per_family' => 1,
+    ]);
+
+    return $pkg;
+}
+
 function addNomination(WelfarePackage $pkg, User $admin): WelfareBeneficiary
 {
     $zone = Zone::create(['name' => 'Test Zone ' . uniqid(), 'code' => 'TZ-' . uniqid()]);
@@ -86,6 +124,8 @@ function addNomination(WelfarePackage $pkg, User $admin): WelfareBeneficiary
         'last_name'            => 'Doe',
         'nin'                  => 'NIN' . uniqid(),
         'reg_no'               => 'REG-' . uniqid(),
+        'guardian_name'        => 'Guardian ' . uniqid(),
+        'guardian_phone'       => '08012345678',
         'vulnerability_status' => VulnerabilityStatus::C,
         'date_registered'      => now()->toDateString(),
         'zone_id'              => $zone->id,
@@ -195,10 +235,15 @@ describe('WelfarePackageLifecycleService server-side guards', function () {
 
     // ── reopenPackage ────────────────────────────────────────────────────────
 
-    it('reopens a CLOSED package', function () {
-        $pkg = makeClosedPackage($this->admin);
+    it('reopens a CLOSED package that has items', function () {
+        $pkg = makeClosedPackageWithItems($this->admin);
         $this->service->reopenPackage($pkg);
         expect($pkg->fresh()->status)->toBe(WelfarePackageStatus::OPEN);
+    });
+
+    it('rejects reopening a CLOSED package with no items', function () {
+        $pkg = makeClosedPackage($this->admin);
+        expect(fn () => $this->service->reopenPackage($pkg))->toThrow(RuntimeException::class);
     });
 
     it('rejects reopening an OPEN package (OPEN → OPEN via reopen illegal)', function () {
@@ -259,7 +304,7 @@ describe('WelfarePackage model helper contracts', function () {
     });
 
     it('isCompositionEditable is false for CLOSED with nominations (reopen does not restore editability)', function () {
-        $pkg = makeClosedPackage($this->admin);
+        $pkg = makeClosedPackageWithItems($this->admin);
         addNomination($pkg, $this->admin);
         // Reopen
         app(WelfarePackageLifecycleService::class)->reopenPackage($pkg);

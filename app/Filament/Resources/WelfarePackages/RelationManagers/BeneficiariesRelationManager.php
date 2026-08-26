@@ -164,21 +164,14 @@ class BeneficiariesRelationManager extends RelationManager
                 CreateAction::make()
                     ->label('Nominate Household')
                     ->visible(fn () => $this->getOwnerRecord()->isOpen() && auth()->user()?->can('suggest', WelfareBeneficiary::class))
-                    ->mutateDataUsing(function (array $data) {
-                        $packageId = $this->getOwnerRecord()->id;
-                        $deceasedId = $data['deceased_id'];
+                    ->using(function (array $data, RelationManager $livewire) {
+                        $package = $livewire->getOwnerRecord();
+                        $user = auth()->user();
 
-                        if (WelfareBeneficiary::where('welfare_package_id', $packageId)->where('deceased_id', $deceasedId)->exists()) {
-                            throw \Illuminate\Validation\ValidationException::withMessages([
-                                'deceased_id' => 'This family already has a welfare request/allocation for the selected package.',
-                            ]);
-                        }
+                        $beneficiary = app(\App\Services\Welfare\WelfareNominationService::class)
+                            ->nominateSingle($package->id, $data['deceased_id'], $user);
 
-                        $data['suggested_by'] = auth()->id();
-                        $data['status'] = BeneficiaryStatus::PENDING;
-                        $data['collection_status'] = CollectionStatus::NOT_COLLECTED;
-
-                        return $data;
+                        return $beneficiary;
                     }),
             ])
             ->recordActions([

@@ -74,17 +74,17 @@ class ItemsRelationManager extends RelationManager
             ])
             ->headerActions([
                 CreateAction::make()
-                    ->visible(fn() => $this->getOwnerRecord()->isDraft()),
+                    ->visible(fn() => $this->getOwnerRecord()->isCompositionEditable()),
             ])
             ->recordActions([
                 EditAction::make()
-                    ->visible(fn() => $this->getOwnerRecord()->isDraft()),
+                    ->visible(fn() => $this->getOwnerRecord()->isCompositionEditable()),
                 DeleteAction::make()
-                    ->visible(fn() => $this->getOwnerRecord()->isDraft()),
+                    ->visible(fn() => $this->getOwnerRecord()->isCompositionEditable()),
             ])
             ->toolbarActions([
                 DeleteBulkAction::make()
-                    ->visible(fn() => $this->getOwnerRecord()->isDraft()),
+                    ->visible(fn() => $this->getOwnerRecord()->isCompositionEditable()),
             ]);
     }
 }

@@ -25,7 +25,7 @@ class WelfareInterventionWidget extends BaseWidget
             ->query(
                 WelfareBeneficiary::query()
                     ->with(['deceased.zone', 'welfarePackage', 'suggester', 'approver'])
-                    ->whereIn('status', ['approved', 'collected'])
+                    ->where('status', \App\Enums\BeneficiaryStatus::APPROVED)
             )
             ->heading('Welfare Support Beneficiaries')
             ->description(fn () => 'Total welfare packages: '.WelfarePackage::count().

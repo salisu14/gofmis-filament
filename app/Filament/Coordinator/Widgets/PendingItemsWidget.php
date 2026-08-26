@@ -41,7 +41,9 @@ class PendingItemsWidget extends Widget
                 ->whereHas('type', fn ($q) => $q->where('name', 'like', '%education%'))
                 ->count(),
             'healthcare' => \App\Models\Prescription::whereMonth('created_at', now()->month)->count(),
-            'welfare' => WelfareBeneficiary::where('status', BeneficiaryStatus::PENDING)->count(),
+            'welfare' => WelfareBeneficiary::where('status', BeneficiaryStatus::PENDING)
+                ->whereHas('deceased', fn ($q) => $q->where('zone_id', $zoneId))
+                ->count(),
         ];
 
         // Recent pending items
@@ -83,6 +85,7 @@ class PendingItemsWidget extends Widget
             ]));
 
         WelfareBeneficiary::where('status', BeneficiaryStatus::PENDING)
+            ->whereHas('deceased', fn ($q) => $q->where('zone_id', $zoneId))
             ->with('deceased', 'welfarePackage')
             ->latest()
             ->limit(3)

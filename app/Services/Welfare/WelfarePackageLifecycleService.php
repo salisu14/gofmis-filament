@@ -41,7 +41,11 @@ class WelfarePackageLifecycleService
             throw new RuntimeException('Cannot open a package that has no items. Add at least one item first.');
         }
 
-        $package->update(['status' => WelfarePackageStatus::OPEN]);
+        $package->update([
+            'status' => WelfarePackageStatus::OPEN,
+            'approved_by' => auth()->check() ? auth()->id() : $package->approved_by,
+            'approved_at' => now(),
+        ]);
     }
 
     /**
@@ -63,9 +67,10 @@ class WelfarePackageLifecycleService
     /**
      * Transition a package from CLOSED back to OPEN.
      *
-     * Note: reopening does NOT restore editability of package composition
-     * if nominations already exist. That constraint is enforced separately
-     * by WelfarePackage::isCompositionEditable().
+     * Reopening requires at least one WelfarePackageItem, matching the
+     * opening guard. Reopening does NOT restore editability of package
+     * composition if nominations already exist (enforced separately by
+     * WelfarePackage::isCompositionEditable()).
      *
      * @throws RuntimeException when the transition is structurally illegal
      */
@@ -77,6 +82,10 @@ class WelfarePackageLifecycleService
             throw new RuntimeException(
                 "Cannot reopen a package with status [{$package->status->value}]. Only CLOSED packages may be reopened."
             );
+        }
+
+        if ($package->items()->count() === 0) {
+            throw new RuntimeException('Cannot reopen a package that has no items. Add at least one item first.');
         }
 
         $package->update(['status' => WelfarePackageStatus::OPEN]);

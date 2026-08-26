@@ -177,9 +177,114 @@ class WelfareBeneficiary extends Model
                     ]);
                 }
             }
+
+            \App\Events\BeneficiaryCollected::dispatch($this, $notes);
         }
 
         return $updated;
+    }
+
+    /**
+     * Whether the household still has at least one operational AND eligible
+     * widow/orphan. Eligibility is revalidated immediately before collection.
+     */
+    public function householdStillEligible(): bool
+    {
+        $deceased = $this->deceased;
+
+        if (! $deceased) {
+            return false;
+        }
+
+        $hasWidow = $deceased->widows->contains(fn ($w) => $w->isOperationalBeneficiary() && $w->is_eligible);
+        $hasOrphan = $deceased->orphans->contains(fn ($o) => $o->isOperationalBeneficiary() && $o->is_eligible);
+
+        return $hasWidow || $hasOrphan;
+    }
+
+    /**
+     * Stock movement rows that would be posted for this collection.
+     */
+    public function collectionStockMovements(): array
+    {
+        $movements = [];
+
+        foreach ($this->welfarePackage?->items ?? [] as $pkgItem) {
+            $movements[] = [
+                'item_id' => $pkgItem->item_id,
+                'quantity' => -1 * (int) $pkgItem->quantity_per_family,
+            ];
+        }
+
+        return $movements;
+    }
+
+    /**
+     * Canonical single-record collection operation.
+     *
+     * Enforces:
+     *  - the beneficiary is APPROVED and NOT_COLLECTED;
+     *  - the household is revalidated as eligible at collection time;
+     *  - sufficient stock exists on the canonical ledger before posting;
+     *  - all writes happen inside the caller-provided transaction.
+     *
+     * @throws \RuntimeException when collection is not permitted.
+     */
+    public function collect(string $notes = null, ?string $collectedBy = null): bool
+    {
+        if (! $this->canBeCollected()) {
+            throw new \RuntimeException('This package cannot be collected. Ensure beneficiary is approved and not already collected.');
+        }
+
+        if (! $this->householdStillEligible()) {
+            throw new \RuntimeException('This household is no longer eligible for welfare support. Collection is blocked.');
+        }
+
+        $this->assertStockAvailable();
+
+        $result = $this->markAsCollected($notes, $collectedBy);
+
+        if (! $result) {
+            throw new \RuntimeException('Failed to record welfare collection.');
+        }
+
+        return true;
+    }
+
+    /**
+     * Verify the canonical stock ledger has sufficient available stock for
+     * every item in the package. Uses the same ledger-derived semantics as
+     * StockAvailabilityService (on-hand minus reserved, per item).
+     *
+     * @throws \RuntimeException when any item would go negative.
+     */
+    public function assertStockAvailable(): void
+    {
+        $package = $this->welfarePackage;
+
+        if (! $package) {
+            throw new \RuntimeException('Welfare package not found for this allocation.');
+        }
+
+        foreach ($package->items as $pkgItem) {
+            $itemId = $pkgItem->item_id;
+            $required = (int) $pkgItem->quantity_per_family;
+
+            $onHand = (int) \App\Models\StockMovement::where('item_id', $itemId)->sum('quantity');
+            $reserved = (int) \App\Models\WelfarePackageItem::join('welfare_beneficiaries', 'welfare_package_items.welfare_package_id', '=', 'welfare_beneficiaries.welfare_package_id')
+                ->where('welfare_package_items.item_id', $itemId)
+                ->where('welfare_beneficiaries.status', \App\Enums\BeneficiaryStatus::APPROVED->value)
+                ->where('welfare_beneficiaries.collection_status', \App\Enums\CollectionStatus::NOT_COLLECTED->value)
+                ->whereNull('welfare_beneficiaries.deleted_at')
+                ->sum('welfare_package_items.quantity_per_family');
+
+            $available = $onHand - $reserved;
+
+            if ($available < $required) {
+                $itemName = $pkgItem->item?->name ?? 'Unknown item';
+                throw new \RuntimeException("Insufficient stock for [{$itemName}] to fulfil this collection.");
+            }
+        }
     }
 
     public function markAsApproved(?string $approvedBy = null): bool

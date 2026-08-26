@@ -26,26 +26,39 @@ return new class extends Migration {
 
     /**
      * Reverse the migrations.
+     *
+     * Faithfully reproduces the ORIGINAL schemas created by:
+     *   - 2026_02_27_164716_create_welfares_table.php
+     *   - 2026_02_27_165454_create_deceased_welafares_table.php
+     *
+     * The original `welfare` table used a UUID primary key (not bigint), and
+     * `deceased_welfare` used UUID foreign keys referencing it. Both tables
+     * carried a unique constraint on (welfare_id, deceased_id). Recreation
+     * order matters: `welfare` must exist before `deceased_welfare` because
+     * the latter references it.
      */
     public function down(): void
     {
         if (! Schema::hasTable('welfare')) {
             Schema::create('welfare', function (\Illuminate\Database\Schema\Blueprint $table) {
-                $table->id();
-                $table->foreignId('deceased_id')->constrained('deceased');
-                $table->enum('status', ['PENDING', 'APPROVED', 'COLLECTED'])->default('PENDING');
-                $table->timestamp('collected_at')->nullable();
+                $table->uuid('id')->primary();
+                $table->string('name', 255);
+                $table->date('date');
+                $table->string('collection_status', 50);
+                $table->string('welfare_status', 50);
                 $table->timestamps();
             });
         }
+
         if (! Schema::hasTable('deceased_welfare')) {
             Schema::create('deceased_welfare', function (\Illuminate\Database\Schema\Blueprint $table) {
-                $table->id();
-                $table->foreignId('deceased_id')->constrained('deceased');
-                $table->foreignId('welfare_id')->constrained('welfare');
-                $table->timestamps();
+                $table->uuid('id')->primary();
+                $table->foreignUuid('welfare_id')->constrained('welfare');
+                $table->foreignUuid('deceased_id')->constrained('deceased');
+                $table->string('collection_status', 50)->default('PENDING');
+
+                $table->unique(['welfare_id', 'deceased_id']);
             });
         }
     }
 };
-?>

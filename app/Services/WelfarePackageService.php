@@ -51,41 +51,21 @@ class WelfarePackageService
 
     public function openPackage(WelfarePackage $package): WelfarePackage
     {
-        if (!$package->canBeOpened()) {
-            throw new RuntimeException("Cannot open package with status: {$package->status->value}");
-        }
-
-        $package->update([
-            'status' => WelfarePackageStatus::OPEN,
-            'approved_by' => auth()->id(),
-            'approved_at' => now(),
-        ]);
+        app(\App\Services\Welfare\WelfarePackageLifecycleService::class)->openPackage($package);
 
         return $package->fresh();
     }
 
     public function closePackage(WelfarePackage $package): WelfarePackage
     {
-        if (!$package->canBeClosed()) {
-            throw new RuntimeException("Cannot close package with status: {$package->status->value}");
-        }
-
-        $package->update([
-            'status' => WelfarePackageStatus::CLOSED,
-        ]);
+        app(\App\Services\Welfare\WelfarePackageLifecycleService::class)->closePackage($package);
 
         return $package->fresh();
     }
 
     public function reopenPackage(WelfarePackage $package): WelfarePackage
     {
-        if (!$package->canBeReopened()) {
-            throw new RuntimeException('Only closed packages can be reopened.');
-        }
-
-        $package->update([
-            'status' => WelfarePackageStatus::OPEN,
-        ]);
+        app(\App\Services\Welfare\WelfarePackageLifecycleService::class)->reopenPackage($package);
 
         return $package->fresh();
     }

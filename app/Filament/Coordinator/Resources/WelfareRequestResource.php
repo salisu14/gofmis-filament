@@ -406,7 +406,8 @@ class WelfareRequestResource extends Resource
                     ->requiresConfirmation()
                     ->modalHeading('Confirm Collection')
                     ->modalDescription('Mark this welfare item as collected?')
-                    ->visible(fn ($record) => $record->canBeCollected())
+                    ->visible(fn ($record) => (auth()->user()?->hasAnyRole(['admin', 'super_admin']) ?? false)
+                        && $record->canBeCollected())
                     ->action(function (WelfareBeneficiary $record) {
                         app(\App\Services\BeneficiaryService::class)->collectPackage($record, 'Collected by beneficiary', auth()->id());
 

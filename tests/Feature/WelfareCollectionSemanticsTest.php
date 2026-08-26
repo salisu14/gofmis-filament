@@ -59,6 +59,17 @@ beforeEach(function () {
         'vulnerability_status' => VulnerabilityStatus::A,
     ]);
 
+    \App\Models\Widow::create([
+        'first_name' => 'Widow Kabiru',
+        'last_name' => 'Garba',
+        'nin' => '60000000001',
+        'reg_no' => 'WID-C001',
+        'child_sequence' => 1,
+        'deceased_id' => $this->deceased1->id,
+        'is_eligible' => true,
+        'is_married' => false,
+    ]);
+
     $this->deceased2 = Deceased::create([
         'first_name' => 'Usman',
         'last_name' => 'Bello',
@@ -70,6 +81,17 @@ beforeEach(function () {
         'date_of_death' => now()->subMonths(2),
         'zone_id' => $this->zoneA->id,
         'vulnerability_status' => VulnerabilityStatus::B,
+    ]);
+
+    \App\Models\Widow::create([
+        'first_name' => 'Widow Usman',
+        'last_name' => 'Bello',
+        'nin' => '60000000002',
+        'reg_no' => 'WID-C002',
+        'child_sequence' => 1,
+        'deceased_id' => $this->deceased2->id,
+        'is_eligible' => true,
+        'is_married' => false,
     ]);
 });
 
@@ -163,7 +185,7 @@ test('7. collection invariants enforce that only approved records can be collect
     $service = app(BeneficiaryService::class);
 
     // Attempt to collect pending record fails
-    expect(fn () => $service->collectPackage($pending, 'Notes', $this->coordinator->id))
+    expect(fn () => $service->collectPackage($pending, 'Notes', $this->admin->id))
         ->toThrow(\RuntimeException::class);
 
     // Approve record
@@ -171,13 +193,13 @@ test('7. collection invariants enforce that only approved records can be collect
     expect($pending->refresh()->canBeCollected())->toBeTrue();
 
     // Mark collected succeeds and updates timestamp
-    $collected = $service->collectPackage($pending, 'Delivered', $this->coordinator->id);
+    $collected = $service->collectPackage($pending, 'Delivered', $this->admin->id);
     expect($collected->isCollected())->toBeTrue()
         ->and($collected->collected_at)->not->toBeNull()
         ->and($collected->canBeCollected())->toBeFalse();
 
     // Duplicate collection attempt fails
-    expect(fn () => $service->collectPackage($collected, 'Second try', $this->coordinator->id))
+    expect(fn () => $service->collectPackage($collected, 'Second try', $this->admin->id))
         ->toThrow(\RuntimeException::class);
 });
 

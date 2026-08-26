@@ -44,8 +44,10 @@ class DeceasedTable
             ])
             ->columns([
                 TextColumn::make('full_name')
+                    ->label('Full Name')
+                    ->state(fn (Deceased $record): string => (string) $record->display_name)
                     ->searchable(['first_name', 'last_name', 'middle_name'])
-                    ->sortable()
+                    ->sortable(query: fn ($query, string $direction) => $query->orderBy('full_name', $direction))
                     ->description(fn ($record) => "Reg: {$record->reg_no}"),
 
                 TextColumn::make('age_at_death')

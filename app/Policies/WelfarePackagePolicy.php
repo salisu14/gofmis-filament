@@ -27,12 +27,14 @@ class WelfarePackagePolicy
 
     public function update(User $user, WelfarePackage $package): bool
     {
-        return $user->hasAnyRole(['super_admin', 'admin']) && $package->isDraft();
+        return $user->hasAnyRole(['super_admin', 'admin']) && $package->isCompositionEditable();
     }
 
     public function delete(User $user, WelfarePackage $package): bool
     {
-        return $user->hasAnyRole(['super_admin', 'admin']) && $package->isDraft();
+        return $user->hasAnyRole(['super_admin', 'admin'])
+            && $package->isDraft()
+            && ! $package->hasNominations();
     }
 
     public function open(User $user, WelfarePackage $package): bool

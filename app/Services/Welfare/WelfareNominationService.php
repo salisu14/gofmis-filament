@@ -10,7 +10,20 @@ use App\Models\User;
 use App\Models\WelfareBeneficiary;
 use App\Models\WelfarePackage;
 use Illuminate\Support\Facades\DB;
+use InvalidArgumentException;
+use RuntimeException;
 
+/**
+ * Canonical server-side authority for Welfare nominations.
+ *
+ * Every production nomination entry point (Filament actions, relation-manager
+ * CreateAction, coordinator create form, services) MUST delegate here. No
+ * other code path may create WelfareBeneficiary nomination records for
+ * production data.
+ *
+ * All validation below is server-side. UI filtering is convenience only and
+ * is never treated as authorization.
+ */
 class WelfareNominationService
 {
     /**
@@ -23,9 +36,7 @@ class WelfareNominationService
     {
         $package = WelfarePackage::find($welfarePackageId);
 
-        if (! $package || $package->status !== WelfarePackageStatus::OPEN) {
-            throw new \InvalidArgumentException('Selected Welfare intervention is not open for nominations.');
-        }
+        $this->assertPackageAcceptingNominations($package);
 
         $nominatedCount = 0;
         $duplicatesCount = 0;
@@ -68,10 +79,7 @@ class WelfareNominationService
                 }
 
                 // Verify household has at least one operational, eligible beneficiary
-                $hasOperationalWidow = $deceased->widows->contains(fn ($w) => $w->isOperationalBeneficiary() && $w->is_eligible);
-                $hasOperationalOrphan = $deceased->orphans->contains(fn ($o) => $o->isOperationalBeneficiary() && $o->is_eligible);
-
-                if (! $hasOperationalWidow && ! $hasOperationalOrphan) {
+                if (! $this->householdHasEligibleBeneficiary($deceased)) {
                     $ineligibleCount++;
                     $messages[] = "Deceased {$deceased->display_name} has no eligible operational beneficiaries.";
 
@@ -79,13 +87,26 @@ class WelfareNominationService
                 }
 
                 // Create WelfareBeneficiary nomination record
-                WelfareBeneficiary::create([
-                    'welfare_package_id' => $package->id,
-                    'deceased_id' => $deceased->id,
-                    'suggested_by' => $user->id,
-                    'status' => BeneficiaryStatus::PENDING,
-                    'collection_status' => CollectionStatus::NOT_COLLECTED,
-                ]);
+                try {
+                    WelfareBeneficiary::create([
+                        'welfare_package_id' => $package->id,
+                        'deceased_id' => $deceased->id,
+                        'suggested_by' => $user->id,
+                        'status' => BeneficiaryStatus::PENDING,
+                        'collection_status' => CollectionStatus::NOT_COLLECTED,
+                    ]);
+                } catch (\Illuminate\Database\UniqueConstraintViolationException|\Illuminate\Database\QueryException $e) {
+                    // Concurrent duplicate attempt: the unique_package_deceased
+                    // constraint is the authoritative PostgreSQL-compatible guard.
+                    if (str_contains($e->getMessage(), 'unique_package_deceased') || str_contains($e->getMessage(), 'UNIQUE constraint failed')) {
+                        $duplicatesCount++;
+                        $messages[] = "Deceased {$deceased->display_name} is already nominated for {$package->name}.";
+
+                        continue;
+                    }
+
+                    throw $e;
+                }
 
                 $nominatedCount++;
             }
@@ -97,5 +118,66 @@ class WelfareNominationService
             'ineligible_count' => $ineligibleCount,
             'messages' => $messages,
         ];
+    }
+
+    /**
+     * Nominate a single household. Delegates to the canonical bulk path so the
+     * two entry points share exactly one validation stack.
+     */
+    public function nominateSingle(string $welfarePackageId, string $deceasedId, User $user): WelfareBeneficiary
+    {
+        $result = $this->nominate($welfarePackageId, [$deceasedId], $user);
+
+        if ($result['nominated_count'] === 0) {
+            $message = $result['messages'][0] ?? 'The household could not be nominated.';
+            throw new RuntimeException($message);
+        }
+
+        $beneficiary = WelfareBeneficiary::where('welfare_package_id', $welfarePackageId)
+            ->where('deceased_id', $deceasedId)
+            ->latest('created_at')
+            ->first();
+
+        if (! $beneficiary) {
+            throw new RuntimeException('Nomination was recorded but the beneficiary record could not be retrieved.');
+        }
+
+        return $beneficiary;
+    }
+
+    /**
+     * Whether a household contains at least one operational AND eligible
+     * widow/orphan, per the domain eligibility helpers.
+     */
+    public function householdHasEligibleBeneficiary(Deceased $deceased): bool
+    {
+        return $deceased->widows->contains(fn ($w) => $w->isOperationalBeneficiary() && $w->is_eligible)
+            || $deceased->orphans->contains(fn ($o) => $o->isOperationalBeneficiary() && $o->is_eligible);
+    }
+
+    /**
+     * Server-side gate shared by every nomination entry point.
+     *
+     * @throws InvalidArgumentException when the package is missing or not
+     *                                  accepting nominations (wrong status or
+     *                                  outside its valid date window).
+     */
+    protected function assertPackageAcceptingNominations(?WelfarePackage $package): void
+    {
+        if (! $package) {
+            throw new InvalidArgumentException('Welfare package not found.');
+        }
+
+        if ($package->status !== WelfarePackageStatus::OPEN) {
+            throw new InvalidArgumentException('Selected Welfare intervention is not open for nominations.');
+        }
+
+        if ($package->start_date && $package->start_date->isFuture()) {
+            throw new InvalidArgumentException('This welfare package has not yet opened for nominations.');
+        }
+
+        if ($package->end_date && $package->end_date->isPast()) {
+            throw new InvalidArgumentException('This welfare package has ended.');
+        }
     }
 }

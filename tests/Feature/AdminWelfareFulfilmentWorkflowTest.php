@@ -35,6 +35,17 @@ beforeEach(function () {
     $this->deceased = Deceased::factory()->create(['zone_id' => $this->zone->id]);
     $this->otherDeceased = Deceased::factory()->create(['zone_id' => $this->otherZone->id]);
 
+    \App\Models\Widow::create([
+        'first_name' => 'Widow',
+        'last_name' => 'Admin',
+        'nin' => '70000000001',
+        'reg_no' => 'WID-ADM-01',
+        'child_sequence' => 1,
+        'deceased_id' => $this->deceased->id,
+        'is_eligible' => true,
+        'is_married' => false,
+    ]);
+
     $this->openPackage = WelfarePackage::create([
         'name' => 'Ramadan Food Package 2026',
         'description' => 'Rice, Sugar, Oil & Flour distribution',

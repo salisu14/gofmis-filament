@@ -44,16 +44,29 @@ class CreateWelfareRequest extends CreateRecord
 
     protected function handleRecordCreation(array $data): \Illuminate\Database\Eloquent\Model
     {
-        try {
-            return parent::handleRecordCreation($data);
-        } catch (\Illuminate\Database\UniqueConstraintViolationException|\Illuminate\Database\QueryException $e) {
-            if (str_contains($e->getMessage(), 'unique_package_deceased') || str_contains($e->getMessage(), 'UNIQUE constraint failed')) {
-                throw \Illuminate\Validation\ValidationException::withMessages([
-                    'deceased_id' => 'This family already has a welfare request/allocation for the selected package.',
-                ]);
-            }
+        $packageId = $data['welfare_package_id'] ?? null;
+        $deceasedId = $data['deceased_id'] ?? null;
 
-            throw $e;
+        if (is_array($packageId)) {
+            $packageId = reset($packageId);
+        }
+        if (is_array($deceasedId)) {
+            $deceasedId = reset($deceasedId);
+        }
+
+        if (! $packageId || ! $deceasedId) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'deceased_id' => 'A welfare package and family head are required.',
+            ]);
+        }
+
+        try {
+            return app(\App\Services\Welfare\WelfareNominationService::class)
+                ->nominateSingle($packageId, $deceasedId, auth()->user());
+        } catch (\RuntimeException $e) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'deceased_id' => $e->getMessage(),
+            ]);
         }
     }
 
