@@ -54,10 +54,11 @@ class OrphansRelationManager extends RelationManager
         return $table
             ->groups([])
             ->columns([
-                Tables\Columns\ImageColumn::make('picture_url')
-                    ->label('Photo')
+                Tables\Columns\ImageColumn::make('profile_photo_url')
+                    ->label('Profile Photo')
                     ->circular()
-                    ->disk('public'),
+                    ->checkFileExistence(false)
+                    ->defaultImageUrl(url('/images/placeholder-avatar.png')),
 
                 Tables\Columns\TextColumn::make('full_name')
                     ->label('Name')

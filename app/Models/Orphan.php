@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\Gender;
 use App\Enums\OrphanStatus;
 use App\Models\Scopes\EligibleOrphanScope;
+use App\Models\Concerns\HasProfilePhoto;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -16,7 +17,7 @@ use Illuminate\Support\Facades\Storage;
 
 class Orphan extends Model
 {
-    use HasUuids, SoftDeletes;
+    use HasProfilePhoto, HasUuids, SoftDeletes;
 
     protected $table = 'orphans';
 

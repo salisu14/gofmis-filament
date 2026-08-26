@@ -18,9 +18,8 @@ class OrphanInfolist
             ->components([
                 Section::make('Profile Summary')
                     ->schema([
-                        ImageEntry::make('picture_url')
-                            ->label('')
-                            ->disk('public')
+                        ImageEntry::make('profile_photo_url')
+                            ->label('Profile Photo')
                             ->circular()
                             ->defaultImageUrl(url('/images/placeholder-avatar.png')),
 

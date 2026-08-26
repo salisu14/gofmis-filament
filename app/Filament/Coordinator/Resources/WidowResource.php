@@ -243,11 +243,9 @@ class WidowResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\ImageColumn::make('picture_url')
-                    ->label('')
+                Tables\Columns\ImageColumn::make('profile_photo_url')
+                    ->label('Profile Photo')
                     ->circular()
-                    ->disk('public')
-                    ->visibility('public')
                     ->checkFileExistence(false),
 
                 Tables\Columns\TextColumn::make('full_name')

@@ -44,12 +44,11 @@ class WidowsTable
                     ->collapsible(),
             ])
             ->columns([
-                ImageColumn::make('picture_url')
-                    ->label('Image')
+                ImageColumn::make('profile_photo_url')
+                    ->label('Profile Photo')
                     ->circular()
-                    ->disk('public')
-                    ->visibility('public')
-                    ->checkFileExistence(false),
+                    ->checkFileExistence(false)
+                    ->defaultImageUrl(url('/images/placeholder-avatar.png')),
 
                 TextColumn::make('full_name')
                     ->label('Name')

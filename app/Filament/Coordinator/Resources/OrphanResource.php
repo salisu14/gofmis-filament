@@ -281,12 +281,11 @@ class OrphanResource extends Resource
         return $table
             ->modifyQueryUsing(fn (Builder $query) => $query->with(['activeSponsorships.sponsor']))
             ->columns([
-                Tables\Columns\ImageColumn::make('picture_url')
-                    ->label('')
+                Tables\Columns\ImageColumn::make('profile_photo_url')
+                    ->label('Profile Photo')
                     ->circular()
-                    ->disk('public')
-                    ->visibility('public')
-                    ->checkFileExistence(false),
+                    ->checkFileExistence(false)
+                    ->defaultImageUrl('https://via.placeholder.com/40'),
 
                 Tables\Columns\TextColumn::make('full_name')
                     ->searchable(['first_name', 'last_name', 'middle_name'])

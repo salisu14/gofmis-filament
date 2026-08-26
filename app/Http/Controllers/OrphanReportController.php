@@ -51,7 +51,7 @@ class OrphanReportController extends Controller
             ->orderBy('created_at')
             ->get();
 
-        $photoDataUri = $this->safePhotoDataUri($orphan->picture_url);
+        $photoDataUri = $orphan->profile_photo_data_uri;
 
         $companyService = app(\App\Services\Company\CompanyInformationService::class);
         $company = $companyService->reportHeader();
@@ -70,37 +70,5 @@ class OrphanReportController extends Controller
         $filename = 'Orphan-Report-'.($orphan->reg_no ?? strtoupper(substr($orphan->id, 0, 8))).'.pdf';
 
         return $pdf->download($filename);
-    }
-
-    /**
-     * Build a safe data URI for the orphan photo, or null when absent / not
-     * readable. DomPDF cannot reliably open public-disk file paths on all systems,
-     * so a base64 data URI is the stable way to render stored images.
-     */
-    protected function safePhotoDataUri(?string $pictureUrl): ?string
-    {
-        if (blank($pictureUrl)) {
-            return null;
-        }
-
-        if (str_starts_with($pictureUrl, 'http://') || str_starts_with($pictureUrl, 'https://')) {
-            return null;
-        }
-
-        $path = Storage::disk('public')->path($pictureUrl);
-
-        if (! is_file($path)) {
-            return null;
-        }
-
-        $contents = @file_get_contents($path);
-
-        if ($contents === false) {
-            return null;
-        }
-
-        $mime = mime_content_type($path) ?: 'application/octet-stream';
-
-        return 'data:'.$mime.';base64,'.base64_encode($contents);
     }
 }

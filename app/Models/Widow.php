@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasProfilePhoto;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
@@ -13,7 +14,7 @@ use Illuminate\Support\Facades\Storage;
 
 class Widow extends Model
 {
-    use HasUuids, SoftDeletes;
+    use HasProfilePhoto, HasUuids, SoftDeletes;
 
     protected $table = 'widows';
 

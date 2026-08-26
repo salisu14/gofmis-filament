@@ -65,13 +65,11 @@ class OrphansTable
                     ->collapsible(),
             ])
             ->columns([
-                ImageColumn::make('picture_url')
-                    ->label('Image')
+                ImageColumn::make('profile_photo_url')
+                    ->label('Profile Photo')
                     ->circular()
-                    ->disk('public')
-                    ->visibility('public')
                     ->checkFileExistence(false)
-                    ->defaultImageUrl('https://via.placeholder.com/40'),
+                    ->defaultImageUrl(url('/images/placeholder-avatar.png')),
                 TextColumn::make('full_name')
                     ->label('Name')
                     ->searchable(['first_name', 'last_name', 'middle_name'])
