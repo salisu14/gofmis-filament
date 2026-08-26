@@ -20,8 +20,6 @@ use App\Services\OrphanStatusService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
 
-uses(\Tests\TestCase::class, RefreshDatabase::class);
-
 if (!function_exists('createTestOrphan')) {
     function createTestOrphan(array $attributes = []): Orphan
     {

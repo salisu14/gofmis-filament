@@ -158,36 +158,14 @@ class RepaymentsRelationManager extends RelationManager
                     ->url(fn(WidowLoanRepayment $record) => route('repayments.receipt.download', $record))
                     ->openUrlInNewTab(),
 
-                // ✅ NEW: Edit Action with chronological safeguard
-                \Filament\Actions\EditAction::make()
-                    ->disabled(fn(WidowLoanRepayment $record): bool =>
-                        // Disable if ANY repayment exists on this loan that was paid AFTER this one
-                    $record->widowLoan->repayments()
-                        ->where(function ($q) use ($record) {
-                            $q->where('paid_at', '>', $record->paid_at)
-                                ->orWhere(function ($q2) use ($record) {
-                                    // Also check created_at if multiple payments happen on the exact same day
-                                    $q2->where('paid_at', $record->paid_at)
-                                        ->where('created_at', '>', $record->created_at);
-                                });
-                        })
-                        ->exists()
-                    )
-                    ->tooltip(function (\Filament\Actions\EditAction $action, WidowLoanRepayment $record) {
-                        if ($record->widowLoan->repayments()
-                            ->where(function ($q) use ($record) {
-                                $q->where('paid_at', '>', $record->paid_at)
-                                    ->orWhere(function ($q2) use ($record) {
-                                        $q2->where('paid_at', $record->paid_at)
-                                            ->where('created_at', '>', $record->created_at);
-                                    });
-                            })
-                            ->exists()
-                        ) {
-                            return 'Cannot edit: A subsequent repayment has been recorded.';
-                        }
-                        return $action->getLabel();
-                    }),
+                Action::make('thermalReceipt')
+                    ->label('Thermal 58mm Receipt')
+                    ->icon('heroicon-m-printer')
+                    ->color('warning')
+                    ->url(fn(WidowLoanRepayment $record) => route('repayments.thermal-receipt.download', $record))
+                    ->openUrlInNewTab(),
+
+
             ]);
     }
 }

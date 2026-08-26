@@ -26,8 +26,6 @@ use App\Services\WidowLoanWriteOffRecommendationService;
 use App\Services\WidowLoanWriteOffService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
-uses(\Tests\TestCase::class, RefreshDatabase::class);
-
 beforeEach(function () {
     // Seed roles and permissions
     $this->seed(\Database\Seeders\RolesAndPermissionsSeeder::class);

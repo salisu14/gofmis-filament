@@ -301,6 +301,14 @@ class OrphansTable
                             }
                         }),
 
+                    // Orphan Dossier Report Action
+                    Action::make('downloadDossier')
+                        ->label('Download Dossier')
+                        ->icon('heroicon-o-document-arrow-down')
+                        ->color('secondary')
+                        ->url(fn (Orphan $record): string => route('orphans.report.download', ['orphan' => $record]))
+                        ->openUrlInNewTab(),
+
                     // ID Card Actions
                     GenerateIdCardAction::make(),
 

@@ -18,8 +18,6 @@ use App\Services\IdCardGenerationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 
-uses(\Tests\TestCase::class, RefreshDatabase::class);
-
 beforeEach(function () {
     $this->seed(\Database\Seeders\RolesAndPermissionsSeeder::class);
 

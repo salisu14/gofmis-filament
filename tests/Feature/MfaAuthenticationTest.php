@@ -10,8 +10,6 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Route;
 use PragmaRX\Google2FAQRCode\Google2FA;
 
-uses(\Tests\TestCase::class, RefreshDatabase::class);
-
 beforeEach(function () {
     // Seed roles and permissions
     $this->seed(\Database\Seeders\RolesAndPermissionsSeeder::class);

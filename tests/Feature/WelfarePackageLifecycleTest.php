@@ -17,8 +17,6 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
-uses(\Tests\TestCase::class, RefreshDatabase::class);
-
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 if (!function_exists('makeAdmin')) {

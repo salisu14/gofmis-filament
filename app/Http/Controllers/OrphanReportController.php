@@ -15,16 +15,24 @@ class OrphanReportController extends Controller
     /**
      * Generate and download the comprehensive orphan dossier / case profile PDF.
      *
-     * This is a read-only, print/donor-tier report. Authorization reuses the
-     * existing OrphanPolicy.view gate and the Orphan "zone" global scope, so a
-     * coordinator can only ever resolve an orphan belonging to their own zone.
+     * Authorization checks gate permissions and enforces zone isolation for coordinators.
      */
     public function download(Request $request, Orphan $orphan)
     {
         Gate::authorize('view', $orphan);
 
+        $user = auth()->user();
+        if ($user && ! $user->hasAnyRole(['admin', 'super_admin'])) {
+            $userZoneId = $user->coordinatedZone?->id;
+            $orphanZoneId = $orphan->deceased?->zone_id;
+            if (! $userZoneId || $userZoneId !== $orphanZoneId) {
+                abort(403, 'Unauthorized zone access.');
+            }
+        }
+
         $orphan->load([
             'deceased.zone.coordinator',
+            'deceased.widows',
             'educations.institution',
             'educations.orphanClass',
             'prescriptions.illnessModel',
@@ -45,12 +53,15 @@ class OrphanReportController extends Controller
 
         $photoDataUri = $this->safePhotoDataUri($orphan->picture_url);
 
+        $companyService = app(\App\Services\Company\CompanyInformationService::class);
+        $company = $companyService->reportHeader();
+
         $pdf = Pdf::loadView('filament.components.orphan-dossier', [
             'orphan' => $orphan,
             'deceased' => $orphan->deceased,
             'welfare' => $welfare,
             'photo_data_uri' => $photoDataUri,
-            'company' => app(CompanyInformationService::class)->reportHeader(),
+            'company' => $company,
             'generated_at' => now(),
         ]);
 
@@ -63,9 +74,8 @@ class OrphanReportController extends Controller
 
     /**
      * Build a safe data URI for the orphan photo, or null when absent / not
-     * readable. DomPDF cannot reliably open the public-disk stream wrapper, so
-     * a data URI is the stable way to render stored images. We only embed a
-     * real stored file — no remote placeholder fetching at generation time.
+     * readable. DomPDF cannot reliably open public-disk file paths on all systems,
+     * so a base64 data URI is the stable way to render stored images.
      */
     protected function safePhotoDataUri(?string $pictureUrl): ?string
     {

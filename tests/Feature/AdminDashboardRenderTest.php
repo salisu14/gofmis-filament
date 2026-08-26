@@ -5,8 +5,6 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 
-uses(\Tests\TestCase::class, RefreshDatabase::class);
-
 test('admin dashboard renders cleanly without emitting raw PHP source code', function () {
     $this->seed(\Database\Seeders\RolesAndPermissionsSeeder::class);
 

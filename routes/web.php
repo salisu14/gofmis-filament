@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\IdCardController;
 use App\Http\Controllers\IdCardDownloadController;
+use App\Http\Controllers\OrphanReportController;
 use App\Http\Controllers\WidowLoanRepaymentController;
 use App\Http\Controllers\WidowLoanWriteOffController;
 use Illuminate\Support\Facades\Route;
@@ -75,13 +76,26 @@ if (app()->environment('local')) {
     })->middleware('auth');
 }
 
+// Orphan Dossier Report Route
+Route::get('/orphans/{orphan}/report', [OrphanReportController::class, 'download'])
+    ->name('orphans.report.download')
+    ->middleware('auth');
+
 // Loan Repayment Receipt Download Route
 Route::get('/repayments/{repayment}/receipt', [WidowLoanRepaymentController::class, 'downloadReceipt'])
     ->name('repayments.receipt.download')
     ->middleware('auth');
 
+Route::get('/repayments/{repayment}/thermal-receipt', [WidowLoanRepaymentController::class, 'downloadThermalReceipt'])
+    ->name('repayments.thermal-receipt.download')
+    ->middleware('auth');
+
 Route::get('/loans/{loan}/statement', [WidowLoanRepaymentController::class, 'downloadStatement'])
     ->name('loans.statement.download')
+    ->middleware('auth');
+
+Route::get('/loans/{loan}/weekly-thermal-report', [WidowLoanRepaymentController::class, 'downloadWeeklyThermalReport'])
+    ->name('loans.weekly-thermal.download')
     ->middleware('auth');
 
 Route::get('/loans/write-off-documents/{writeOff}', [WidowLoanWriteOffController::class, 'downloadDocument'])

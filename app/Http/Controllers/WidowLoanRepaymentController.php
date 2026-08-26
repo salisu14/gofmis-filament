@@ -12,31 +12,22 @@ use Illuminate\Support\Facades\Gate;
 class WidowLoanRepaymentController extends Controller
 {
     /**
-     * Generate and download the PDF receipt for a specific repayment.
+     * Generate and download the A4 PDF receipt for a specific repayment.
      */
     public function downloadReceipt(Request $request, WidowLoanRepayment $repayment)
     {
-        // 1. Authorization Check (Highly Recommended!)
-        // Ensure the logged-in user is allowed to view this receipt.
-        // You can use Policies: Gate::authorize('view', $repayment);
-        // Or a simple check like below:
-        if (!auth()->check()) {
-            abort(403, 'You must be logged in to download receipts.');
-        }
+        $this->authorizeLoanAccess($repayment->widowLoan);
 
-        // 2. Eager load relationships to prevent N+1 queries in the view
         $repayment->load(['widowLoan.widow.deceased.zone', 'transaction']);
 
-        // 3. Calculate the historical balance at the time of this payment
         $balance = max(
             0,
-            (float) $repayment->widowLoan->total_payable
+            (float) ($repayment->widowLoan->total_payable ?? $repayment->widowLoan->principal_amount)
             - (float) $repayment->widowLoan->repayments()
                 ->where('paid_at', '<=', $repayment->paid_at)
                 ->sum('amount')
         );
 
-        // 4. Load the Blade view into DomPDF
         $pdf = Pdf::loadView('filament.components.loan-receipt', [
             'record' => $repayment,
             'widow'  => $repayment->widowLoan->widow,
@@ -44,24 +35,22 @@ class WidowLoanRepaymentController extends Controller
             'company' => app(CompanyInformationService::class)->reportHeader(),
         ]);
 
-        // 5. Set paper size
         $pdf->setPaper('A4', 'portrait');
 
-        // 6. Return the PDF as a downloadable stream
         return $pdf->download("Receipt-{$repayment->receipt_number}.pdf");
     }
 
+    /**
+     * Generate and download the A4 loan statement.
+     */
     public function downloadStatement(WidowLoan $loan)
     {
-        if (!auth()->check()) {
-            abort(403);
-        }
+        $this->authorizeLoanAccess($loan);
 
         if (! $loan->repayments()->exists()) {
             abort(403, 'Loan statement cannot be downloaded until repayment has started.');
         }
 
-        // Eager load relationships
         $loan->load(['widow.deceased.zone', 'repayments']);
 
         $pdf = Pdf::loadView('filament.components.loan-statement', [
@@ -72,5 +61,95 @@ class WidowLoanRepaymentController extends Controller
         $pdf->setPaper('A4', 'portrait');
 
         return $pdf->download("Loan-Statement-{$loan->id}.pdf");
+    }
+
+    /**
+     * Generate and download the 58mm thermal WRL weekly repayment receipt report for a specific repayment.
+     */
+    public function downloadThermalReceipt(Request $request, WidowLoanRepayment $repayment)
+    {
+        $loan = $repayment->widowLoan()->withoutGlobalScopes()->first();
+
+        if (! $loan) {
+            abort(404, 'Associated loan record not found.');
+        }
+
+        $this->authorizeLoanAccess($loan);
+
+        $repayment->load(['widowLoan.widow.deceased.zone.coordinator', 'transaction.creator']);
+
+        $pdf = Pdf::loadView('pdf.reports.wrl-weekly-repayment-thermal', [
+            'repayment' => $repayment,
+            'loan' => $loan,
+            'company' => app(CompanyInformationService::class)->reportHeader(),
+        ]);
+
+        // 58mm paper width: 58mm / 25.4 * 72 = 164.41 pt
+        $pdf->setPaper([0, 0, 164.41, 650], 'portrait');
+
+        $filename = 'WRL-Thermal-Repayment-'.($repayment->receipt_number ?? substr($repayment->id, 0, 8)).'.pdf';
+
+        return $pdf->download($filename);
+    }
+
+    /**
+     * Generate and download the 58mm thermal WRL weekly repayment report for a specific loan.
+     */
+    public function downloadWeeklyThermalReport(Request $request, WidowLoan $loan)
+    {
+        $this->authorizeLoanAccess($loan);
+
+        $loan->load(['widow.deceased.zone.coordinator', 'repayments.transaction.creator']);
+        $repayment = $loan->repayments()->latest('paid_at')->first();
+
+        if (! $repayment) {
+            // Build a transient repayment object representing zero collection / initial state
+            $repayment = new WidowLoanRepayment([
+                'widow_loan_id' => $loan->id,
+                'amount' => 0.00,
+                'paid_at' => now(),
+                'payment_method' => 'N/A',
+                'receipt_number' => null,
+            ]);
+            $repayment->setRelation('widowLoan', $loan);
+        }
+
+        $pdf = Pdf::loadView('pdf.reports.wrl-weekly-repayment-thermal', [
+            'repayment' => $repayment,
+            'loan' => $loan,
+            'company' => app(CompanyInformationService::class)->reportHeader(),
+        ]);
+
+        // 58mm paper width: 58mm / 25.4 * 72 = 164.41 pt
+        $pdf->setPaper([0, 0, 164.41, 650], 'portrait');
+
+        $filename = 'WRL-Weekly-Repayment-Thermal-'.($loan->reference_number ?? substr($loan->id, 0, 8)).'.pdf';
+
+        return $pdf->download($filename);
+    }
+
+    /**
+     * Enforce authentication and coordinator zone isolation.
+     */
+    protected function authorizeLoanAccess(WidowLoan $loan): void
+    {
+        if (! auth()->check()) {
+            abort(403, 'Unauthorized.');
+        }
+
+        $user = auth()->user();
+
+        if ($user->hasAnyRole(['super_admin', 'admin'])) {
+            return;
+        }
+
+        $userZoneId = $user->coordinatedZone?->id;
+        $widow = $loan->widow()->withoutGlobalScopes()->first();
+        $deceased = $widow?->deceased()->withoutGlobalScopes()->first();
+        $loanZoneId = $deceased?->zone_id;
+
+        if (! $userZoneId || $userZoneId !== $loanZoneId) {
+            abort(403, 'Unauthorized zone access.');
+        }
     }
 }

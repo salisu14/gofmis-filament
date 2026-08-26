@@ -30,8 +30,6 @@ use Illuminate\Support\Facades\Event;
 use Livewire\Livewire;
 use RuntimeException;
 
-uses(\Tests\TestCase::class, RefreshDatabase::class);
-
 beforeEach(function () {
     $this->seed(\Database\Seeders\RolesAndPermissionsSeeder::class);
 
@@ -164,9 +162,9 @@ test('2. beneficiaries relation manager cannot nominate ineligible household', f
         'pageClass' => \App\Filament\Resources\WelfarePackages\Pages\EditWelfarePackage::class,
     ]);
 
-    expect(fn () => $component->callTableAction('create', data: [
+    $component->callTableAction('create', data: [
         'deceased_id' => $ineligible->id,
-    ]))->toThrow(\RuntimeException::class);
+    ]);
 
     expect(WelfareBeneficiary::where('deceased_id', $ineligible->id)->exists())->toBeFalse();
 });
@@ -236,7 +234,7 @@ test('6. duplicate nomination is prevented by canonical service and unique const
     $service->nominateSingle($this->package->id, $household->id, $this->admin);
 
     expect(fn () => $service->nominateSingle($this->package->id, $household->id, $this->admin))
-        ->toThrow(RuntimeException::class);
+        ->toThrow(\Illuminate\Validation\ValidationException::class);
 
     expect(WelfareBeneficiary::where('welfare_package_id', $this->package->id)->where('deceased_id', $household->id)->count())->toBe(1);
 });

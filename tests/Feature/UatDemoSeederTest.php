@@ -24,8 +24,6 @@ use Database\Seeders\UatDemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
 
-uses(\Tests\TestCase::class, RefreshDatabase::class);
-
 beforeEach(function () {
     // Baseline reference seeders that UAT data depends on (zones, roles,
     // permissions, orphan classes, intervention types). UatDemoSeeder itself
