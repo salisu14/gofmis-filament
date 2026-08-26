@@ -23,7 +23,7 @@ use Illuminate\Support\Str;
 use Livewire\Livewire;
 use Spatie\Permission\Models\Role;
 
-uses(RefreshDatabase::class);
+uses(\Tests\TestCase::class, RefreshDatabase::class);
 
 beforeEach(function () {
     Role::firstOrCreate(['name' => 'admin'], ['id' => Str::uuid(), 'uuid' => Str::uuid()]);
@@ -45,20 +45,22 @@ beforeEach(function () {
     $this->otherCoordinator->coordinatedZone()->save($this->otherZone);
 });
 
-function makeDeceased(array $attrs = []): Deceased
-{
-    return Deceased::withoutGlobalScopes()->create(array_merge([
-        'first_name' => 'Test',
-        'last_name' => 'Deceased',
-        'nin' => fake()->unique()->numerify('###########'),
-        'reg_no' => 'DEC-'.fake()->unique()->numberBetween(10000, 99999),
-        'guardian_name' => 'Guardian',
-        'guardian_phone' => '08012345678',
-        'vulnerability_status' => VulnerabilityStatus::A,
-        'date_registered' => now()->toDateString(),
-        'number_of_orphans_left' => 0,
-        'number_of_widows_left' => 0,
-    ], $attrs));
+if (!function_exists('makeDeceased')) {
+    function makeDeceased(array $attrs = []): Deceased
+    {
+        return Deceased::withoutGlobalScopes()->create(array_merge([
+            'first_name' => 'Test',
+            'last_name' => 'Deceased',
+            'nin' => fake()->unique()->numerify('###########'),
+            'reg_no' => 'DEC-'.fake()->unique()->numberBetween(10000, 99999),
+            'guardian_name' => 'Guardian',
+            'guardian_phone' => '08012345678',
+            'vulnerability_status' => VulnerabilityStatus::A,
+            'date_registered' => now()->toDateString(),
+            'number_of_orphans_left' => 0,
+            'number_of_widows_left' => 0,
+        ], $attrs));
+    }
 }
 
 // 1. Admin list renders

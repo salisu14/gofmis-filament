@@ -24,7 +24,7 @@ use Database\Seeders\UatDemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
 
-uses(RefreshDatabase::class);
+uses(\Tests\TestCase::class, RefreshDatabase::class);
 
 beforeEach(function () {
     // Baseline reference seeders that UAT data depends on (zones, roles,
@@ -35,9 +35,11 @@ beforeEach(function () {
     $this->seed(\Database\Seeders\InterventionTypeSeeder::class);
 });
 
-function seedUatOnce(): void
-{
-    Artisan::call('db:seed', ['--class' => UatDemoSeeder::class]);
+if (!function_exists('seedUatOnce')) {
+    function seedUatOnce(): void
+    {
+        Artisan::call('db:seed', ['--class' => UatDemoSeeder::class]);
+    }
 }
 
 test('UatDemoSeeder refuses to run in production environment', function () {

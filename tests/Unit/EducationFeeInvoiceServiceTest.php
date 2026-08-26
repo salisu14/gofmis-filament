@@ -10,7 +10,7 @@ use App\Models\User;
 use App\Services\EducationFeeInvoiceService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
-uses(RefreshDatabase::class);
+uses(\Tests\TestCase::class, RefreshDatabase::class);
 
 it('calculates the orphan education balance without including voided or cancelled invoices', function () {
     // Create a User to associate with the bank accounts

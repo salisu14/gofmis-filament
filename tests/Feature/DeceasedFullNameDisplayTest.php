@@ -15,7 +15,7 @@ use Illuminate\Support\Str;
 use Livewire\Livewire;
 use Spatie\Permission\Models\Role;
 
-uses(RefreshDatabase::class);
+uses(\Tests\TestCase::class, RefreshDatabase::class);
 
 beforeEach(function () {
     Role::firstOrCreate(['name' => 'admin'], ['id' => Str::uuid(), 'uuid' => Str::uuid()]);
@@ -28,19 +28,23 @@ beforeEach(function () {
     $this->zone = Zone::create(['name' => 'Zone A']);
 });
 
-function makeDeceased(array $attrs = []): Deceased
-{
-    return Deceased::create(array_merge([
-        'first_name' => 'Adamu',
-        'last_name' => 'Bello',
-        'nin' => '90000000001',
-        'reg_no' => 'UAT-DEC-001',
-        'guardian_name' => 'Guardian',
-        'guardian_phone' => '08012345678',
-        'vulnerability_status' => VulnerabilityStatus::B,
-        'date_registered' => now()->toDateString(),
-        'zone_id' => \App\Models\Zone::first()?->id,
-    ], $attrs));
+if (!function_exists('makeDeceased')) {
+    function makeDeceased(array $attrs = []): Deceased
+    {
+        return Deceased::withoutGlobalScopes()->create(array_merge([
+            'first_name' => 'Adamu',
+            'last_name' => 'Bello',
+            'nin' => fake()->unique()->numerify('###########'),
+            'reg_no' => 'DEC-'.fake()->unique()->numberBetween(10000, 99999),
+            'guardian_name' => 'Guardian',
+            'guardian_phone' => '08012345678',
+            'vulnerability_status' => VulnerabilityStatus::B,
+            'date_registered' => now()->toDateString(),
+            'number_of_orphans_left' => 0,
+            'number_of_widows_left' => 0,
+            'zone_id' => \App\Models\Zone::first()?->id,
+        ], $attrs));
+    }
 }
 
 test('deceased list renders the full name column value', function () {

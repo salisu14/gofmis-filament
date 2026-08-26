@@ -30,7 +30,7 @@ use Illuminate\Support\Facades\Event;
 use Livewire\Livewire;
 use RuntimeException;
 
-uses(RefreshDatabase::class);
+uses(\Tests\TestCase::class, RefreshDatabase::class);
 
 beforeEach(function () {
     $this->seed(\Database\Seeders\RolesAndPermissionsSeeder::class);
@@ -72,61 +72,65 @@ beforeEach(function () {
     ]);
 });
 
-function makeHousehold(string $nin, string $regNo, string $zoneId, bool $eligibleWidow = true, bool $eligibleOrphan = false): Deceased
-{
-    $deceased = Deceased::create([
-        'first_name' => 'Family',
-        'last_name' => 'Head',
-        'nin' => $nin,
-        'reg_no' => $regNo,
-        'guardian_name' => 'Guardian',
-        'guardian_phone' => '08012345678',
-        'date_registered' => now()->subMonths(1),
-        'date_of_death' => now()->subMonths(2),
-        'zone_id' => $zoneId,
-        'vulnerability_status' => VulnerabilityStatus::B,
-    ]);
-
-    if ($eligibleWidow) {
-        Widow::create([
-            'first_name' => 'Widow',
+if (!function_exists('makeHousehold')) {
+    function makeHousehold(string $nin, string $regNo, string $zoneId, bool $eligibleWidow = true, bool $eligibleOrphan = false): Deceased
+    {
+        $deceased = Deceased::create([
+            'first_name' => 'Family',
             'last_name' => 'Head',
-            'nin' => $nin . 'W',
-            'reg_no' => $regNo . '-W',
-            'child_sequence' => 1,
-            'deceased_id' => $deceased->id,
-            'is_eligible' => true,
-            'is_married' => false,
+            'nin' => $nin,
+            'reg_no' => $regNo,
+            'guardian_name' => 'Guardian',
+            'guardian_phone' => '08012345678',
+            'date_registered' => now()->subMonths(1),
+            'date_of_death' => now()->subMonths(2),
+            'zone_id' => $zoneId,
+            'vulnerability_status' => VulnerabilityStatus::B,
         ]);
-    }
 
-    if ($eligibleOrphan) {
-        Orphan::create([
-            'first_name' => 'Orphan',
-            'last_name' => 'Head',
-            'reg_no' => $regNo . '-O',
-            'child_sequence' => 1,
-            'gender' => Gender::FEMALE,
-            'birth_date' => now()->subYears(10),
-            'deceased_id' => $deceased->id,
-            'status' => OrphanStatus::ACTIVE,
-            'is_eligible' => true,
-            'is_married' => false,
-        ]);
-    }
+        if ($eligibleWidow) {
+            Widow::create([
+                'first_name' => 'Widow',
+                'last_name' => 'Head',
+                'nin' => $nin . 'W',
+                'reg_no' => $regNo . '-W',
+                'child_sequence' => 1,
+                'deceased_id' => $deceased->id,
+                'is_eligible' => true,
+                'is_married' => false,
+            ]);
+        }
 
-    return $deceased;
+        if ($eligibleOrphan) {
+            Orphan::create([
+                'first_name' => 'Orphan',
+                'last_name' => 'Head',
+                'reg_no' => $regNo . '-O',
+                'child_sequence' => 1,
+                'gender' => Gender::FEMALE,
+                'birth_date' => now()->subYears(10),
+                'deceased_id' => $deceased->id,
+                'status' => OrphanStatus::ACTIVE,
+                'is_eligible' => true,
+                'is_married' => false,
+            ]);
+        }
+
+        return $deceased;
+    }
 }
 
-function addStock(string $itemId, int $quantity): void
-{
-    StockMovement::create([
-        'item_id' => $itemId,
-        'movement_type' => StockMovementType::OPENING_BALANCE,
-        'quantity' => $quantity,
-        'occurred_at' => now(),
-        'created_by' => null,
-    ]);
+if (!function_exists('addStock')) {
+    function addStock(string $itemId, int $quantity): void
+    {
+        StockMovement::create([
+            'item_id' => $itemId,
+            'movement_type' => StockMovementType::OPENING_BALANCE,
+            'quantity' => $quantity,
+            'occurred_at' => now(),
+            'created_by' => null,
+        ]);
+    }
 }
 
 // ─── 1-3. BeneficiariesRelationManager nomination guards ─────────────────────
@@ -160,9 +164,9 @@ test('2. beneficiaries relation manager cannot nominate ineligible household', f
         'pageClass' => \App\Filament\Resources\WelfarePackages\Pages\EditWelfarePackage::class,
     ]);
 
-    $component->callTableAction('create', data: [
+    expect(fn () => $component->callTableAction('create', data: [
         'deceased_id' => $ineligible->id,
-    ]);
+    ]))->toThrow(\RuntimeException::class);
 
     expect(WelfareBeneficiary::where('deceased_id', $ineligible->id)->exists())->toBeFalse();
 });

@@ -5,6 +5,8 @@ use App\Models\Widow;
 use App\Services\IdCardPDFService;
 use Illuminate\Support\Facades\Storage;
 
+uses(Tests\TestCase::class);
+
 it('uses public storage URLs for browser card previews', function () {
     Storage::fake('public');
     Storage::disk('public')->put('widow-photos/hannatu.jpg', 'image-bytes');

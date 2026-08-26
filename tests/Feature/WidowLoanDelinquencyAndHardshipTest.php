@@ -26,7 +26,7 @@ use App\Services\WidowLoanWriteOffRecommendationService;
 use App\Services\WidowLoanWriteOffService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
-uses(RefreshDatabase::class);
+uses(\Tests\TestCase::class, RefreshDatabase::class);
 
 beforeEach(function () {
     // Seed roles and permissions

@@ -4,6 +4,8 @@ use App\Enums\Gender;
 use App\Models\Orphan;
 use App\Services\OrphanEligibilityService;
 
+uses(Tests\TestCase::class);
+
 it('filters out male orphans once they are 18', function () {
     $service = new OrphanEligibilityService;
 

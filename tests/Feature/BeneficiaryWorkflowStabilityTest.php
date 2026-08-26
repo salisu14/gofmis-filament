@@ -20,23 +20,25 @@ use App\Services\OrphanStatusService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
 
-uses(RefreshDatabase::class);
+uses(\Tests\TestCase::class, RefreshDatabase::class);
 
-function createTestOrphan(array $attributes = []): Orphan
-{
-    static $seq = 1;
+if (!function_exists('createTestOrphan')) {
+    function createTestOrphan(array $attributes = []): Orphan
+    {
+        static $seq = 1;
 
-    return Orphan::create(array_merge([
-        'first_name' => 'Child'.$seq,
-        'last_name' => 'Orphan'.$seq,
-        'reg_no' => 'ORP-'.sprintf('%05d', $seq),
-        'child_sequence' => $seq++,
-        'gender' => Gender::MALE,
-        'birth_date' => now()->subYears(10)->toDateString(),
-        'address' => '123 Main Street',
-        'status' => OrphanStatus::ACTIVE,
-        'is_eligible' => true,
-    ], $attributes));
+        return Orphan::create(array_merge([
+            'first_name' => 'Child'.$seq,
+            'last_name' => 'Orphan'.$seq,
+            'reg_no' => 'ORP-'.sprintf('%05d', $seq),
+            'child_sequence' => $seq++,
+            'gender' => Gender::MALE,
+            'birth_date' => now()->subYears(10)->toDateString(),
+            'address' => '123 Main Street',
+            'status' => OrphanStatus::ACTIVE,
+            'is_eligible' => true,
+        ], $attributes));
+    }
 }
 
 beforeEach(function () {

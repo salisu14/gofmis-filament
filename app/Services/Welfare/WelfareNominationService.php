@@ -130,7 +130,7 @@ class WelfareNominationService
 
         if ($result['nominated_count'] === 0) {
             $message = $result['messages'][0] ?? 'The household could not be nominated.';
-            throw new RuntimeException($message);
+            throw \Illuminate\Validation\ValidationException::withMessages(['deceased_id' => $message]);
         }
 
         $beneficiary = WelfareBeneficiary::where('welfare_package_id', $welfarePackageId)
