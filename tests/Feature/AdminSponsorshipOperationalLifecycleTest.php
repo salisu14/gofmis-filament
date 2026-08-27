@@ -118,14 +118,12 @@ class AdminSponsorshipOperationalLifecycleTest extends TestCase
         $this->actingAs($this->admin);
 
         Livewire::test(CreateSponsorship::class)
-            ->fillForm([
-                'orphan_id' => $this->eligibleOrphan->id,
-                'sponsor_id' => $this->sponsor->id,
-                'amount_committed' => 200000,
-                'start_date' => now()->format('Y-m-d'),
-                'end_date' => now()->addMonths(6)->format('Y-m-d'),
-                'notes' => 'Educational support package',
-            ])
+            ->set('data.orphan_id', $this->eligibleOrphan->id)
+            ->set('data.sponsor_id', $this->sponsor->id)
+            ->set('data.amount_committed', 200000)
+            ->set('data.start_date', now()->format('Y-m-d'))
+            ->set('data.end_date', now()->addMonths(6)->format('Y-m-d'))
+            ->set('data.notes', 'Educational support package')
             ->call('create')
             ->assertHasNoFormErrors();
 

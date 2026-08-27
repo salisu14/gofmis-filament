@@ -3,12 +3,16 @@
 namespace App\Filament\Resources\WidowLoanRepayments\Tables;
 
 use App\Models\WidowLoanRepayment;
+use App\Models\Zone;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
+use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Select;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\Redirect;
 
 class WidowLoanRepaymentsTable
 {
@@ -20,7 +24,7 @@ class WidowLoanRepaymentsTable
                     ->label('Receipt #')
                     ->searchable()
                     ->copyable()
-                    ->formatStateUsing(fn($state) => 'RCP-' . str_pad($state, 5, '0', STR_PAD_LEFT))
+                    ->formatStateUsing(fn ($state) => 'RCP-'.str_pad($state, 5, '0', STR_PAD_LEFT))
                     ->weight('bold')
                     ->sortable(),
 
@@ -51,7 +55,7 @@ class WidowLoanRepaymentsTable
                     ->label('Balance After')
                     ->money('NGN')
                     ->alignEnd()
-                    ->color(fn($state) => $state > 0 ? 'danger' : 'success')
+                    ->color(fn ($state) => $state > 0 ? 'danger' : 'success')
                     ->toggleable(),
 
                 TextColumn::make('payment_method')
@@ -84,20 +88,44 @@ class WidowLoanRepaymentsTable
                         ->label('Download PDF')
                         ->icon('heroicon-m-document-arrow-down')
                         ->color('success')
-                        ->url(fn(WidowLoanRepayment $record) => route('repayments.receipt.download', $record))
+                        ->url(fn (WidowLoanRepayment $record) => route('repayments.receipt.download', $record))
                         ->openUrlInNewTab(),
 
                     Action::make('thermalReceipt')
                         ->label('Thermal 58mm Receipt')
                         ->icon('heroicon-m-printer')
                         ->color('warning')
-                        ->url(fn(WidowLoanRepayment $record) => route('repayments.thermal-receipt.download', $record))
+                        ->url(fn (WidowLoanRepayment $record) => route('repayments.thermal-receipt.download', $record))
                         ->openUrlInNewTab(),
 
-
-                ])
+                ]),
             ])
             ->toolbarActions([
+                Action::make('weeklyReport')
+                    ->label('Weekly Repayment Report')
+                    ->icon('heroicon-m-printer')
+                    ->color('info')
+                    ->form([
+                        DatePicker::make('week')
+                            ->label('Reporting Week')
+                            ->default(now())
+                            ->displayFormat('d/m/Y')
+                            ->required(),
+                        Select::make('zone')
+                            ->label('Zone (optional)')
+                            ->options(fn () => Zone::query()->orderBy('name')->pluck('name', 'id'))
+                            ->searchable()
+                            ->visible(fn () => auth()->user()?->hasAnyRole(['admin', 'super_admin']) ?? false),
+                    ])
+                    ->action(function (array $data): \Illuminate\Http\RedirectResponse {
+                        $query = ['week' => $data['week']];
+
+                        if (! empty($data['zone'])) {
+                            $query['zone'] = $data['zone'];
+                        }
+
+                        return Redirect::route('wrl.weekly.download', $query);
+                    }),
                 BulkActionGroup::make([
                 ]),
             ])

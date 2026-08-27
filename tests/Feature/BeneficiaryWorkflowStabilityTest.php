@@ -17,10 +17,9 @@ use App\Models\Zone;
 use App\Services\IdCardGenerationService;
 use App\Services\IdCardPDFService;
 use App\Services\OrphanStatusService;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
 
-if (!function_exists('createTestOrphan')) {
+if (! function_exists('createTestOrphan')) {
     function createTestOrphan(array $attributes = []): Orphan
     {
         static $seq = 1;

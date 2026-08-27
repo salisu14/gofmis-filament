@@ -5,9 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\WidowLoan;
 use App\Models\WidowLoanRepayment;
 use App\Services\Company\CompanyInformationService;
+use App\Services\WidowLoanWeeklyReportService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Gate;
 
 class WidowLoanRepaymentController extends Controller
 {
@@ -20,17 +20,14 @@ class WidowLoanRepaymentController extends Controller
 
         $repayment->load(['widowLoan.widow.deceased.zone', 'transaction']);
 
-        $balance = max(
-            0,
-            (float) ($repayment->widowLoan->total_payable ?? $repayment->widowLoan->principal_amount)
-            - (float) $repayment->widowLoan->repayments()
-                ->where('paid_at', '<=', $repayment->paid_at)
-                ->sum('amount')
-        );
+        // Historical balance immediately after THIS repayment, using the
+        // deterministic (paid_at, receipt_number) ordering from the model
+        // (never a loose same-day sum that depends on creation-time ties).
+        $balance = $repayment->balance_after;
 
         $pdf = Pdf::loadView('filament.components.loan-receipt', [
             'record' => $repayment,
-            'widow'  => $repayment->widowLoan->widow,
+            'widow' => $repayment->widowLoan->widow,
             'balance' => $balance,
             'company' => app(CompanyInformationService::class)->reportHeader(),
         ]);
@@ -93,39 +90,76 @@ class WidowLoanRepaymentController extends Controller
     }
 
     /**
-     * Generate and download the 58mm thermal WRL weekly repayment report for a specific loan.
+     * Generate and download the TRUE 58mm thermal WRL WEEKLY repayment report.
+     *
+     * This is an aggregate reconciliation of every eligible repayment recorded
+     * within a single reporting week (ISO Monday–Sunday), across the
+     * organization (admin / super_admin) or a single coordinator zone.
+     *
+     * It is intentionally distinct from any individual repayment receipt:
+     *  - repayments.receipt.download        -> A4 per-repayment receipt
+     *  - repayments.thermal-receipt.download -> 58mm per-repayment receipt
+     *  - wrl.weekly.download                -> 58mm WEEKLY aggregate report
      */
-    public function downloadWeeklyThermalReport(Request $request, WidowLoan $loan)
+    public function downloadWeeklyReport(Request $request)
     {
-        $this->authorizeLoanAccess($loan);
+        $user = $request->user();
 
-        $loan->load(['widow.deceased.zone.coordinator', 'repayments.transaction.creator']);
-        $repayment = $loan->repayments()->latest('paid_at')->first();
-
-        if (! $repayment) {
-            // Build a transient repayment object representing zero collection / initial state
-            $repayment = new WidowLoanRepayment([
-                'widow_loan_id' => $loan->id,
-                'amount' => 0.00,
-                'paid_at' => now(),
-                'payment_method' => 'N/A',
-                'receipt_number' => null,
-            ]);
-            $repayment->setRelation('widowLoan', $loan);
+        if (! $user) {
+            abort(403, 'Unauthorized.');
         }
 
-        $pdf = Pdf::loadView('pdf.reports.wrl-weekly-repayment-thermal', [
-            'repayment' => $repayment,
-            'loan' => $loan,
-            'company' => app(CompanyInformationService::class)->reportHeader(),
+        $canFilterZone = $user->hasAnyRole(['super_admin', 'admin']);
+        $requestedZone = $request->query('zone');
+
+        // Coordinators may never request another zone's records.
+        if (! $canFilterZone && $requestedZone) {
+            abort(403, 'Unauthorized zone access.');
+        }
+
+        $company = app(CompanyInformationService::class)->reportHeader();
+
+        $report = app(WidowLoanWeeklyReportService::class)->build(
+            weekAnchor: $request->query('week'),
+            zoneId: $requestedZone,
+            user: $user,
+            canFilterZone: $canFilterZone,
+        );
+
+        $pdf = Pdf::loadView('pdf.reports.wrl-weekly-repayment-report-thermal', [
+            'rows' => $report['rows'],
+            'weekStart' => $report['week_start'],
+            'weekEnd' => $report['week_end'],
+            'zone' => $report['zone_name'],
+            'scheduleCount' => $report['schedule_count'],
+            'repaymentCount' => $report['rows']->sum(fn ($row) => $row['collected'] ? 1 : 0),
+            'distinctLoans' => $report['distinct_loans'],
+            'expectedTotal' => $report['expected_total'],
+            'collectedTotal' => $report['collected_total'],
+            'shortfallTotal' => $report['shortfall_total'],
+            'remainingBalanceTotal' => $report['remaining_balance_total'],
+            'company' => $company,
+            'generatedAt' => $report['generated_at'],
         ]);
 
-        // 58mm paper width: 58mm / 25.4 * 72 = 164.41 pt
-        $pdf->setPaper([0, 0, 164.41, 650], 'portrait');
+        // 58mm paper width: 58mm / 25.4 * 72 = 164.41 pt.
+        // Thermal output is continuous-feed, so height is set tall enough to
+        // avoid clipping multi-row weeks while printing on a single receipt.
+        $pdf->setPaper([0, 0, 164.41, 1500], 'portrait');
 
-        $filename = 'WRL-Weekly-Repayment-Thermal-'.($loan->reference_number ?? substr($loan->id, 0, 8)).'.pdf';
+        $filename = 'WRL-Weekly-Report-'.$report['week_start']->format('Y-m-d').'.pdf';
 
         return $pdf->download($filename);
+    }
+
+    /**
+     * Canonical, stable loan reference used wherever no dedicated reference
+     * column exists on the loan. Mirrors the convention used by the financial
+     * services (REP-/DISB- prefixes use the same UUID short form).
+     */
+    public static function loanReference(WidowLoan $loan, ?string $prefix = 'LOAN'): string
+    {
+        return $prefix.'-'.strtoupper(substr((string) $loan->id, 0, 8));
     }
 
     /**

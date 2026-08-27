@@ -4,7 +4,6 @@ namespace Tests\Feature;
 
 use App\Enums\BeneficiaryStatus;
 use App\Enums\CollectionStatus;
-use App\Enums\Gender;
 use App\Enums\OrphanStatus;
 use App\Enums\StockMovementType;
 use App\Enums\WelfarePackageStatus;
@@ -21,7 +20,6 @@ use App\Models\WidowLoan;
 use App\Models\WidowLoanRepayment;
 use App\Models\Zone;
 use Database\Seeders\UatDemoSeeder;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
 
 beforeEach(function () {
@@ -33,7 +31,7 @@ beforeEach(function () {
     $this->seed(\Database\Seeders\InterventionTypeSeeder::class);
 });
 
-if (!function_exists('seedUatOnce')) {
+if (! function_exists('seedUatOnce')) {
     function seedUatOnce(): void
     {
         Artisan::call('db:seed', ['--class' => UatDemoSeeder::class]);
@@ -41,7 +39,7 @@ if (!function_exists('seedUatOnce')) {
 }
 
 test('UatDemoSeeder refuses to run in production environment', function () {
-    $seeder = new UatDemoSeeder();
+    $seeder = new UatDemoSeeder;
 
     // Force the application environment to production and invoke the guard.
     $app = app();

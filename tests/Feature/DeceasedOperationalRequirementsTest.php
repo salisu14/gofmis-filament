@@ -17,7 +17,6 @@ use App\Models\User;
 use App\Models\Widow;
 use App\Models\Zone;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use Livewire\Livewire;
@@ -43,7 +42,7 @@ beforeEach(function () {
     $this->otherCoordinator->coordinatedZone()->save($this->otherZone);
 });
 
-if (!function_exists('makeDeceased')) {
+if (! function_exists('makeDeceased')) {
     function makeDeceased(array $attrs = []): Deceased
     {
         return Deceased::withoutGlobalScopes()->create(array_merge([
@@ -108,17 +107,15 @@ it('admin create requires historical dependent counts', function () {
     $this->actingAs($this->admin);
 
     Livewire::test(CreateDeceased::class)
-        ->fillForm([
-            'first_name' => 'John',
-            'last_name' => 'Doe',
-            'vulnerability_status' => VulnerabilityStatus::A->value,
-            'zone_id' => $this->zone->id,
-            'guardian_name' => 'Guardian',
-            'date_registered' => now()->toDateString(),
-            'date_of_death' => now()->toDateString(),
-            'number_of_widows_left' => null,
-            'number_of_orphans_left' => null,
-        ])
+        ->set('data.first_name', 'John')
+        ->set('data.last_name', 'Doe')
+        ->set('data.vulnerability_status', VulnerabilityStatus::A->value)
+        ->set('data.zone_id', $this->zone->id)
+        ->set('data.guardian_name', 'Guardian')
+        ->set('data.date_registered', now()->toDateString())
+        ->set('data.date_of_death', now()->toDateString())
+        ->set('data.number_of_widows_left', null)
+        ->set('data.number_of_orphans_left', null)
         ->call('create')
         ->assertHasFormErrors(['number_of_widows_left', 'number_of_orphans_left']);
 });
@@ -128,16 +125,14 @@ it('coordinator create requires historical dependent counts', function () {
     $this->actingAs($this->coordinator);
 
     Livewire::test(CoordinatorCreateDeceased::class)
-        ->fillForm([
-            'first_name' => 'John',
-            'last_name' => 'Doe',
-            'vulnerability_status' => VulnerabilityStatus::A->value,
-            'guardian_name' => 'Guardian',
-            'date_registered' => now()->toDateString(),
-            'date_of_death' => now()->toDateString(),
-            'number_of_widows_left' => null,
-            'number_of_orphans_left' => null,
-        ])
+        ->set('data.first_name', 'John')
+        ->set('data.last_name', 'Doe')
+        ->set('data.vulnerability_status', VulnerabilityStatus::A->value)
+        ->set('data.guardian_name', 'Guardian')
+        ->set('data.date_registered', now()->toDateString())
+        ->set('data.date_of_death', now()->toDateString())
+        ->set('data.number_of_widows_left', null)
+        ->set('data.number_of_orphans_left', null)
         ->call('create')
         ->assertHasFormErrors(['number_of_widows_left', 'number_of_orphans_left']);
 });
@@ -147,20 +142,18 @@ it('accepts explicit zero for historical dependent counts', function () {
     $this->actingAs($this->admin);
 
     Livewire::test(CreateDeceased::class)
-        ->fillForm([
-            'first_name' => 'John',
-            'last_name' => 'Doe',
-            'nin' => '12345678901',
-            'vulnerability_status' => VulnerabilityStatus::A->value,
-            'zone_id' => $this->zone->id,
-            'guardian_name' => 'Guardian',
-            'guardian_phone' => '08012345678',
-            'date_registered' => now()->toDateString(),
-            'date_of_death' => now()->toDateString(),
-            'number_of_widows_left' => 0,
-            'number_of_orphans_left' => 0,
-            'address' => 'Address',
-        ])
+        ->set('data.first_name', 'John')
+        ->set('data.last_name', 'Doe')
+        ->set('data.nin', '12345678901')
+        ->set('data.vulnerability_status', VulnerabilityStatus::A->value)
+        ->set('data.zone_id', $this->zone->id)
+        ->set('data.guardian_name', 'Guardian')
+        ->set('data.guardian_phone', '08012345678')
+        ->set('data.date_registered', now()->toDateString())
+        ->set('data.date_of_death', now()->toDateString())
+        ->set('data.number_of_widows_left', 0)
+        ->set('data.number_of_orphans_left', 0)
+        ->set('data.address', 'Address')
         ->call('create')
         ->assertHasNoFormErrors(['number_of_widows_left', 'number_of_orphans_left']);
 });
@@ -170,10 +163,8 @@ it('rejects negative numbers for historical dependent counts', function () {
     $this->actingAs($this->admin);
 
     Livewire::test(CreateDeceased::class)
-        ->fillForm([
-            'number_of_widows_left' => -1,
-            'number_of_orphans_left' => -2,
-        ])
+        ->set('data.number_of_widows_left', -1)
+        ->set('data.number_of_orphans_left', -2)
         ->call('create')
         ->assertHasFormErrors(['number_of_widows_left', 'number_of_orphans_left']);
 });
@@ -252,7 +243,7 @@ it('cause of death Other selection reveals and requires specify field', function
     $this->actingAs($this->admin);
 
     Livewire::test(CreateDeceased::class)
-        ->fillForm(['death_cause' => 'Other'])
+        ->set('data.death_cause', 'Other')
         ->assertFormFieldIsVisible('death_cause_other')
         ->call('create')
         ->assertHasFormErrors(['death_cause_other']);
@@ -301,19 +292,17 @@ it('date_registered and date_of_death are independent separate fields', function
 it('validates date of death cannot be in the future', function () {
     $this->actingAs($this->admin);
     Livewire::test(CreateDeceased::class)
-        ->fillForm([
-            'first_name' => 'Ali',
-            'last_name' => 'Musa',
-            'nin' => '12345678901',
-            'zone_id' => $this->zone->id,
-            'vulnerability_status' => 'A',
-            'guardian_name' => 'Jane',
-            'date_registered' => now()->format('Y-m-d'),
-            'date_of_death' => Carbon::tomorrow()->format('Y-m-d'),
-            'number_of_widows_left' => 0,
-            'number_of_orphans_left' => 0,
-            'address' => '1 Test St',
-        ])
+        ->set('data.first_name', 'Ali')
+        ->set('data.last_name', 'Musa')
+        ->set('data.nin', '12345678901')
+        ->set('data.zone_id', $this->zone->id)
+        ->set('data.vulnerability_status', 'A')
+        ->set('data.guardian_name', 'Jane')
+        ->set('data.date_registered', now()->format('Y-m-d'))
+        ->set('data.date_of_death', Carbon::tomorrow()->format('Y-m-d'))
+        ->set('data.number_of_widows_left', 0)
+        ->set('data.number_of_orphans_left', 0)
+        ->set('data.address', '1 Test St')
         ->call('create')
         ->assertHasFormErrors(['date_of_death']);
 });
@@ -322,20 +311,18 @@ it('validates date of death cannot be in the future', function () {
 it('validates date of birth cannot be after date of death', function () {
     $this->actingAs($this->admin);
     Livewire::test(CreateDeceased::class)
-        ->fillForm([
-            'first_name' => 'Ali',
-            'last_name' => 'Musa',
-            'nin' => '23456789012',
-            'zone_id' => $this->zone->id,
-            'vulnerability_status' => 'A',
-            'guardian_name' => 'Jane',
-            'date_registered' => now()->format('Y-m-d'),
-            'date_of_birth' => '2020-01-01',
-            'date_of_death' => '2019-01-01',
-            'number_of_widows_left' => 0,
-            'number_of_orphans_left' => 0,
-            'address' => '1 Test St',
-        ])
+        ->set('data.first_name', 'Ali')
+        ->set('data.last_name', 'Musa')
+        ->set('data.nin', '23456789012')
+        ->set('data.zone_id', $this->zone->id)
+        ->set('data.vulnerability_status', 'A')
+        ->set('data.guardian_name', 'Jane')
+        ->set('data.date_registered', now()->format('Y-m-d'))
+        ->set('data.date_of_birth', '2020-01-01')
+        ->set('data.date_of_death', '2019-01-01')
+        ->set('data.number_of_widows_left', 0)
+        ->set('data.number_of_orphans_left', 0)
+        ->set('data.address', '1 Test St')
         ->call('create')
         ->assertHasFormErrors(['date_of_death']);
 });
@@ -783,10 +770,10 @@ it('form age field is hidden when date of birth is supplied', function () {
     $this->actingAs($this->admin);
 
     Livewire::test(CreateDeceased::class)
-        ->fillForm(['date_of_birth' => '1985-01-01'])
+        ->set('data.date_of_birth', '1985-01-01')
         ->assertFormFieldIsHidden('age');
 
     Livewire::test(CreateDeceased::class)
-        ->fillForm(['date_of_birth' => null])
+        ->set('data.date_of_birth', null)
         ->assertFormFieldIsVisible('age');
 });

@@ -11,7 +11,6 @@ use App\Models\Project;
 use App\Models\User;
 use App\Models\Zone;
 use Filament\Facades\Filament;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 
 beforeEach(function () {
@@ -63,13 +62,11 @@ test('1. coordinator project pages render cleanly', function () {
 
 test('2. coordinator can create project for own zone beneficiary', function () {
     Livewire::test(CreateProject::class)
-        ->fillForm([
-            'name' => 'Housing Renovation Project',
-            'type' => ProjectType::HOUSE->value,
-            'deceased_id' => (string) $this->deceased->id,
-            'budget_allocated' => 250000,
-            'description' => 'Roof repair and wall plastering',
-        ])
+        ->set('data.name', 'Housing Renovation Project')
+        ->set('data.type', ProjectType::HOUSE->value)
+        ->set('data.deceased_id', (string) $this->deceased->id)
+        ->set('data.budget_allocated', 250000)
+        ->set('data.description', 'Roof repair and wall plastering')
         ->call('create')
         ->assertHasNoFormErrors();
 
@@ -83,12 +80,10 @@ test('2. coordinator can create project for own zone beneficiary', function () {
 
 test('3. coordinator cannot select other-zone deceased for project creation', function () {
     Livewire::test(CreateProject::class)
-        ->fillForm([
-            'name' => 'Cross Zone Project',
-            'type' => ProjectType::HOUSE->value,
-            'deceased_id' => (string) $this->otherDeceased->id,
-            'budget_allocated' => 100000,
-        ])
+        ->set('data.name', 'Cross Zone Project')
+        ->set('data.type', ProjectType::HOUSE->value)
+        ->set('data.deceased_id', (string) $this->otherDeceased->id)
+        ->set('data.budget_allocated', 100000)
         ->call('create')
         ->assertHasFormErrors(['deceased_id']);
 });

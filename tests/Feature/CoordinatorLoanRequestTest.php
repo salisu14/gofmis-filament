@@ -13,7 +13,6 @@ use App\Models\Widow;
 use App\Models\WidowLoan;
 use App\Models\Zone;
 use Filament\Facades\Filament;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 
 beforeEach(function () {
@@ -94,14 +93,12 @@ test('1. coordinator can render Loan Request create page', function () {
 
 test('2. coordinator can create valid loan request for own-zone widow', function () {
     Livewire::test(CreateLoanRequest::class)
-        ->fillForm([
-            'widow_id' => (string) $this->widow->id,
-            'principal_amount' => 50000,
-            'duration_months' => 6,
-            'repayment_frequency' => 'weekly',
-            'purpose' => 'Small trading business capital',
-            'notes' => 'Verified beneficiary by coordinator',
-        ])
+        ->set('data.widow_id', (string) $this->widow->id)
+        ->set('data.principal_amount', 50000)
+        ->set('data.duration_months', 6)
+        ->set('data.repayment_frequency', 'weekly')
+        ->set('data.purpose', 'Small trading business capital')
+        ->set('data.notes', 'Verified beneficiary by coordinator')
         ->call('create')
         ->assertHasNoFormErrors();
 
@@ -117,13 +114,11 @@ test('2. coordinator can create valid loan request for own-zone widow', function
 
 test('3. coordinator cannot select other-zone widow for loan request', function () {
     Livewire::test(CreateLoanRequest::class)
-        ->fillForm([
-            'widow_id' => (string) $this->otherWidow->id,
-            'principal_amount' => 50000,
-            'duration_months' => 6,
-            'repayment_frequency' => 'weekly',
-            'purpose' => 'Cross-zone loan request attempt',
-        ])
+        ->set('data.widow_id', (string) $this->otherWidow->id)
+        ->set('data.principal_amount', 50000)
+        ->set('data.duration_months', 6)
+        ->set('data.repayment_frequency', 'weekly')
+        ->set('data.purpose', 'Cross-zone loan request attempt')
         ->call('create')
         ->assertHasFormErrors(['widow_id']);
 });

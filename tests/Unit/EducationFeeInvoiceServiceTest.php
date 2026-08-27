@@ -105,7 +105,7 @@ it('calculates the orphan education balance without including voided or cancelle
     expect($education->fresh()->balance)->toEqual(100000.00);
 
     // 5. Pay Invoice 1
-    $service = new EducationFeeInvoiceService();
+    $service = new EducationFeeInvoiceService;
     $service->recordPayment($invoice1, [
         'amount' => 50000.00,
         'bank_account_id' => $childBank->id,

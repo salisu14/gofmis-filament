@@ -15,7 +15,6 @@ use App\Models\User;
 use App\Models\Widow;
 use App\Models\Zone;
 use App\Services\IdCardGenerationService;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 
 beforeEach(function () {
@@ -70,17 +69,15 @@ beforeEach(function () {
 
 test('1. standalone prescription create with illness_id succeeds', function () {
     Livewire::test(CreatePrescription::class)
-        ->fillForm([
-            'doctor_name' => 'Dr. Musa',
-            'illness_id' => $this->illness->id,
-            'prescription_date' => now()->toDateString(),
-            'prescribable_type' => Orphan::class,
-            'prescribable_id' => $this->orphan->id,
-            'user_id' => $this->admin->id,
-            'lab_test_cost' => 1000,
-            'drug_cost' => 2000,
-            'note' => 'Take twice daily',
-        ])
+        ->set('data.doctor_name', 'Dr. Musa')
+        ->set('data.illness_id', $this->illness->id)
+        ->set('data.prescription_date', now()->toDateString())
+        ->set('data.prescribable_type', Orphan::class)
+        ->set('data.prescribable_id', $this->orphan->id)
+        ->set('data.user_id', $this->admin->id)
+        ->set('data.lab_test_cost', 1000)
+        ->set('data.drug_cost', 2000)
+        ->set('data.note', 'Take twice daily')
         ->call('create')
         ->assertHasNoFormErrors();
 
@@ -94,16 +91,14 @@ test('1. standalone prescription create with illness_id succeeds', function () {
 
 test('2. standalone widow prescription create succeeds', function () {
     Livewire::test(CreatePrescription::class)
-        ->fillForm([
-            'doctor_name' => 'Dr. Fatima',
-            'illness_id' => $this->illness->id,
-            'prescription_date' => now()->toDateString(),
-            'prescribable_type' => Widow::class,
-            'prescribable_id' => $this->widow->id,
-            'user_id' => $this->admin->id,
-            'lab_test_cost' => 500,
-            'drug_cost' => 1500,
-        ])
+        ->set('data.doctor_name', 'Dr. Fatima')
+        ->set('data.illness_id', $this->illness->id)
+        ->set('data.prescription_date', now()->toDateString())
+        ->set('data.prescribable_type', Widow::class)
+        ->set('data.prescribable_id', $this->widow->id)
+        ->set('data.user_id', $this->admin->id)
+        ->set('data.lab_test_cost', 500)
+        ->set('data.drug_cost', 1500)
         ->call('create')
         ->assertHasNoFormErrors();
 
@@ -116,14 +111,12 @@ test('2. standalone widow prescription create succeeds', function () {
 
 test('3. standalone orphan prescription create succeeds', function () {
     Livewire::test(CreatePrescription::class)
-        ->fillForm([
-            'doctor_name' => 'Dr. Ibrahim',
-            'illness_id' => $this->illness->id,
-            'prescription_date' => now()->toDateString(),
-            'prescribable_type' => Orphan::class,
-            'prescribable_id' => $this->orphan->id,
-            'user_id' => $this->admin->id,
-        ])
+        ->set('data.doctor_name', 'Dr. Ibrahim')
+        ->set('data.illness_id', $this->illness->id)
+        ->set('data.prescription_date', now()->toDateString())
+        ->set('data.prescribable_type', Orphan::class)
+        ->set('data.prescribable_id', $this->orphan->id)
+        ->set('data.user_id', $this->admin->id)
         ->call('create')
         ->assertHasNoFormErrors();
 
@@ -194,15 +187,13 @@ test('6 & 7. required illness relationship is persisted and legacy illness colum
 
 test('8. medication pivot records persist correctly', function () {
     Livewire::test(CreatePrescription::class)
-        ->fillForm([
-            'doctor_name' => 'Dr. Meds',
-            'illness_id' => $this->illness->id,
-            'prescription_date' => now()->toDateString(),
-            'prescribable_type' => Orphan::class,
-            'prescribable_id' => $this->orphan->id,
-            'user_id' => $this->admin->id,
-            'medications' => [$this->medication->id],
-        ])
+        ->set('data.doctor_name', 'Dr. Meds')
+        ->set('data.illness_id', $this->illness->id)
+        ->set('data.prescription_date', now()->toDateString())
+        ->set('data.prescribable_type', Orphan::class)
+        ->set('data.prescribable_id', $this->orphan->id)
+        ->set('data.user_id', $this->admin->id)
+        ->set('data.medications', [$this->medication->id])
         ->call('create')
         ->assertHasNoFormErrors();
 

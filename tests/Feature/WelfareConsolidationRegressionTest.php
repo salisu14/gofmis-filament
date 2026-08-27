@@ -25,7 +25,6 @@ use App\Services\BeneficiaryService;
 use App\Services\Welfare\WelfareNominationService;
 use App\Services\Welfare\WelfarePackageLifecycleService;
 use Filament\Facades\Filament;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
 use Livewire\Livewire;
 use RuntimeException;
@@ -70,7 +69,7 @@ beforeEach(function () {
     ]);
 });
 
-if (!function_exists('makeHousehold')) {
+if (! function_exists('makeHousehold')) {
     function makeHousehold(string $nin, string $regNo, string $zoneId, bool $eligibleWidow = true, bool $eligibleOrphan = false): Deceased
     {
         $deceased = Deceased::create([
@@ -90,8 +89,8 @@ if (!function_exists('makeHousehold')) {
             Widow::create([
                 'first_name' => 'Widow',
                 'last_name' => 'Head',
-                'nin' => $nin . 'W',
-                'reg_no' => $regNo . '-W',
+                'nin' => $nin.'W',
+                'reg_no' => $regNo.'-W',
                 'child_sequence' => 1,
                 'deceased_id' => $deceased->id,
                 'is_eligible' => true,
@@ -103,7 +102,7 @@ if (!function_exists('makeHousehold')) {
             Orphan::create([
                 'first_name' => 'Orphan',
                 'last_name' => 'Head',
-                'reg_no' => $regNo . '-O',
+                'reg_no' => $regNo.'-O',
                 'child_sequence' => 1,
                 'gender' => Gender::FEMALE,
                 'birth_date' => now()->subYears(10),
@@ -118,7 +117,7 @@ if (!function_exists('makeHousehold')) {
     }
 }
 
-if (!function_exists('addStock')) {
+if (! function_exists('addStock')) {
     function addStock(string $itemId, int $quantity): void
     {
         StockMovement::create([

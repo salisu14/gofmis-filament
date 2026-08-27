@@ -11,7 +11,6 @@ use App\Models\Orphan;
 use App\Models\User;
 use App\Models\Zone;
 use Filament\Facades\Filament;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 
 beforeEach(function () {
@@ -79,18 +78,12 @@ test('4, 5, 6, 7, 8, 9, 10. valid Coordinator Education Request saves all requir
     $requestDate = now()->format('Y-m-d');
 
     Livewire::test(CreateEducationRequest::class)
-        ->fillForm([
-            'orphan_id' => (string) $this->orphan->id,
-        ])
-        ->fillForm([
-            'intervention_type_id' => (string) $this->supportType->id,
-        ])
-        ->fillForm([
-            'request_date' => $requestDate,
-            'requested_level' => 'primary_1',
-            'requested_amount' => 45000,
-            'notes' => 'Urgent school fees for term 1.',
-        ])
+        ->set('data.orphan_id', (string) $this->orphan->id)
+        ->set('data.intervention_type_id', (string) $this->supportType->id)
+        ->set('data.request_date', $requestDate)
+        ->set('data.requested_level', 'primary_1')
+        ->set('data.requested_amount', 45000)
+        ->set('data.notes', 'Urgent school fees for term 1.')
         ->call('create')
         ->assertHasNoFormErrors();
 
@@ -112,15 +105,9 @@ test('11. coordinator can select own-zone eligible orphan', function () {
 
 test('12. other-zone orphan cannot be selected/submitted by coordinator', function () {
     Livewire::test(CreateEducationRequest::class)
-        ->fillForm([
-            'orphan_id' => (string) $this->otherOrphan->id,
-        ])
-        ->fillForm([
-            'intervention_type_id' => (string) $this->supportType->id,
-        ])
-        ->fillForm([
-            'notes' => 'Cross zone attempt.',
-        ])
+        ->set('data.orphan_id', (string) $this->otherOrphan->id)
+        ->set('data.intervention_type_id', (string) $this->supportType->id)
+        ->set('data.notes', 'Cross zone attempt.')
         ->call('create')
         ->assertHasFormErrors(['orphan_id']);
 
@@ -159,15 +146,9 @@ test('13 & 14. newly-created request appears in Admin Education Verification que
 
 test('15. invalid or missing support type yields validation error instead of HTTP 500', function () {
     Livewire::test(CreateEducationRequest::class)
-        ->fillForm([
-            'orphan_id' => (string) $this->orphan->id,
-        ])
-        ->fillForm([
-            'intervention_type_id' => '00000000-0000-0000-0000-000000000000',
-        ])
-        ->fillForm([
-            'notes' => 'Invalid support type test',
-        ])
+        ->set('data.orphan_id', (string) $this->orphan->id)
+        ->set('data.intervention_type_id', '00000000-0000-0000-0000-000000000000')
+        ->set('data.notes', 'Invalid support type test')
         ->call('create')
         ->assertHasFormErrors(['intervention_type_id']);
 });
