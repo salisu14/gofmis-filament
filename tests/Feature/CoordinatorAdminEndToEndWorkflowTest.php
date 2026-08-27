@@ -26,7 +26,6 @@ use App\Models\Widow;
 use App\Models\WidowLoan;
 use App\Models\Zone;
 use App\Services\WidowLoanService;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 
 beforeEach(function () {
     $this->seed(\Database\Seeders\RolesAndPermissionsSeeder::class);

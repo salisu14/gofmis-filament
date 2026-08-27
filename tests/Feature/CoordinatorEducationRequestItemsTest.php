@@ -12,7 +12,6 @@ use App\Models\Orphan;
 use App\Models\User;
 use App\Models\Zone;
 use Filament\Facades\Filament;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 
 beforeEach(function () {
@@ -93,27 +92,25 @@ beforeEach(function () {
 
 test('1, 2 & 3. coordinator can create item-based Education Request with multiple requested items', function () {
     Livewire::test(CreateEducationRequest::class)
-        ->fillForm([
-            'orphan_id' => (string) $this->orphan->id,
-            'intervention_type_id' => (string) $this->uniformType->id,
-            'request_date' => now()->format('Y-m-d'),
-            'requested_level' => 'jss_1',
-            'notes' => 'Uniform and books needed for new term',
-            'items' => [
-                [
-                    'item_id' => (string) $this->itemUniform->id,
-                    'item_name' => $this->itemUniform->name,
-                    'orphan_class' => 'Size 34 / JSS 1',
-                    'specification' => 'Blue cotton uniform',
-                    'quantity_requested' => 2,
-                ],
-                [
-                    'item_id' => (string) $this->itemBooks->id,
-                    'item_name' => $this->itemBooks->name,
-                    'orphan_class' => 'JSS 1',
-                    'specification' => 'Higher education notebooks',
-                    'quantity_requested' => 10,
-                ],
+        ->set('data.orphan_id', (string) $this->orphan->id)
+        ->set('data.intervention_type_id', (string) $this->uniformType->id)
+        ->set('data.request_date', now()->format('Y-m-d'))
+        ->set('data.requested_level', 'jss_1')
+        ->set('data.notes', 'Uniform and books needed for new term')
+        ->set('data.items', [
+            [
+                'item_id' => (string) $this->itemUniform->id,
+                'item_name' => $this->itemUniform->name,
+                'orphan_class' => 'Size 34 / JSS 1',
+                'specification' => 'Blue cotton uniform',
+                'quantity_requested' => 2,
+            ],
+            [
+                'item_id' => (string) $this->itemBooks->id,
+                'item_name' => $this->itemBooks->name,
+                'orphan_class' => 'JSS 1',
+                'specification' => 'Higher education notebooks',
+                'quantity_requested' => 10,
             ],
         ])
         ->call('create')
@@ -137,17 +134,15 @@ test('1, 2 & 3. coordinator can create item-based Education Request with multipl
 
 test('4. coordinator cannot set Qty Fulfilled during request creation', function () {
     Livewire::test(CreateEducationRequest::class)
-        ->fillForm([
-            'orphan_id' => (string) $this->orphan->id,
-            'intervention_type_id' => (string) $this->uniformType->id,
-            'request_date' => now()->format('Y-m-d'),
-            'notes' => 'Testing Qty Fulfilled field restriction',
-            'items' => [
-                [
-                    'item_id' => (string) $this->itemUniform->id,
-                    'quantity_requested' => 2,
-                    'quantity_fulfilled' => 5, // Tampered input
-                ],
+        ->set('data.orphan_id', (string) $this->orphan->id)
+        ->set('data.intervention_type_id', (string) $this->uniformType->id)
+        ->set('data.request_date', now()->format('Y-m-d'))
+        ->set('data.notes', 'Testing Qty Fulfilled field restriction')
+        ->set('data.items', [
+            [
+                'item_id' => (string) $this->itemUniform->id,
+                'quantity_requested' => 2,
+                'quantity_fulfilled' => 5, // Tampered input
             ],
         ])
         ->call('create')
@@ -166,15 +161,13 @@ test('5. coordinator cannot create arbitrary master items', function () {
 
 test('6 & 16. coordinator cannot attach items or create request for another zone orphan', function () {
     Livewire::test(CreateEducationRequest::class)
-        ->fillForm([
-            'orphan_id' => (string) $this->otherOrphan->id,
-            'intervention_type_id' => (string) $this->uniformType->id,
-            'notes' => 'Cross-zone request attempt',
-            'items' => [
-                [
-                    'item_id' => (string) $this->itemUniform->id,
-                    'quantity_requested' => 1,
-                ],
+        ->set('data.orphan_id', (string) $this->otherOrphan->id)
+        ->set('data.intervention_type_id', (string) $this->uniformType->id)
+        ->set('data.notes', 'Cross-zone request attempt')
+        ->set('data.items', [
+            [
+                'item_id' => (string) $this->itemUniform->id,
+                'quantity_requested' => 1,
             ],
         ])
         ->call('create')
@@ -187,25 +180,21 @@ test('6 & 16. coordinator cannot attach items or create request for another zone
 
 test('7. item-based intervention requiring items rejects empty requested-item set', function () {
     Livewire::test(CreateEducationRequest::class)
-        ->fillForm([
-            'orphan_id' => (string) $this->orphan->id,
-            'intervention_type_id' => (string) $this->uniformType->id,
-            'notes' => 'Empty items request attempt',
-            'items' => [],
-        ])
+        ->set('data.orphan_id', (string) $this->orphan->id)
+        ->set('data.intervention_type_id', (string) $this->uniformType->id)
+        ->set('data.notes', 'Empty items request attempt')
+        ->set('data.items', [])
         ->call('create')
         ->assertHasFormErrors(['items']);
 });
 
 test('8. monetary/non-item intervention can be submitted without fake items', function () {
     Livewire::test(CreateEducationRequest::class)
-        ->fillForm([
-            'orphan_id' => (string) $this->orphan->id,
-            'intervention_type_id' => (string) $this->feesType->id,
-            'requested_amount' => 45000,
-            'notes' => 'School fee monetary request',
-            'items' => [],
-        ])
+        ->set('data.orphan_id', (string) $this->orphan->id)
+        ->set('data.intervention_type_id', (string) $this->feesType->id)
+        ->set('data.requested_amount', 45000)
+        ->set('data.notes', 'School fee monetary request')
+        ->set('data.items', [])
         ->call('create')
         ->assertHasNoFormErrors();
 

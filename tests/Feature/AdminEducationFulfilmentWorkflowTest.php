@@ -12,7 +12,6 @@ use App\Models\Orphan;
 use App\Models\User;
 use App\Models\Zone;
 use Filament\Facades\Filament;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 
 beforeEach(function () {

@@ -13,7 +13,6 @@ use App\Models\User;
 use App\Models\Widow;
 use App\Models\WidowLoan;
 use App\Models\Zone;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 
 beforeEach(function () {

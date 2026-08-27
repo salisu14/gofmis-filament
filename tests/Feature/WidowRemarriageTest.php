@@ -13,7 +13,6 @@ use App\Models\Widow;
 use App\Models\WidowLoan;
 use App\Models\Zone;
 use Filament\Facades\Filament;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 
 beforeEach(function () {
@@ -207,13 +206,11 @@ test('10. same NIN + same deceased rejected cleanly by validation', function () 
     $this->actingAs($this->admin);
 
     Livewire::test(AdminCreateWidow::class)
-        ->fillForm([
-            'deceased_id' => (string) $this->deceasedA->id,
-            'first_name' => 'Amina',
-            'last_name' => 'Usman',
-            'nin' => '12345678901', // Same NIN + Same Deceased!
-            'address' => 'Garko, Kano',
-        ])
+        ->set('data.deceased_id', (string) $this->deceasedA->id)
+        ->set('data.first_name', 'Amina')
+        ->set('data.last_name', 'Usman')
+        ->set('data.nin', '12345678901')
+        ->set('data.address', 'Garko, Kano')
         ->call('create')
         ->assertHasFormErrors(['nin']);
 });
@@ -226,13 +223,11 @@ test('11. same NIN + different deceased allowed', function () {
     $deceasedB = Deceased::factory()->create(['zone_id' => $this->zone->id]);
 
     Livewire::test(AdminCreateWidow::class)
-        ->fillForm([
-            'deceased_id' => (string) $deceasedB->id,
-            'first_name' => 'Amina',
-            'last_name' => 'Usman',
-            'nin' => '12345678901', // Same NIN + Different Deceased!
-            'address' => 'Garko, Kano',
-        ])
+        ->set('data.deceased_id', (string) $deceasedB->id)
+        ->set('data.first_name', 'Amina')
+        ->set('data.last_name', 'Usman')
+        ->set('data.nin', '12345678901')
+        ->set('data.address', 'Garko, Kano')
         ->call('create')
         ->assertHasNoFormErrors();
 
@@ -440,13 +435,11 @@ test('20. no SQL exception leaks for duplicate submissions', function () {
     $this->actingAs($this->admin);
 
     Livewire::test(AdminCreateWidow::class)
-        ->fillForm([
-            'deceased_id' => (string) $this->deceasedA->id,
-            'first_name' => 'Amina',
-            'last_name' => 'Usman',
-            'nin' => '12345678901', // Duplicate under same deceased
-            'address' => 'Garko, Kano',
-        ])
+        ->set('data.deceased_id', (string) $this->deceasedA->id)
+        ->set('data.first_name', 'Amina')
+        ->set('data.last_name', 'Usman')
+        ->set('data.nin', '12345678901')
+        ->set('data.address', 'Garko, Kano')
         ->call('create')
         ->assertHasFormErrors(['nin']);
 });

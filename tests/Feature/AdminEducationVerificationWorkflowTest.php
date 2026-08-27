@@ -11,7 +11,6 @@ use App\Models\OrphanEducation;
 use App\Models\User;
 use App\Models\Zone;
 use Filament\Facades\Filament;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 
 beforeEach(function () {
@@ -64,15 +63,11 @@ test('1. coordinator creates Education Request and can see read-only education s
     $this->actingAs($this->coordinator);
 
     Livewire::test(CreateEducationRequest::class)
-        ->fillForm([
-            'orphan_id' => (string) $this->orphan->id,
-        ])
-        ->fillForm([
-            'intervention_type_id' => (string) $this->supportType->id,
-            'requested_level' => 'jss_1',
-            'requested_amount' => 35000,
-            'notes' => 'Termly school fee request',
-        ])
+        ->set('data.orphan_id', (string) $this->orphan->id)
+        ->set('data.intervention_type_id', (string) $this->supportType->id)
+        ->set('data.requested_level', 'jss_1')
+        ->set('data.requested_amount', 35000)
+        ->set('data.notes', 'Termly school fee request')
         ->call('create')
         ->assertHasNoFormErrors();
 

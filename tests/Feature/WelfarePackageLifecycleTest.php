@@ -13,48 +13,47 @@ use App\Models\WelfareBeneficiary;
 use App\Models\WelfarePackage;
 use App\Models\Zone;
 use App\Services\Welfare\WelfarePackageLifecycleService;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-if (!function_exists('makeAdmin')) {
+if (! function_exists('makeAdmin')) {
     function makeAdmin(): User
     {
         $user = User::factory()->create(['status' => UserStatus::ACTIVE]);
         $user->assignRole('admin');
+
         return $user;
     }
 }
 
-if (!function_exists('makeDraftPackage')) {
+if (! function_exists('makeDraftPackage')) {
     function makeDraftPackage(User $admin, bool $withItems = false): WelfarePackage
     {
         $pkg = WelfarePackage::create([
-            'name'       => 'Test Package',
-            'status'     => WelfarePackageStatus::DRAFT,
+            'name' => 'Test Package',
+            'status' => WelfarePackageStatus::DRAFT,
             'created_by' => $admin->id,
             'start_date' => now()->toDateString(),
-            'end_date'   => now()->addMonth()->toDateString(),
+            'end_date' => now()->addMonth()->toDateString(),
         ]);
 
         if ($withItems) {
             $category = \App\Models\Category::create([
-                'name'       => 'Test Category ' . uniqid(),
-                'user_id'    => $admin->id,
+                'name' => 'Test Category '.uniqid(),
+                'user_id' => $admin->id,
             ]);
 
             $item = \App\Models\Item::create([
-                'name'        => 'Test Item ' . uniqid(),
+                'name' => 'Test Item '.uniqid(),
                 'category_id' => $category->id,
-                'user_id'     => $admin->id,
+                'user_id' => $admin->id,
             ]);
 
             \App\Models\WelfarePackageItem::create([
-                'welfare_package_id'  => $pkg->id,
-                'item_id'             => $item->id,
-                'category_id'         => $category->id,
+                'welfare_package_id' => $pkg->id,
+                'item_id' => $item->id,
+                'category_id' => $category->id,
                 'quantity_per_family' => 1,
             ]);
         }
@@ -63,60 +62,62 @@ if (!function_exists('makeDraftPackage')) {
     }
 }
 
-if (!function_exists('makeOpenPackage')) {
+if (! function_exists('makeOpenPackage')) {
     function makeOpenPackage(User $admin): WelfarePackage
     {
         $pkg = WelfarePackage::create([
-            'name'       => 'Open Package',
-            'status'     => WelfarePackageStatus::OPEN,
+            'name' => 'Open Package',
+            'status' => WelfarePackageStatus::OPEN,
             'created_by' => $admin->id,
             'start_date' => now()->toDateString(),
-            'end_date'   => now()->addMonth()->toDateString(),
+            'end_date' => now()->addMonth()->toDateString(),
         ]);
+
         return $pkg;
     }
 }
 
-if (!function_exists('makeClosedPackage')) {
+if (! function_exists('makeClosedPackage')) {
     function makeClosedPackage(User $admin): WelfarePackage
     {
         $pkg = WelfarePackage::create([
-            'name'       => 'Closed Package',
-            'status'     => WelfarePackageStatus::CLOSED,
+            'name' => 'Closed Package',
+            'status' => WelfarePackageStatus::CLOSED,
             'created_by' => $admin->id,
             'start_date' => now()->toDateString(),
-            'end_date'   => now()->addMonth()->toDateString(),
+            'end_date' => now()->addMonth()->toDateString(),
         ]);
+
         return $pkg;
     }
 }
 
-if (!function_exists('makeClosedPackageWithItems')) {
+if (! function_exists('makeClosedPackageWithItems')) {
     function makeClosedPackageWithItems(User $admin): WelfarePackage
     {
         $pkg = WelfarePackage::create([
-            'name'       => 'Closed Package With Items',
-            'status'     => WelfarePackageStatus::CLOSED,
+            'name' => 'Closed Package With Items',
+            'status' => WelfarePackageStatus::CLOSED,
             'created_by' => $admin->id,
             'start_date' => now()->toDateString(),
-            'end_date'   => now()->addMonth()->toDateString(),
+            'end_date' => now()->addMonth()->toDateString(),
         ]);
 
         $category = \App\Models\Category::create([
-            'name'    => 'Closed Test Category ' . uniqid(),
+            'name' => 'Closed Test Category '.uniqid(),
             'user_id' => $admin->id,
         ]);
 
         $item = \App\Models\Item::create([
-            'name'        => 'Closed Test Item ' . uniqid(),
+            'name' => 'Closed Test Item '.uniqid(),
             'category_id' => $category->id,
-            'user_id'     => $admin->id,
+            'user_id' => $admin->id,
         ]);
 
         \App\Models\WelfarePackageItem::create([
-            'welfare_package_id'  => $pkg->id,
-            'item_id'             => $item->id,
-            'category_id'         => $category->id,
+            'welfare_package_id' => $pkg->id,
+            'item_id' => $item->id,
+            'category_id' => $category->id,
             'quantity_per_family' => 1,
         ]);
 
@@ -124,28 +125,28 @@ if (!function_exists('makeClosedPackageWithItems')) {
     }
 }
 
-if (!function_exists('addNomination')) {
+if (! function_exists('addNomination')) {
     function addNomination(WelfarePackage $pkg, User $admin): WelfareBeneficiary
     {
-        $zone = Zone::create(['name' => 'Test Zone ' . uniqid(), 'code' => 'TZ-' . uniqid()]);
+        $zone = Zone::create(['name' => 'Test Zone '.uniqid(), 'code' => 'TZ-'.uniqid()]);
         $deceased = Deceased::create([
-            'first_name'           => 'John',
-            'last_name'            => 'Doe',
-            'nin'                  => 'NIN' . uniqid(),
-            'reg_no'               => 'REG-' . uniqid(),
-            'guardian_name'        => 'Guardian ' . uniqid(),
-            'guardian_phone'       => '08012345678',
+            'first_name' => 'John',
+            'last_name' => 'Doe',
+            'nin' => 'NIN'.uniqid(),
+            'reg_no' => 'REG-'.uniqid(),
+            'guardian_name' => 'Guardian '.uniqid(),
+            'guardian_phone' => '08012345678',
             'vulnerability_status' => VulnerabilityStatus::C,
-            'date_registered'      => now()->toDateString(),
-            'zone_id'              => $zone->id,
+            'date_registered' => now()->toDateString(),
+            'zone_id' => $zone->id,
         ]);
 
         return WelfareBeneficiary::create([
             'welfare_package_id' => $pkg->id,
-            'deceased_id'        => $deceased->id,
-            'suggested_by'       => $admin->id,
-            'status'             => BeneficiaryStatus::PENDING,
-            'collection_status'  => CollectionStatus::NOT_COLLECTED,
+            'deceased_id' => $deceased->id,
+            'suggested_by' => $admin->id,
+            'status' => BeneficiaryStatus::PENDING,
+            'collection_status' => CollectionStatus::NOT_COLLECTED,
         ]);
     }
 }
@@ -198,7 +199,7 @@ describe('WelfarePackageLifecycleService server-side guards', function () {
 
     beforeEach(function () {
         $this->artisan('db:seed', ['--class' => 'RolesAndPermissionsSeeder']);
-        $this->admin   = makeAdmin();
+        $this->admin = makeAdmin();
         $this->service = app(WelfarePackageLifecycleService::class);
     });
 

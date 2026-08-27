@@ -4,7 +4,6 @@ use App\Enums\UserStatus;
 use App\Models\Role;
 use App\Models\User;
 use App\Services\MfaService;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 

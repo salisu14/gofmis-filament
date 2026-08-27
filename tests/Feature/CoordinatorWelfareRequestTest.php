@@ -11,7 +11,6 @@ use App\Models\WelfarePackage;
 use App\Models\Widow;
 use App\Models\Zone;
 use Filament\Facades\Filament;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 
 beforeEach(function () {
@@ -129,10 +128,8 @@ test('5. duplicate welfare request is rejected by validation', function () {
     $this->actingAs($this->coordinator);
 
     Livewire::test(CreateWelfareRequest::class)
-        ->fillForm([
-            'welfare_package_id' => (string) $this->package->id,
-            'deceased_id' => (string) $ownDeceased->id,
-        ])
+        ->set('data.welfare_package_id', (string) $this->package->id)
+        ->set('data.deceased_id', (string) $ownDeceased->id)
         ->call('create')
         ->assertHasFormErrors(['welfare_package_id']);
 });

@@ -5,12 +5,7 @@ use App\Filament\Resources\Deceased\Pages\ListDeceaseds;
 use App\Models\Deceased;
 use App\Models\User;
 use App\Models\Zone;
-use App\Models\Widow;
-use App\Models\Orphan;
-use App\Enums\Gender;
-use App\Enums\OrphanStatus;
 use Filament\Facades\Filament;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Livewire\Livewire;
 use Spatie\Permission\Models\Role;
@@ -26,7 +21,7 @@ beforeEach(function () {
     $this->zone = Zone::create(['name' => 'Zone A']);
 });
 
-if (!function_exists('makeDeceased')) {
+if (! function_exists('makeDeceased')) {
     function makeDeceased(array $attrs = []): Deceased
     {
         return Deceased::withoutGlobalScopes()->create(array_merge([
