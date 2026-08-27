@@ -101,16 +101,14 @@ test('1. create page renders without error', function () {
 
 test('2. valid Orphan request saves', function () {
     Livewire::test(CreateHealthcareRequest::class)
-        ->fillForm([
-            'prescribable_type' => Orphan::class,
-            'prescribable_id' => $this->orphan->id,
-            'doctor_name' => 'Dr. Sani',
-            'illness_id' => $this->illness->id,
-            'prescription_date' => now()->toDateString(),
-            'lab_test_cost' => 1500,
-            'drug_cost' => 3500,
-            'note' => 'Full recovery course',
-        ])
+        ->set('data.prescribable_type', Orphan::class)
+        ->set('data.prescribable_id', $this->orphan->id)
+        ->set('data.doctor_name', 'Dr. Sani')
+        ->set('data.illness_id', $this->illness->id)
+        ->set('data.prescription_date', now()->toDateString())
+        ->set('data.lab_test_cost', 1500)
+        ->set('data.drug_cost', 3500)
+        ->set('data.note', 'Full recovery course')
         ->call('create')
         ->assertHasNoFormErrors();
 
@@ -124,16 +122,14 @@ test('2. valid Orphan request saves', function () {
 
 test('3. valid Widow request saves', function () {
     Livewire::test(CreateHealthcareRequest::class)
-        ->fillForm([
-            'prescribable_type' => Widow::class,
-            'prescribable_id' => $this->widow->id,
-            'doctor_name' => 'Dr. Zainab',
-            'illness_id' => $this->illness->id,
-            'prescription_date' => now()->toDateString(),
-            'lab_test_cost' => 2000,
-            'drug_cost' => 5000,
-            'note' => 'Widow healthcare support',
-        ])
+        ->set('data.prescribable_type', Widow::class)
+        ->set('data.prescribable_id', $this->widow->id)
+        ->set('data.doctor_name', 'Dr. Zainab')
+        ->set('data.illness_id', $this->illness->id)
+        ->set('data.prescription_date', now()->toDateString())
+        ->set('data.lab_test_cost', 2000)
+        ->set('data.drug_cost', 5000)
+        ->set('data.note', 'Widow healthcare support')
         ->call('create')
         ->assertHasNoFormErrors();
 
@@ -147,13 +143,11 @@ test('3. valid Widow request saves', function () {
 
 test('4. patient type persists correctly', function () {
     Livewire::test(CreateHealthcareRequest::class)
-        ->fillForm([
-            'prescribable_type' => Widow::class,
-            'prescribable_id' => $this->widow->id,
-            'doctor_name' => 'Dr. TypeTest',
-            'illness_id' => $this->illness->id,
-            'prescription_date' => now()->toDateString(),
-        ])
+        ->set('data.prescribable_type', Widow::class)
+        ->set('data.prescribable_id', $this->widow->id)
+        ->set('data.doctor_name', 'Dr. TypeTest')
+        ->set('data.illness_id', $this->illness->id)
+        ->set('data.prescription_date', now()->toDateString())
         ->call('create')
         ->assertHasNoFormErrors();
 
@@ -163,13 +157,11 @@ test('4. patient type persists correctly', function () {
 
 test('5. patient ID persists correctly', function () {
     Livewire::test(CreateHealthcareRequest::class)
-        ->fillForm([
-            'prescribable_type' => Orphan::class,
-            'prescribable_id' => $this->orphan->id,
-            'doctor_name' => 'Dr. IdTest',
-            'illness_id' => $this->illness->id,
-            'prescription_date' => now()->toDateString(),
-        ])
+        ->set('data.prescribable_type', Orphan::class)
+        ->set('data.prescribable_id', $this->orphan->id)
+        ->set('data.doctor_name', 'Dr. IdTest')
+        ->set('data.illness_id', $this->illness->id)
+        ->set('data.prescription_date', now()->toDateString())
         ->call('create')
         ->assertHasNoFormErrors();
 
@@ -179,13 +171,11 @@ test('5. patient ID persists correctly', function () {
 
 test('6. illness_id persists correctly', function () {
     Livewire::test(CreateHealthcareRequest::class)
-        ->fillForm([
-            'prescribable_type' => Orphan::class,
-            'prescribable_id' => $this->orphan->id,
-            'doctor_name' => 'Dr. IllnessTest',
-            'illness_id' => $this->illness->id,
-            'prescription_date' => now()->toDateString(),
-        ])
+        ->set('data.prescribable_type', Orphan::class)
+        ->set('data.prescribable_id', $this->orphan->id)
+        ->set('data.doctor_name', 'Dr. IllnessTest')
+        ->set('data.illness_id', $this->illness->id)
+        ->set('data.prescription_date', now()->toDateString())
         ->call('create')
         ->assertHasNoFormErrors();
 
@@ -203,26 +193,22 @@ test('7. switching patient type clears stale patient selection', function () {
 
 test('8. missing required patient type gives validation, not 500', function () {
     Livewire::test(CreateHealthcareRequest::class)
-        ->fillForm([
-            'prescribable_type' => null,
-            'prescribable_id' => $this->orphan->id,
-            'doctor_name' => 'Dr. MissingType',
-            'illness_id' => $this->illness->id,
-            'prescription_date' => now()->toDateString(),
-        ])
+        ->set('data.prescribable_type', null)
+        ->set('data.prescribable_id', $this->orphan->id)
+        ->set('data.doctor_name', 'Dr. MissingType')
+        ->set('data.illness_id', $this->illness->id)
+        ->set('data.prescription_date', now()->toDateString())
         ->call('create')
         ->assertHasFormErrors(['prescribable_type' => 'required']);
 });
 
 test('9. coordinator cannot create request for another zone orphan', function () {
     Livewire::test(CreateHealthcareRequest::class)
-        ->fillForm([
-            'prescribable_type' => Orphan::class,
-            'prescribable_id' => $this->otherOrphan->id,
-            'doctor_name' => 'Dr. CrossZoneOrphan',
-            'illness_id' => $this->illness->id,
-            'prescription_date' => now()->toDateString(),
-        ])
+        ->set('data.prescribable_type', Orphan::class)
+        ->set('data.prescribable_id', $this->otherOrphan->id)
+        ->set('data.doctor_name', 'Dr. CrossZoneOrphan')
+        ->set('data.illness_id', $this->illness->id)
+        ->set('data.prescription_date', now()->toDateString())
         ->call('create')
         ->assertHasFormErrors(['prescribable_id']);
 
@@ -233,13 +219,11 @@ test('9. coordinator cannot create request for another zone orphan', function ()
 
 test('10. coordinator cannot create request for another zone widow', function () {
     Livewire::test(CreateHealthcareRequest::class)
-        ->fillForm([
-            'prescribable_type' => Widow::class,
-            'prescribable_id' => $this->otherWidow->id,
-            'doctor_name' => 'Dr. CrossZoneWidow',
-            'illness_id' => $this->illness->id,
-            'prescription_date' => now()->toDateString(),
-        ])
+        ->set('data.prescribable_type', Widow::class)
+        ->set('data.prescribable_id', $this->otherWidow->id)
+        ->set('data.doctor_name', 'Dr. CrossZoneWidow')
+        ->set('data.illness_id', $this->illness->id)
+        ->set('data.prescription_date', now()->toDateString())
         ->call('create')
         ->assertHasFormErrors(['prescribable_id']);
 
@@ -252,13 +236,11 @@ test('11. forged inaccessible beneficiary ID is rejected with validation error',
     $forgedUuid = (string) \Illuminate\Support\Str::uuid();
 
     Livewire::test(CreateHealthcareRequest::class)
-        ->fillForm([
-            'prescribable_type' => Orphan::class,
-            'prescribable_id' => $forgedUuid,
-            'doctor_name' => 'Dr. ForgedId',
-            'illness_id' => $this->illness->id,
-            'prescription_date' => now()->toDateString(),
-        ])
+        ->set('data.prescribable_type', Orphan::class)
+        ->set('data.prescribable_id', $forgedUuid)
+        ->set('data.doctor_name', 'Dr. ForgedId')
+        ->set('data.illness_id', $this->illness->id)
+        ->set('data.prescription_date', now()->toDateString())
         ->call('create')
         ->assertHasFormErrors(['prescribable_id']);
 });
@@ -280,9 +262,7 @@ test('12. existing records still edit and view successfully', function () {
 
     Livewire::test(EditHealthcareRequest::class, ['record' => $prescription->getRouteKey()])
         ->assertSuccessful()
-        ->fillForm([
-            'doctor_name' => 'Dr. UpdatedViewTest',
-        ])
+        ->set('data.doctor_name', 'Dr. UpdatedViewTest')
         ->call('save')
         ->assertHasNoFormErrors();
 
