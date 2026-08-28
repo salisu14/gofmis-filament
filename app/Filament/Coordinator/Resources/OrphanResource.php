@@ -78,8 +78,15 @@ class OrphanResource extends Resource
     {
         $user = auth()->user();
 
-        return $user?->hasAnyRole(['admin', 'super_admin'])
-            || $user?->managesZone();
+        // Admin/super-admin platform rule (Gate::before super-admin bypass applies).
+        if ($user?->hasAnyRole(['admin', 'super_admin'])) {
+            return true;
+        }
+
+        // Coordinator: capability = create_orphans permission AND own-zone scope.
+        return $user?->isCoordinator()
+            && $user->can('create_orphans')
+            && $user->managesZone();
     }
 
     public static function canEdit($record): bool
@@ -92,7 +99,14 @@ class OrphanResource extends Resource
             return true;
         }
 
-        return $user->managesZone($record->deceased?->zone_id);
+        // Coordinator: capability = edit_orphans permission AND record in own zone.
+        // Resolve the record's zone WITHOUT the Deceased global zone scope, so an
+        // out-of-zone record cannot become null and accidentally pass the scope check.
+        $recordZoneId = $record->deceased()->withoutGlobalScopes()->value('zone_id');
+
+        return $user->isCoordinator()
+            && $user->can('edit_orphans')
+            && $user->managesZone($recordZoneId);
     }
 
     public static function canDelete($record): bool

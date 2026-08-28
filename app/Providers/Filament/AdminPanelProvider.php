@@ -323,6 +323,10 @@ class AdminPanelProvider extends PanelProvider
                                     ->icon('heroicon-o-document-chart-bar')
                                     ->url('/admin/reports/prescription-report')
                                     ->isActiveWhen(fn () => request()->is('admin/reports/prescription-report*')),
+                                NavigationItem::make('Project Report')
+                                    ->icon('heroicon-o-building-office')
+                                    ->url('/admin/reports/project-report')
+                                    ->isActiveWhen(fn () => request()->is('admin/reports/project-report*')),
                             ])
                     );
                 }

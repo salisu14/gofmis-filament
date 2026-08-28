@@ -61,8 +61,14 @@ class WidowResource extends Resource
     {
         $user = auth()->user();
 
-        return $user?->hasAnyRole(['admin', 'super_admin'])
-            || $user?->managesZone();
+        if ($user?->hasAnyRole(['admin', 'super_admin'])) {
+            return true;
+        }
+
+        // Coordinator: capability = create_widows permission AND own-zone scope.
+        return $user?->isCoordinator()
+            && $user->can('create_widows')
+            && $user->managesZone();
     }
 
     public static function canEdit($record): bool
@@ -75,7 +81,12 @@ class WidowResource extends Resource
             return true;
         }
 
-        return $user->managesZone($record->deceased?->zone_id);
+        // Resolve the record's zone without the Deceased global zone scope.
+        $recordZoneId = $record->deceased()->withoutGlobalScopes()->value('zone_id');
+
+        return $user->isCoordinator()
+            && $user->can('edit_widows')
+            && $user->managesZone($recordZoneId);
     }
 
     public static function canDelete($record): bool

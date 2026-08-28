@@ -267,15 +267,20 @@ class User extends Authenticatable implements FilamentUser, HasAppAuthentication
         return ! empty($this->app_authentication_secret) && ! empty($this->mfa_confirmed_at);
     }
 
+    public function isMfaMandatoryByRole(): bool
+    {
+        $mandatoryRoles = config('security.mfa.mandatory_roles', ['super_admin', 'admin']);
+
+        return $this->hasAnyRole($mandatoryRoles);
+    }
+
     public function isMfaRequired(): bool
     {
         if ($this->mfa_enrollment_required) {
             return true;
         }
 
-        $mandatoryRoles = config('security.mfa.mandatory_roles', ['super_admin', 'admin']);
-
-        return $this->hasAnyRole($mandatoryRoles);
+        return $this->isMfaMandatoryByRole();
     }
 
     public function mfaState(): string
