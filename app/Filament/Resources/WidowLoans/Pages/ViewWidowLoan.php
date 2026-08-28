@@ -547,6 +547,13 @@ class ViewWidowLoan extends ViewRecord
                 ->openUrlInNewTab()
                 ->visible(fn ($record) => $record->repayments()->exists()),
 
+            Action::make('recordRepayment')
+                ->label('Record Repayment')
+                ->icon('heroicon-m-banknotes')
+                ->color('success')
+                ->url(fn (WidowLoan $record) => \App\Filament\Resources\WidowLoanRepayments\WidowLoanRepaymentResource::getUrl('create', ['widow_loan_id' => $record->id]))
+                ->visible(fn (WidowLoan $record) => $record->status === WidowLoanStatus::DISBURSED && $record->outstanding_balance > 0 && ! $record->fully_repaid),
+
         ];
     }
 }

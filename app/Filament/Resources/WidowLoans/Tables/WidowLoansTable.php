@@ -150,6 +150,10 @@ class WidowLoansTable
                 TernaryFilter::make('hardship_active')
                     ->label('Active Hardship'),
 
+                TernaryFilter::make('fully_repaid')
+                    ->label('Payment Cleared')
+                    ->indicator('Cleared Status'),
+
                 SelectFilter::make('recovery_status')
                     ->label('Recovery Status')
                     ->options(WidowLoanRecoveryStatus::class),
@@ -178,6 +182,59 @@ class WidowLoansTable
                         ->url(fn ($record) => route('loans.statement.download', $record))
                         ->openUrlInNewTab()
                         ->visible(fn (WidowLoan $record) => $record->repayments()->exists()),
+
+                    Action::make('recordRepayment')
+                        ->label('Record Repayment')
+                        ->icon('heroicon-m-banknotes')
+                        ->color('success')
+                        ->url(fn (WidowLoan $record) => \App\Filament\Resources\WidowLoanRepayments\WidowLoanRepaymentResource::getUrl('create', ['widow_loan_id' => $record->id]))
+                        ->visible(fn (WidowLoan $record) => $record->status === WidowLoanStatus::DISBURSED && $record->outstanding_balance > 0 && ! $record->fully_repaid),
+
+                    Action::make('recordCounterFunding')
+                        ->label('Record Counter Funding')
+                        ->icon('heroicon-m-shield-check')
+                        ->color('success')
+                        ->form([
+                            \Filament\Forms\Components\TextInput::make('counter_funded_amount')
+                                ->label('Amount to Counter Fund')
+                                ->numeric()
+                                ->required()
+                                ->maxValue(fn (WidowLoan $record) => $record->outstanding_balance),
+                            \Filament\Forms\Components\DatePicker::make('transaction_date')
+                                ->label('Effective Date')
+                                ->default(now())
+                                ->required(),
+                            \Filament\Forms\Components\Textarea::make('notes')
+                                ->label('Reason / Notes')
+                                ->nullable(),
+                        ])
+                        ->action(function (WidowLoan $record, array $data): void {
+                            \Illuminate\Support\Facades\DB::transaction(function () use ($record, $data): void {
+                                $amount = (float) $data['counter_funded_amount'];
+                                $balanceBefore = $record->outstanding_balance;
+                                $balanceAfter = max(0, $balanceBefore - $amount);
+
+                                $record->counterFundings()->create([
+                                    'amount' => $amount,
+                                    'transaction_date' => $data['transaction_date'],
+                                    'balance_before' => $balanceBefore,
+                                    'balance_after' => $balanceAfter,
+                                    'notes' => $data['notes'] ?? null,
+                                    'recorded_by' => auth()->id(),
+                                ]);
+
+                                // Outstanding is recomputed from the counter-funding
+                                // ledger inside refreshBalance() (single source of truth).
+                                $record->refreshBalance();
+                            });
+
+                            \Filament\Notifications\Notification::make()
+                                ->title('Counter Funding Recorded')
+                                ->success()
+                                ->send();
+                        })
+                        ->requiresConfirmation()
+                        ->visible(fn (WidowLoan $record) => $record->status === WidowLoanStatus::DISBURSED && $record->outstanding_balance > 0 && ! $record->fully_repaid),
 
                     // Workflow actions in order
                     \App\Filament\Actions\ApproveWidowLoanAction::make(),

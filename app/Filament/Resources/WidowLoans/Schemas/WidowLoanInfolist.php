@@ -76,6 +76,14 @@ class WidowLoanInfolist
                                 ->weight('bold')
                                 ->state(fn (WidowLoan $record) => (float) $record->total_paid),
 
+                            TextEntry::make('total_counter_funded')
+                                ->label('Total Counter Funded')
+                                ->money('NGN')
+                                ->color('info')
+                                ->weight('bold')
+                                ->state(fn (WidowLoan $record) => (float) $record->counterFundings()->sum('amount'))
+                                ->visible(fn (WidowLoan $record) => $record->counterFundings()->exists()),
+
                             TextEntry::make('amount_written_off')
                                 ->label('Amount Written Off')
                                 ->money('NGN')
