@@ -2,7 +2,6 @@
 
 namespace App\Filament\Resources\WelfarePackages\RelationManagers;
 
-use App\Filament\Resources\WelfarePackages\WelfarePackageResource;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
@@ -11,6 +10,8 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\RelationManagers\RelationManager;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
@@ -19,8 +20,6 @@ class ItemsRelationManager extends RelationManager
 {
     protected static string $relationship = 'items';
 
-    protected static ?string $relatedResource = WelfarePackageResource::class;
-
     protected static ?string $title = 'Package Items';
 
     public function form(Schema $schema): Schema
@@ -28,16 +27,36 @@ class ItemsRelationManager extends RelationManager
         return $schema
             ->schema([
                 Select::make('item_id')
+                    ->label('Item')
                     ->relationship('item', 'name')
                     ->searchable()
                     ->preload()
-                    ->required(),
+                    ->required()
+                    ->live()
+                    ->afterStateUpdated(function ($state, Set $set) {
+                        if ($state) {
+                            $item = \App\Models\Item::with('category')->find($state);
+                            $set('category_display', $item?->category?->name ?? '-');
+                        } else {
+                            $set('category_display', null);
+                        }
+                    }),
 
-                Select::make('category_id')
-                    ->relationship('category', 'name')
-                    ->searchable()
-                    ->preload()
-                    ->required(),
+                TextInput::make('category_display')
+                    ->label('Category')
+                    ->helperText('Derived automatically from selected item')
+                    ->disabled()
+                    ->dehydrated(false)
+                    ->formatStateUsing(function (Get $get, $record) {
+                        $itemId = $get('item_id');
+                        if ($itemId) {
+                            $item = \App\Models\Item::with('category')->find($itemId);
+
+                            return $item?->category?->name;
+                        }
+
+                        return $record?->item?->category?->name;
+                    }),
 
                 TextInput::make('quantity_per_family')
                     ->numeric()
@@ -60,7 +79,8 @@ class ItemsRelationManager extends RelationManager
                     ->sortable()
                     ->weight('font-bold'),
 
-                TextColumn::make('category.name')
+                TextColumn::make('item.category.name')
+                    ->label('Category')
                     ->badge()
                     ->color('info'),
 
@@ -74,17 +94,17 @@ class ItemsRelationManager extends RelationManager
             ])
             ->headerActions([
                 CreateAction::make()
-                    ->visible(fn() => $this->getOwnerRecord()->isCompositionEditable()),
+                    ->visible(fn () => $this->getOwnerRecord()->isCompositionEditable()),
             ])
             ->recordActions([
                 EditAction::make()
-                    ->visible(fn() => $this->getOwnerRecord()->isCompositionEditable()),
+                    ->visible(fn () => $this->getOwnerRecord()->isCompositionEditable()),
                 DeleteAction::make()
-                    ->visible(fn() => $this->getOwnerRecord()->isCompositionEditable()),
+                    ->visible(fn () => $this->getOwnerRecord()->isCompositionEditable()),
             ])
             ->toolbarActions([
                 DeleteBulkAction::make()
-                    ->visible(fn() => $this->getOwnerRecord()->isCompositionEditable()),
+                    ->visible(fn () => $this->getOwnerRecord()->isCompositionEditable()),
             ]);
     }
 }

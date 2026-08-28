@@ -411,7 +411,6 @@ test('populated orphan dossier renders canonical welfare, sponsorship, guardian 
     \App\Models\WelfarePackageItem::create([
         'welfare_package_id' => $welfarePackage->id,
         'item_id' => $item->id,
-        'category_id' => $category->id,
         'quantity_per_family' => 3,
     ]);
     $beneficiary = \App\Models\WelfareBeneficiary::create([
