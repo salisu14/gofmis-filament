@@ -52,8 +52,9 @@ class WidowsTable
 
                 TextColumn::make('full_name')
                     ->label('Name')
+                    ->state(fn ($record): string => (string) $record->display_name)
                     ->searchable(['first_name', 'last_name', 'middle_name'])
-                    ->sortable()
+                    ->sortable(query: fn ($query, string $direction) => $query->orderBy('full_name', $direction))
                     ->weight('bold'),
 
                 TextColumn::make('reg_no')

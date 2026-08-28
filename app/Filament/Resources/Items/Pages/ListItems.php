@@ -16,4 +16,11 @@ class ListItems extends ListRecords
             CreateAction::make(),
         ];
     }
+
+    protected function getHeaderWidgets(): array
+    {
+        return [
+            \App\Filament\Resources\Items\Widgets\ItemStockOverviewWidget::class,
+        ];
+    }
 }

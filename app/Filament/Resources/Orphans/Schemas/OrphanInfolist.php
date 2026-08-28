@@ -90,10 +90,11 @@ class OrphanInfolist
                             }),
                         IconEntry::make('is_married')
                             ->label('Married')
-                            ->boolean(),
+                            ->boolean()
+                            ->visible(fn ($record) => (($record->gender->value ?? $record->gender) === \App\Enums\Gender::FEMALE->value)),
                         TextEntry::make('married_at')
                             ->dateTime()
-                            ->visible(fn ($record) => $record->is_married),
+                            ->visible(fn ($record) => $record->is_married && (($record->gender->value ?? $record->gender) === \App\Enums\Gender::FEMALE->value)),
 
                         TextEntry::make('zone.name')
                             ->label('Zone')
