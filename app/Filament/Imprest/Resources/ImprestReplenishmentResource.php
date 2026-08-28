@@ -26,10 +26,12 @@ use Filament\Tables\Table;
 class ImprestReplenishmentResource extends Resource
 {
     protected static ?string $model = ImprestReplenishment::class;
-    protected static string|null|\BackedEnum $navigationIcon = 'heroicon-o-arrow-path';
-    protected static string|null|\UnitEnum $navigationGroup = 'Fund Management';
-    protected static ?int $navigationSort = 3;
 
+    protected static string|null|\BackedEnum $navigationIcon = 'heroicon-o-arrow-path';
+
+    protected static string|null|\UnitEnum $navigationGroup = 'Fund Management';
+
+    protected static ?int $navigationSort = 3;
 
     public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder
     {
@@ -47,6 +49,12 @@ class ImprestReplenishmentResource extends Resource
         }
 
         return $query;
+    }
+
+    public static function canCreate(): bool
+    {
+        // A8: Non-destructively disable new Imprest / Out-of-Pocket creation
+        return false;
     }
 
     public static function form(Schema $schema): Schema
@@ -69,7 +77,9 @@ class ImprestReplenishmentResource extends Resource
                             ->live()
                             ->afterStateUpdated(function (Get $get, Set $set) {
                                 $fundId = $get('fund_id');
-                                if (!$fundId) return;
+                                if (! $fundId) {
+                                    return;
+                                }
 
                                 $fund = \App\Models\ImprestFund::find($fundId);
                                 if ($fund) {
@@ -156,12 +166,12 @@ class ImprestReplenishmentResource extends Resource
                 Tables\Columns\TextColumn::make('variance')
                     ->money('NGN')
                     ->alignment('right')
-                    ->color(fn(float $state): string => $state != 0 ? 'danger' : 'success')
+                    ->color(fn (float $state): string => $state != 0 ? 'danger' : 'success')
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('status')
                     ->badge()
-                    ->color(fn(string $state): string => match ($state) {
+                    ->color(fn (string $state): string => match ($state) {
                         'draft' => 'gray',
                         'submitted' => 'warning',
                         'approved' => 'primary',
@@ -204,7 +214,7 @@ class ImprestReplenishmentResource extends Resource
                     ->icon('heroicon-m-check')
                     ->color('success')
                     ->requiresConfirmation()
-                    ->visible(fn(ImprestReplenishment $record): bool => $record->status === 'submitted' && auth()->user()->can('approve', $record->fund)
+                    ->visible(fn (ImprestReplenishment $record): bool => $record->status === 'submitted' && auth()->user()->can('approve', $record->fund)
                     )
                     ->action(function (ImprestReplenishment $record) {
                         try {
@@ -232,7 +242,7 @@ class ImprestReplenishmentResource extends Resource
                     ->modalDescription(fn (ImprestReplenishment $record): string => $record->fund?->bank_account_id
                         ? 'This will restore the fund to its authorized amount.'
                         : 'This fund is not linked to a bank account yet, so payment cannot be processed.')
-                    ->visible(fn(ImprestReplenishment $record): bool => $record->status === 'approved' && auth()->user()->can('replenish', $record->fund)
+                    ->visible(fn (ImprestReplenishment $record): bool => $record->status === 'approved' && auth()->user()->can('replenish', $record->fund)
                     )
                     ->disabled(fn (ImprestReplenishment $record): bool => blank($record->fund?->bank_account_id))
                     ->action(function (ImprestReplenishment $record) {
@@ -255,7 +265,7 @@ class ImprestReplenishmentResource extends Resource
                     }),
 
                 EditAction::make()
-                    ->visible(fn(ImprestReplenishment $record): bool => $record->status === 'draft'),
+                    ->visible(fn (ImprestReplenishment $record): bool => $record->status === 'draft'),
             ])
             ->defaultSort('created_at', 'desc');
     }

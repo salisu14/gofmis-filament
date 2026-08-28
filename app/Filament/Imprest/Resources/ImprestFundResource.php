@@ -9,8 +9,8 @@ use App\Filament\Imprest\Resources\ImprestFundResource\Pages\ListImprestFunds;
 use App\Filament\Imprest\Resources\ImprestFundResource\Pages\ViewImprestFund;
 use App\Filament\Imprest\Resources\ImprestFundResource\RelationManagers\ReconciliationsRelationManager;
 use App\Filament\Imprest\Resources\ImprestFundResource\RelationManagers\TransactionsRelationManager;
-use App\Models\ImprestFund;
 use App\Models\BankAccount;
+use App\Models\ImprestFund;
 use App\Models\Zone;
 use App\Services\Imprest\ImprestFundStatusService;
 use Filament\Actions\Action;
@@ -34,9 +34,13 @@ use Illuminate\Database\Eloquent\Model;
 class ImprestFundResource extends Resource
 {
     protected static ?string $model = ImprestFund::class;
+
     protected static string|null|\BackedEnum $navigationIcon = 'heroicon-o-building-library';
+
     protected static string|null|\UnitEnum $navigationGroup = 'Fund Management';
+
     protected static ?int $navigationSort = 1;
+
     protected static ?string $recordTitleAttribute = 'location';
 
     public static function getNavigationBadge(): ?string
@@ -58,8 +62,14 @@ class ImprestFundResource extends Resource
     {
         return [
             'Custodian' => $record->custodian?->name,
-            'Balance' => '₦' . number_format($record->current_balance, 2),
+            'Balance' => '₦'.number_format($record->current_balance, 2),
         ];
+    }
+
+    public static function canCreate(): bool
+    {
+        // A8: Non-destructively disable new Imprest creation
+        return false;
     }
 
     public static function form(Schema $schema): Schema
@@ -178,21 +188,21 @@ class ImprestFundResource extends Resource
                     ->money('NGN')
                     ->sortable()
                     ->alignment('right')
-                    ->color(fn(ImprestFund $record): string => $record->isLowBalance() ? 'danger' : 'success'),
+                    ->color(fn (ImprestFund $record): string => $record->isLowBalance() ? 'danger' : 'success'),
 
                 Tables\Columns\TextColumn::make('utilization')
                     ->label('Used %')
-                    ->state(fn(ImprestFund $record): float => $record->authorized_amount > 0
+                    ->state(fn (ImprestFund $record): float => $record->authorized_amount > 0
                         ? round((($record->authorized_amount - $record->current_balance) / $record->authorized_amount) * 100, 1)
                         : 0)
                     ->suffix('%')
-                    ->color(fn(float $state): string => $state > 80 ? 'danger' : ($state > 50 ? 'warning' : 'success'))
+                    ->color(fn (float $state): string => $state > 80 ? 'danger' : ($state > 50 ? 'warning' : 'success'))
                     ->alignment('right'),
 
                 Tables\Columns\TextColumn::make('status')
                     ->badge()
                     ->formatStateUsing(fn (string $state): string => FundStatus::tryFrom($state)?->label() ?? str($state)->title())
-                    ->color(fn(string $state): string => FundStatus::tryFrom($state)?->color() ?? 'gray'),
+                    ->color(fn (string $state): string => FundStatus::tryFrom($state)?->color() ?? 'gray'),
 
                 Tables\Columns\TextColumn::make('last_reconciled_at')
                     ->label('Last Reconciled')
@@ -217,23 +227,23 @@ class ImprestFundResource extends Resource
                     ->trueLabel('Below 20%')
                     ->falseLabel('Above 20%')
                     ->queries(
-                        true: fn($query) => $query->whereRaw('current_balance < (authorized_amount * 0.2)'),
-                        false: fn($query) => $query->whereRaw('current_balance >= (authorized_amount * 0.2)'),
+                        true: fn ($query) => $query->whereRaw('current_balance < (authorized_amount * 0.2)'),
+                        false: fn ($query) => $query->whereRaw('current_balance >= (authorized_amount * 0.2)'),
                     ),
             ])
             ->recordActions([
-               ActionGroup::make([
-                   ViewAction::make(),
-                   EditAction::make(),
+                ActionGroup::make([
+                    ViewAction::make(),
+                    EditAction::make(),
 
-                   Action::make('reconcile')
-                       ->icon('heroicon-m-scale')
-                       ->color('warning')
-                       ->url(fn(ImprestFund $record): string => ImprestReconciliationResource::getUrl('create', ['fund_id' => $record->id]))
-                       ->visible(fn(ImprestFund $record): bool => $record->isActive() && auth()->user()->can('reconcile', $record)),
+                    Action::make('reconcile')
+                        ->icon('heroicon-m-scale')
+                        ->color('warning')
+                        ->url(fn (ImprestFund $record): string => ImprestReconciliationResource::getUrl('create', ['fund_id' => $record->id]))
+                        ->visible(fn (ImprestFund $record): bool => $record->isActive() && auth()->user()->can('reconcile', $record)),
 
-                   ...self::statusActions(),
-               ])
+                    ...self::statusActions(),
+                ]),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
@@ -266,7 +276,7 @@ class ImprestFundResource extends Resource
                         TextEntry::make('status')
                             ->badge()
                             ->formatStateUsing(fn (string $state): string => FundStatus::tryFrom($state)?->label() ?? str($state)->title())
-                            ->color(fn(string $state): string => FundStatus::tryFrom($state)?->color() ?? 'gray'),
+                            ->color(fn (string $state): string => FundStatus::tryFrom($state)?->color() ?? 'gray'),
                     ]),
 
                 Section::make('Financial Summary')
@@ -277,9 +287,9 @@ class ImprestFundResource extends Resource
                             ->icon('heroicon-m-banknotes'),
                         TextEntry::make('current_balance')
                             ->money('NGN')
-                            ->color(fn(ImprestFund $record): string => $record->isLowBalance() ? 'danger' : 'success'),
+                            ->color(fn (ImprestFund $record): string => $record->isLowBalance() ? 'danger' : 'success'),
                         TextEntry::make('total_spent')
-                            ->state(fn(ImprestFund $record): float => $record->authorized_amount - $record->current_balance)
+                            ->state(fn (ImprestFund $record): float => $record->authorized_amount - $record->current_balance)
                             ->money('NGN'),
                     ]),
 

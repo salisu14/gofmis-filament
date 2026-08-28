@@ -79,6 +79,12 @@ class ImprestTransactionResource extends Resource
         return $query;
     }
 
+    public static function canCreate(): bool
+    {
+        // A8: Non-destructively disable new Out-of-Pocket / Imprest transaction creation
+        return false;
+    }
+
     public static function form(Schema $schema): Schema
     {
         return $schema
