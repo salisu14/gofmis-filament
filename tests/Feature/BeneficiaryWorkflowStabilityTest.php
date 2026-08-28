@@ -4,7 +4,6 @@ use App\Enums\Gender;
 use App\Enums\IllnessCategory;
 use App\Enums\OrphanStatus;
 use App\Filament\Resources\Deceased\RelationManagers\OrphansRelationManager;
-use App\Filament\Resources\Orphans\OrphanResource;
 use App\Models\Deceased;
 use App\Models\IdCard;
 use App\Models\IdCardTemplate;
@@ -278,12 +277,12 @@ test('id card activation and markAsPrinted refuse ineligible beneficiaries', fun
         ->toThrow(ValidationException::class);
 });
 
-test('orphans relation manager declares related resource', function () {
+test('orphans relation manager does not declare relatedResource so it uses its own contextual form schema', function () {
     $reflection = new ReflectionProperty(OrphansRelationManager::class, 'relatedResource');
     $reflection->setAccessible(true);
     $relatedResource = $reflection->getValue();
 
-    expect($relatedResource)->toBe(OrphanResource::class);
+    expect($relatedResource)->toBeNull();
 });
 
 test('id card pdf service prepares data for active or archived cardable without throwing exception', function () {

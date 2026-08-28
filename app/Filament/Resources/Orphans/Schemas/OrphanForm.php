@@ -106,6 +106,12 @@ class OrphanForm
                 ->preload()
                 ->disabled($isArchivedOrIneligible)
                 ->required();
+        } else {
+            $personalSchema[] = TextInput::make('deceased_family_display')
+                ->label('Deceased Household / Family')
+                ->placeholder('Linked to currently viewed Deceased household')
+                ->disabled()
+                ->dehydrated(false);
         }
 
         return $schema

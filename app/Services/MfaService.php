@@ -268,4 +268,28 @@ class MfaService
             );
         });
     }
+
+    /**
+     * Remove administrative forced MFA enrollment flag for target user.
+     */
+    public function removeMfaEnrollmentRequirement(User $actor, User $target): void
+    {
+        if (Gate::forUser($actor)->denies('update', $target)) {
+            throw ValidationException::withMessages([
+                'mfa' => ['Unauthorized: You are not authorized to remove forced MFA enrollment for this user.'],
+            ]);
+        }
+
+        DB::transaction(function () use ($actor, $target) {
+            $target->update(['mfa_enrollment_required' => false]);
+
+            SecurityAuditService::log(
+                'MFA_ENROLLMENT_UNFORCED',
+                "Administrative forced MFA enrollment was removed for {$target->email} by admin {$actor->email}",
+                $actor,
+                $target,
+                ['actor_id' => $actor->id, 'target_user_id' => $target->id]
+            );
+        });
+    }
 }

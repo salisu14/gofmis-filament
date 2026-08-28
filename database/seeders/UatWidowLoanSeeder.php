@@ -74,7 +74,7 @@ class UatWidowLoanSeeder extends Seeder
             ]
         );
 
-        BankAccount::firstOrCreate(
+        BankAccount::updateOrCreate(
             ['account_number' => '1000000002'],
             [
                 'account_name' => 'WRL Repayment Account',

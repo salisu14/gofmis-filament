@@ -29,9 +29,17 @@ use Filament\Tables\Table;
 class ImprestReconciliationResource extends Resource
 {
     protected static ?string $model = ImprestReconciliation::class;
+
     protected static string|null|\BackedEnum $navigationIcon = 'heroicon-o-scale';
+
     protected static string|null|\UnitEnum $navigationGroup = 'Audit & Reconciliation';
+
     protected static ?int $navigationSort = 1;
+
+    public static function canCreate(): bool
+    {
+        return false;
+    }
 
     public static function form(Schema $schema): Schema
     {
@@ -50,11 +58,13 @@ class ImprestReconciliationResource extends Resource
                             ->searchable()
                             ->preload()
                             ->native(false)
-                            ->default(fn() => request()->query('fund_id'))
+                            ->default(fn () => request()->query('fund_id'))
                             ->live()
                             ->afterStateUpdated(function (Get $get, Set $set) {
                                 $fundId = $get('fund_id');
-                                if (!$fundId) return;
+                                if (! $fundId) {
+                                    return;
+                                }
 
                                 $fund = ImprestFund::find($fundId);
                                 if ($fund) {
@@ -158,7 +168,7 @@ class ImprestReconciliationResource extends Resource
                     ]),
 
                 Section::make('Discrepancy Resolution')
-                    ->visible(fn(Get $get): bool => abs(floatval($get('actual_variance') ?? 0)) >= 0.01)
+                    ->visible(fn (Get $get): bool => abs(floatval($get('actual_variance') ?? 0)) >= 0.01)
                     ->schema([
                         Textarea::make('variance_explanation')
                             ->required()
@@ -211,7 +221,7 @@ class ImprestReconciliationResource extends Resource
                     ->label('Variance')
                     ->money('NGN')
                     ->alignment('right')
-                    ->color(fn(ImprestReconciliation $record): string => $record->isBalanced() ? 'success' : 'danger')
+                    ->color(fn (ImprestReconciliation $record): string => $record->isBalanced() ? 'success' : 'danger')
                     ->weight('font-bold'),
 
                 Tables\Columns\IconColumn::make('is_balanced')
@@ -221,7 +231,7 @@ class ImprestReconciliationResource extends Resource
 
                 Tables\Columns\TextColumn::make('status')
                     ->badge()
-                    ->color(fn(string $state): string => match ($state) {
+                    ->color(fn (string $state): string => match ($state) {
                         'completed' => 'success',
                         'in_progress' => 'warning',
                         'flagged' => 'danger',
@@ -256,8 +266,8 @@ class ImprestReconciliationResource extends Resource
                     ->trueLabel('Has Variance')
                     ->falseLabel('Balanced')
                     ->queries(
-                        true: fn($query) => $query->whereRaw('ABS(actual_variance) >= 0.01'),
-                        false: fn($query) => $query->whereRaw('ABS(actual_variance) < 0.01'),
+                        true: fn ($query) => $query->whereRaw('ABS(actual_variance) >= 0.01'),
+                        false: fn ($query) => $query->whereRaw('ABS(actual_variance) < 0.01'),
                     ),
             ])
             ->recordActions([
@@ -267,7 +277,7 @@ class ImprestReconciliationResource extends Resource
                     ->icon('heroicon-m-hand-thumb-up')
                     ->color('success')
                     ->requiresConfirmation()
-                    ->visible(fn(ImprestReconciliation $record): bool => !$record->custodian_acknowledged &&
+                    ->visible(fn (ImprestReconciliation $record): bool => ! $record->custodian_acknowledged &&
                         auth()->id() === $record->custodian_id
                     )
                     ->action(function (ImprestReconciliation $record) {
@@ -284,7 +294,7 @@ class ImprestReconciliationResource extends Resource
                     ->icon('heroicon-m-check')
                     ->color('primary')
                     ->requiresConfirmation()
-                    ->visible(fn(ImprestReconciliation $record): bool => $record->status === 'in_progress' &&
+                    ->visible(fn (ImprestReconciliation $record): bool => $record->status === 'in_progress' &&
                         auth()->user()->can('reconcile', $record->fund)
                     )
                     ->action(function (ImprestReconciliation $record) {
@@ -346,7 +356,7 @@ class ImprestReconciliationResource extends Resource
                         TextEntry::make('actual_variance')
                             ->label(fn (ImprestReconciliation $record): string => 'Variance ('.$record->variance_label.')')
                             ->money('NGN')
-                            ->color(fn(ImprestReconciliation $record): string => $record->isBalanced() ? 'success' : 'danger')
+                            ->color(fn (ImprestReconciliation $record): string => $record->isBalanced() ? 'success' : 'danger')
                             ->weight('font-bold'),
                     ]),
 
@@ -360,8 +370,8 @@ class ImprestReconciliationResource extends Resource
                             ->label('Custodian')
                             ->icon('heroicon-m-user'),
                         TextEntry::make('custodian_acknowledged')
-                            ->icon(fn(bool $state): string => $state ? 'heroicon-m-check-circle' : 'heroicon-m-x-circle')
-                            ->color(fn(bool $state): string => $state ? 'success' : 'warning'),
+                            ->icon(fn (bool $state): string => $state ? 'heroicon-m-check-circle' : 'heroicon-m-x-circle')
+                            ->color(fn (bool $state): string => $state ? 'success' : 'warning'),
                     ]),
 
                 Section::make('Notes')

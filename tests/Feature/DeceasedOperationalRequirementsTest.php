@@ -18,14 +18,11 @@ use App\Models\Widow;
 use App\Models\Zone;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Str;
 use Livewire\Livewire;
-use Spatie\Permission\Models\Role;
 
 beforeEach(function () {
-    Role::firstOrCreate(['name' => 'admin'], ['id' => Str::uuid(), 'uuid' => Str::uuid()]);
-    Role::firstOrCreate(['name' => 'super_admin'], ['id' => Str::uuid(), 'uuid' => Str::uuid()]);
-    Role::firstOrCreate(['name' => 'coordinator'], ['id' => Str::uuid(), 'uuid' => Str::uuid()]);
+    $this->seed(\Database\Seeders\RolesAndPermissionsSeeder::class);
+    app()->make(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
 
     $this->admin = User::factory()->create();
     $this->admin->assignRole('admin');

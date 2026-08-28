@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Enums\BeneficiaryStatus;
-use App\Enums\CollectionStatus;
 use App\Models\User;
 use App\Models\WelfareBeneficiary;
 use App\Models\WelfarePackage;
@@ -112,12 +111,25 @@ class BeneficiaryService
 
     public function bulkApprove(array $beneficiaryIds, ?string $approvedBy = null): int
     {
-        return WelfareBeneficiary::whereIn('id', $beneficiaryIds)
-            ->pending()
-            ->update([
-                'status' => BeneficiaryStatus::APPROVED,
-                'approved_by' => $approvedBy ?? auth()->id(),
-            ]);
+        $approvedCount = 0;
+
+        DB::transaction(function () use ($beneficiaryIds, $approvedBy, &$approvedCount) {
+            $beneficiaries = WelfareBeneficiary::whereIn('id', $beneficiaryIds)
+                ->pending()
+                ->lockForUpdate()
+                ->get();
+
+            foreach ($beneficiaries as $beneficiary) {
+                $beneficiary->update([
+                    'status' => BeneficiaryStatus::APPROVED,
+                    'approved_by' => $approvedBy ?? auth()->id(),
+                ]);
+                \App\Events\BeneficiaryApproved::dispatch($beneficiary);
+                $approvedCount++;
+            }
+        });
+
+        return $approvedCount;
     }
 
     /**

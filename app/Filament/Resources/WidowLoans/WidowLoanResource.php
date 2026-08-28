@@ -46,6 +46,7 @@ class WidowLoanResource extends Resource
             RelationManagers\RepaymentsRelationManager::class,
             RelationManagers\HardshipRelationManager::class,
             RelationManagers\RecoveryRelationManager::class,
+            RelationManagers\CounterFundingRelationManager::class,
         ];
     }
 
@@ -64,7 +65,7 @@ class WidowLoanResource extends Resource
         if (in_array($record->status, [\App\Enums\WidowLoanStatus::COMPLETED, \App\Enums\WidowLoanStatus::WRITTEN_OFF])) {
             return false;
         }
-        
+
         $hasFinancialActivity = in_array($record->status, [
             \App\Enums\WidowLoanStatus::DISBURSED,
             \App\Enums\WidowLoanStatus::COMPLETED,
@@ -89,7 +90,7 @@ class WidowLoanResource extends Resource
         if ($hasFinancialActivity) {
             return false;
         }
-        
+
         return parent::canDelete($record);
     }
 

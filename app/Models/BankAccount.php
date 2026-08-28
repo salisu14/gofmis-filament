@@ -3,8 +3,8 @@
 namespace App\Models;
 
 use App\Exceptions\InsufficientBankBalanceException;
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -15,16 +15,25 @@ class BankAccount extends Model
     use HasUuids;
 
     public const USAGE_GENERAL = 'general';
+
     public const USAGE_WIDOW_LOAN_DISBURSEMENT = 'widow_loan_disbursement';
+
     public const USAGE_WIDOW_LOAN_REPAYMENT = 'widow_loan_repayment';
+
     public const USAGE_INTERVENTION = 'intervention';
+
     public const USAGE_IMPREST = 'imprest';
+
     public const USAGE_EDUCATION = 'education';
+
     public const USAGE_EDUCATION_BENEVOLENT = 'education_benevolent';
+
     public const USAGE_OTHER = 'other';
 
     protected $keyType = 'string';
+
     public $incrementing = false;
+
     protected $table = 'bank_accounts';
 
     /**
@@ -108,9 +117,7 @@ class BankAccount extends Model
 
     public function scopeDedicatedTo(Builder $query, string|array $usage): Builder
     {
-        return $query
-            ->whereNotNull('parent_bank_account_id')
-            ->whereIn('usage', (array) $usage);
+        return $query->whereIn('usage', (array) $usage);
     }
 
     /*
@@ -146,6 +153,7 @@ class BankAccount extends Model
         }
 
         $availableBalance = (float) $this->ledger_balance - (float) ($this->reserved_balance ?? 0);
+
         return $availableBalance >= $amount;
     }
 
@@ -158,7 +166,7 @@ class BankAccount extends Model
             throw new \InvalidArgumentException('Amount must be greater than zero.');
         }
 
-        if (!$this->hasSufficientFunds($amount)) {
+        if (! $this->hasSufficientFunds($amount)) {
             throw new InsufficientBankBalanceException('Cannot reserve funds: Available balance is too low.');
         }
         $this->reserved_balance = (float) $this->reserved_balance + $amount;
@@ -191,6 +199,7 @@ class BankAccount extends Model
     /**
      * Immediate debit for transactions.
      * Updates the actual ledger balance.
+     *
      * @throws InsufficientBankBalanceException
      */
     public function debit(float $amount): void
@@ -199,7 +208,7 @@ class BankAccount extends Model
             throw new \InvalidArgumentException('Amount must be greater than zero.');
         }
 
-        if (!$this->hasSufficientFunds($amount)) {
+        if (! $this->hasSufficientFunds($amount)) {
             throw new InsufficientBankBalanceException('Insufficient funds in bank account.');
         }
         $this->ledger_balance = (float) $this->ledger_balance - $amount;
@@ -237,7 +246,7 @@ class BankAccount extends Model
 
     public function isSubAccount(): bool
     {
-        return !is_null($this->parent_bank_account_id);
+        return ! is_null($this->parent_bank_account_id);
     }
 
     public function isMainAccount(): bool
@@ -252,7 +261,7 @@ class BankAccount extends Model
 
     public function isDedicatedTo(string|array $usage): bool
     {
-        return $this->isSubAccount() && in_array($this->usage, (array) $usage, true);
+        return in_array($this->usage, (array) $usage, true);
     }
 
     public function ensureDedicatedTo(string|array $usage, string $workflowName = 'this workflow'): void
@@ -262,7 +271,7 @@ class BankAccount extends Model
         }
 
         throw ValidationException::withMessages([
-            'bank_account_id' => "Please select a child bank account dedicated to {$workflowName}.",
+            'bank_account_id' => "Please select a bank account dedicated to {$workflowName}.",
         ]);
     }
 
@@ -281,6 +290,7 @@ class BankAccount extends Model
     {
         if ($this->isMainAccount()) {
             $childrenBalance = $this->children()->sum('ledger_balance');
+
             return (float) ($this->ledger_balance + $childrenBalance);
         }
 

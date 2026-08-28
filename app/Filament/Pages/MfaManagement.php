@@ -297,6 +297,10 @@ class MfaManagement extends Page implements HasTable
                         ->label('Force Enrollment')
                         ->icon('heroicon-o-shield-exclamation')
                         ->color('warning')
+                        ->requiresConfirmation()
+                        ->modalHeading('Force MFA Enrollment?')
+                        ->modalDescription('This user will be required to configure multi-factor authentication before continuing to use protected areas of the system.')
+                        ->modalSubmitActionLabel('Force Enrollment')
                         ->visible(fn (User $record) => Gate::allows('update', $record) && ! $record->mfa_enrollment_required)
                         ->action(function (User $record) {
                             try {
@@ -306,6 +310,34 @@ class MfaManagement extends Page implements HasTable
                                 \Filament\Notifications\Notification::make()
                                     ->title('Enrollment Required')
                                     ->body("MFA enrollment is now forced for {$record->email}.")
+                                    ->success()
+                                    ->send();
+                            } catch (\Throwable $e) {
+                                \Filament\Notifications\Notification::make()
+                                    ->title('Action Failed')
+                                    ->body($e->getMessage())
+                                    ->danger()
+                                    ->send();
+                            }
+                        }),
+
+                    Action::make('removeEnrollmentRequirement')
+                        ->label('Remove Forced Enrollment')
+                        ->icon('heroicon-o-shield-check')
+                        ->color('gray')
+                        ->requiresConfirmation()
+                        ->modalHeading('Remove Forced MFA Enrollment?')
+                        ->modalDescription('This will remove the administrative forced enrollment requirement for this user. If their role mandates MFA, MFA will remain mandatory.')
+                        ->modalSubmitActionLabel('Remove Forced Enrollment')
+                        ->visible(fn (User $record) => Gate::allows('update', $record) && $record->mfa_enrollment_required)
+                        ->action(function (User $record) {
+                            try {
+                                $service = new \App\Services\MfaService;
+                                $service->removeMfaEnrollmentRequirement(auth()->user(), $record);
+
+                                \Filament\Notifications\Notification::make()
+                                    ->title('Forced Enrollment Removed')
+                                    ->body("Administrative forced MFA enrollment was removed for {$record->email}.")
                                     ->success()
                                     ->send();
                             } catch (\Throwable $e) {

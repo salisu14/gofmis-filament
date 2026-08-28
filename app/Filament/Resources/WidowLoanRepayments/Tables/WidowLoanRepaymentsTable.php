@@ -12,7 +12,6 @@ use Filament\Forms\Components\Select;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
-use Illuminate\Support\Facades\Redirect;
 
 class WidowLoanRepaymentsTable
 {
@@ -117,14 +116,14 @@ class WidowLoanRepaymentsTable
                             ->searchable()
                             ->visible(fn () => auth()->user()?->hasAnyRole(['admin', 'super_admin']) ?? false),
                     ])
-                    ->action(function (array $data): \Illuminate\Http\RedirectResponse {
+                    ->action(function (array $data) {
                         $query = ['week' => $data['week']];
 
                         if (! empty($data['zone'])) {
                             $query['zone'] = $data['zone'];
                         }
 
-                        return Redirect::route('wrl.weekly.download', $query);
+                        return redirect()->route('wrl.weekly.download', $query);
                     }),
                 BulkActionGroup::make([
                 ]),

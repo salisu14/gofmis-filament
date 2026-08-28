@@ -115,6 +115,11 @@ Route::get('/prescriptions/{prescription}/download', [\App\Http\Controllers\Pres
     ->name('prescriptions.download')
     ->middleware('auth');
 
+// Project Print Route
+Route::get('/projects/print', [\App\Http\Controllers\ProjectReportController::class, 'exportPdf'])
+    ->name('reports.project-report.pdf')
+    ->middleware('auth');
+
 Route::get('/prescriptions/{prescription}/referral/preview', [\App\Http\Controllers\PrescriptionDocumentController::class, 'referralPreview'])
     ->name('prescriptions.referral.preview')
     ->middleware('auth');

@@ -1,11 +1,11 @@
 <?php
+
 // app/Services/ExpenseService.php
 
 namespace App\Services;
 
 use App\Models\Project;
 use App\Models\ProjectExpense;
-use App\Models\ProjectMilestone;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
@@ -13,6 +13,7 @@ class ExpenseService
 {
     /**
      * Record a new expense and update project/milestone budgets
+     *
      * @throws \Throwable
      */
     public function recordExpense(array $data, string $recordedBy): ProjectExpense
@@ -79,7 +80,7 @@ class ExpenseService
             ->groupBy('month')
             ->orderBy('month')
             ->get()
-            ->map(fn($row) => [
+            ->map(fn ($row) => [
                 'month' => \Carbon\Carbon::parse($row->month)->format('M Y'),
                 'total' => (float) $row->total,
             ])
@@ -91,9 +92,6 @@ class ExpenseService
      */
     public function recalculateBudget(Project $project): void
     {
-        $totalSpent = $project->expenses()->sum('amount');
-        $project->update(['budget_spent' => $totalSpent]);
-
         // Also recalculate milestone budgets
         foreach ($project->milestones as $milestone) {
             $milestoneSpent = $milestone->expenses()->sum('amount');

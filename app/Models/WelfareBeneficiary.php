@@ -230,7 +230,7 @@ class WelfareBeneficiary extends Model
      *
      * @throws \RuntimeException when collection is not permitted.
      */
-    public function collect(string $notes = null, ?string $collectedBy = null): bool
+    public function collect(?string $notes = null, ?string $collectedBy = null): bool
     {
         if (! $this->canBeCollected()) {
             throw new \RuntimeException('This package cannot be collected. Ensure beneficiary is approved and not already collected.');
@@ -265,6 +265,10 @@ class WelfareBeneficiary extends Model
         if (! $package) {
             throw new \RuntimeException('Welfare package not found for this allocation.');
         }
+
+        // Apply a row-level lock on the underlying items to serialize concurrent collections
+        $itemIds = $package->items->pluck('item_id')->unique();
+        \App\Models\Item::whereIn('id', $itemIds)->lockForUpdate()->get();
 
         foreach ($package->items as $pkgItem) {
             $itemId = $pkgItem->item_id;

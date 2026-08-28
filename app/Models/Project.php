@@ -1,4 +1,5 @@
 <?php
+
 // app/Models/Project.php
 
 namespace App\Models;
@@ -11,7 +12,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Spatie\Activitylog\Models\Concerns\LogsActivity;
 use Spatie\Activitylog\Support\LogOptions;
 
 class Project extends Model
@@ -24,7 +24,6 @@ class Project extends Model
         'type',
         'status',
         'budget_allocated',
-        'budget_spent',
         'zone_id',
         'deceased_id',
         'location_address',
@@ -39,7 +38,6 @@ class Project extends Model
         'type' => ProjectType::class,
         'status' => ProjectStatus::class,
         'budget_allocated' => 'decimal:2',
-        'budget_spent' => 'decimal:2',
         'start_date' => 'date',
         'expected_completion_date' => 'date',
         'actual_completion_date' => 'date',
@@ -100,15 +98,23 @@ class Project extends Model
     public function getProgressPercentageAttribute(): int
     {
         $total = $this->milestones()->count();
-        if ($total === 0) return 0;
+        if ($total === 0) {
+            return 0;
+        }
 
         $completed = $this->milestones()->where('status', 'completed')->count();
+
         return (int) round(($completed / $total) * 100);
+    }
+
+    public function getBudgetSpentAttribute(): float
+    {
+        return (float) $this->expenses()->sum('amount');
     }
 
     public function getBudgetRemainingAttribute(): float
     {
-        return (float) $this->budget_allocated - (float) $this->budget_spent;
+        return (float) $this->budget_allocated - $this->budget_spent;
     }
 
     public function getIsOverBudgetAttribute(): bool
@@ -116,13 +122,13 @@ class Project extends Model
         return $this->budget_spent > $this->budget_allocated;
     }
 
-//    public function getActivityLogOptions(): LogOptions
-//    {
-//        return LogOptions::defaults()
-//            ->logOnly(['name', 'status', 'budget_allocated', 'budget_spent', 'zone_id', 'coordinator_id'])
-//            ->logOnlyDirty()
-//            ->dontSubmitEmptyLogs();
-//    }
+    //    public function getActivityLogOptions(): LogOptions
+    //    {
+    //        return LogOptions::defaults()
+    //            ->logOnly(['name', 'status', 'budget_allocated', 'budget_spent', 'zone_id', 'coordinator_id'])
+    //            ->logOnlyDirty()
+    //            ->dontSubmitEmptyLogs();
+    //    }
 
     protected static function booted(): void
     {

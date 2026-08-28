@@ -1,14 +1,17 @@
 <div class="w-full max-w-4xl px-4 sm:px-6 lg:px-8">
     <div class="bg-slate-900/60 border border-slate-800 backdrop-blur-xl p-8 rounded-2xl shadow-2xl space-y-8">
-        
+
         <!-- Header -->
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-6 border-b border-slate-800">
             <div>
                 <h2 class="text-2xl font-bold text-slate-100">Account Security</h2>
                 <p class="text-sm text-slate-400">Manage your Multi-Factor Authentication (MFA) setup and recovery codes.</p>
             </div>
-            
-            <a href="/admin" class="text-xs font-semibold text-slate-450 hover:text-slate-200 transition bg-slate-800/80 px-3.5 py-2 rounded-xl border border-slate-700/50">
+            @php
+                $dashboardUrl = auth()->user()?->isAdmin() ? '/admin' : (auth()->user()?->isCoordinator() ? '/coordinator' : '/admin');
+            @endphp
+
+            <a href="{{ $dashboardUrl }}" class="text-xs font-semibold text-slate-450 hover:text-slate-200 transition bg-slate-800/80 px-3.5 py-2 rounded-xl border border-slate-700/50">
                 Back to Dashboard
             </a>
         </div>
@@ -60,7 +63,7 @@
                                 class="bg-slate-900 border border-slate-850 hover:border-slate-700 hover:bg-slate-850 text-slate-200 font-semibold py-2.5 px-4 rounded-xl text-sm transition">
                                 Reconfigure Authenticator
                             </button>
-                            
+
                             <button wire:click="selectAction('disable')"
                                 {{ auth()->user()->isMfaRequired() ? 'disabled' : '' }}
                                 class="bg-rose-950/20 border border-rose-900/30 hover:border-rose-900/60 text-rose-455 disabled:opacity-40 disabled:pointer-events-none font-semibold py-2.5 px-4 rounded-xl text-sm transition">
@@ -198,7 +201,7 @@
                 @else
                     <div class="space-y-6">
                         <x-security.recovery-codes :codes="$newRecoveryCodes" :email="auth()->user()->email" />
-                        
+
                         <div class="flex justify-end pt-4 border-t border-slate-800/80">
                             <button type="button" wire:click="cancelAction" class="w-full sm:w-auto bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-semibold py-3 px-6 rounded-xl shadow-lg transition">
                                 I Have Saved My Recovery Codes
@@ -220,7 +223,7 @@
                     <div class="bg-white p-2.5 rounded-lg shadow-inner flex items-center justify-center shrink-0">
                         {!! \SimpleSoftwareIO\QrCode\Facades\QrCode::size(140)->generate($provisioningUri) !!}
                     </div>
-                    
+
                     <div class="space-y-2 max-w-xs text-left">
                         <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider block">Manual Key</span>
                         <code class="block select-all bg-slate-950 border border-slate-850 text-amber-500 px-3 py-1.5 rounded-lg font-mono text-xs tracking-wider break-all">

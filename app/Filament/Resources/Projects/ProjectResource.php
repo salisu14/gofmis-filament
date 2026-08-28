@@ -25,6 +25,7 @@ class ProjectResource extends Resource
     protected static string|BackedEnum|null $navigationIcon = Heroicon::BuildingOffice;
 
     protected static string|null|\UnitEnum $navigationGroup = 'Projects & Interventions';
+
     protected static ?int $navigationSort = 1;
 
     protected static ?string $recordTitleAttribute = 'name';
@@ -50,6 +51,13 @@ class ProjectResource extends Resource
             RelationManagers\MilestonesRelationManager::class,
             RelationManagers\BeneficiariesRelationManager::class,
             RelationManagers\MediaRelationManager::class,
+        ];
+    }
+
+    public static function getWidgets(): array
+    {
+        return [
+            \App\Filament\Resources\Projects\Widgets\ProjectReportWidget::class,
         ];
     }
 

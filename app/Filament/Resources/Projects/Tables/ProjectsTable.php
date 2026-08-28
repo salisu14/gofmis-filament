@@ -77,6 +77,24 @@ class ProjectsTable
                 SelectFilter::make('zone_id')
                     ->label('Zone')
                     ->relationship('zone', 'name'),
+                \Filament\Tables\Filters\Filter::make('created_at')
+                    ->form([
+                        \Filament\Forms\Components\DatePicker::make('created_from')
+                            ->label('Date From'),
+                        \Filament\Forms\Components\DatePicker::make('created_until')
+                            ->label('Date To'),
+                    ])
+                    ->query(function (\Illuminate\Database\Eloquent\Builder $query, array $data): \Illuminate\Database\Eloquent\Builder {
+                        return $query
+                            ->when(
+                                $data['created_from'],
+                                fn (\Illuminate\Database\Eloquent\Builder $query, $date): \Illuminate\Database\Eloquent\Builder => $query->whereDate('created_at', '>=', $date),
+                            )
+                            ->when(
+                                $data['created_until'],
+                                fn (\Illuminate\Database\Eloquent\Builder $query, $date): \Illuminate\Database\Eloquent\Builder => $query->whereDate('created_at', '<=', $date),
+                            );
+                    }),
             ])
             ->recordActions([
                 ActionGroup::make([

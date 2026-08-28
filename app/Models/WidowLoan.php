@@ -177,6 +177,11 @@ class WidowLoan extends Model
         return $this->belongsTo(Widow::class);
     }
 
+    public function counterFundings(): HasMany
+    {
+        return $this->hasMany(WidowLoanCounterFunding::class);
+    }
+
     public function bankAccount(): BelongsTo
     {
         return $this->belongsTo(BankAccount::class);
@@ -384,11 +389,14 @@ class WidowLoan extends Model
      */
     public function refreshBalance(): void
     {
-        // Fallback to principal_amount if total_payable was somehow lost
         $totalPayable = (float) ($this->total_payable ?? $this->principal_amount);
         $totalPaid = (float) $this->repayments()->sum('amount');
         $amountWrittenOff = (float) ($this->amount_written_off ?? 0);
-        $outstanding = max(0, $totalPayable - $totalPaid - $amountWrittenOff);
+        // Counter funding is derived from the authoritative ledger so the
+        // denormalized counter_funded_amount column can never drift from the
+        // recorded history (single source of truth).
+        $counterFunded = (float) $this->counterFundings()->sum('amount');
+        $outstanding = max(0, $totalPayable - $totalPaid - $amountWrittenOff - $counterFunded);
 
         $fullyRepaid = $outstanding <= 0 && $this->status !== WidowLoanStatus::WRITTEN_OFF && $amountWrittenOff <= 0;
 
@@ -417,6 +425,11 @@ class WidowLoan extends Model
         if ($this->status === WidowLoanStatus::DISBURSED) {
             app(\App\Services\WidowLoanDelinquencyService::class)->evaluateLoan($this);
         }
+    }
+
+    public function getTotalCounterFundedAttribute(): float
+    {
+        return (float) $this->counterFundings()->sum('amount');
     }
 
     /**

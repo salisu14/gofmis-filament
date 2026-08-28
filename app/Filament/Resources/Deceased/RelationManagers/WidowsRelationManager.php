@@ -6,7 +6,6 @@ use App\Actions\Widow\RegisterWidowAction;
 use App\Data\Widow\WidowData;
 use App\Enums\IllnessCategory;
 use App\Filament\Resources\Widows\Schemas\WidowForm;
-use App\Filament\Resources\Widows\WidowResource;
 use App\Models\Illness;
 use App\Models\Medication;
 use App\Models\Prescription;
@@ -36,8 +35,6 @@ class WidowsRelationManager extends RelationManager
 {
     protected static string $relationship = 'widows';
 
-    protected static ?string $relatedResource = WidowResource::class;
-
     protected static ?string $recordTitleAttribute = 'full_name';
 
     protected static ?string $title = 'Widows';
@@ -49,6 +46,27 @@ class WidowsRelationManager extends RelationManager
     public function form(Schema $schema): Schema
     {
         return WidowForm::configure($schema, includeDeceased: false);
+    }
+
+    public function canCreate(): bool
+    {
+        if ($this->getRelationship()->count() >= 4) {
+            return false;
+        }
+
+        $user = auth()->user();
+        if (! $user) {
+            return false;
+        }
+        if ($user->hasAnyRole(['admin', 'super_admin'])) {
+            return true;
+        }
+
+        $owner = $this->getOwnerRecord();
+
+        return $user->isCoordinator()
+            && $user->can('create_widows')
+            && $user->managesZone($owner?->zone_id);
     }
 
     public function table(Table $table): Table
@@ -64,8 +82,9 @@ class WidowsRelationManager extends RelationManager
 
                 Tables\Columns\TextColumn::make('full_name')
                     ->label('Name')
+                    ->state(fn ($record): string => (string) $record->display_name)
                     ->searchable(['first_name', 'middle_name', 'last_name'])
-                    ->sortable()
+                    ->sortable(query: fn ($query, string $direction) => $query->orderBy('full_name', $direction))
                     ->weight('bold'),
 
                 Tables\Columns\TextColumn::make('nin')
@@ -96,6 +115,12 @@ class WidowsRelationManager extends RelationManager
                     ->icon('heroicon-m-plus')
                     ->modalWidth('4xl')
                     ->url(null)
+                    ->visible(fn (RelationManager $livewire) => $livewire->canCreate())
+                    ->mutateFormDataUsing(function (array $data, RelationManager $livewire): array {
+                        $data['deceased_id'] = $livewire->getOwnerRecord()->id;
+
+                        return $data;
+                    })
                     ->using(function (array $data, RelationManager $livewire): Widow {
                         $deceased = $livewire->getOwnerRecord();
 
@@ -118,8 +143,7 @@ class WidowsRelationManager extends RelationManager
                         );
 
                         return app(RegisterWidowAction::class)->execute($widowData);
-                    })
-                    ->hidden(fn (RelationManager $livewire) => $livewire->getRelationship()->count() >= 4),
+                    }),
             ])
             ->recordActions([
                 Action::make('manageMedical')

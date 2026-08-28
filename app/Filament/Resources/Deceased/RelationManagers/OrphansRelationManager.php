@@ -6,7 +6,6 @@ use App\Actions\Orphan\RegisterOrphanAction;
 use App\Data\Orphan\OrphanData;
 use App\Enums\IllnessCategory;
 use App\Enums\OrphanStatus;
-use App\Filament\Resources\Orphans\OrphanResource;
 use App\Filament\Resources\Orphans\Schemas\OrphanForm;
 use App\Models\Illness;
 use App\Models\Medication;
@@ -36,8 +35,6 @@ class OrphansRelationManager extends RelationManager
 {
     protected static string $relationship = 'orphans';
 
-    protected static ?string $relatedResource = OrphanResource::class;
-
     protected static ?string $recordTitleAttribute = 'full_name';
 
     protected static ?string $title = 'Orphans';
@@ -47,6 +44,23 @@ class OrphansRelationManager extends RelationManager
     public function form(Schema $schema): Schema
     {
         return OrphanForm::configure($schema, includeDeceased: false);
+    }
+
+    public function canCreate(): bool
+    {
+        $user = auth()->user();
+        if (! $user) {
+            return false;
+        }
+        if ($user->hasAnyRole(['admin', 'super_admin'])) {
+            return true;
+        }
+
+        $owner = $this->getOwnerRecord();
+
+        return $user->isCoordinator()
+            && $user->can('create_orphans')
+            && $user->managesZone($owner?->zone_id);
     }
 
     public function table(Table $table): Table
@@ -62,7 +76,9 @@ class OrphansRelationManager extends RelationManager
 
                 Tables\Columns\TextColumn::make('full_name')
                     ->label('Name')
+                    ->state(fn ($record): string => (string) $record->display_name)
                     ->searchable(['first_name', 'middle_name', 'last_name'])
+                    ->sortable(query: fn ($query, string $direction) => $query->orderBy('full_name', $direction))
                     ->weight('bold'),
 
                 Tables\Columns\TextColumn::make('gender')
@@ -96,6 +112,12 @@ class OrphansRelationManager extends RelationManager
                     ->icon('heroicon-m-plus')
                     ->modalWidth('4xl')
                     ->url(null)
+                    ->visible(fn (RelationManager $livewire) => $livewire->canCreate())
+                    ->mutateFormDataUsing(function (array $data, RelationManager $livewire): array {
+                        $data['deceased_id'] = $livewire->getOwnerRecord()->id;
+
+                        return $data;
+                    })
                     ->using(function (array $data, RelationManager $livewire): Orphan {
                         $deceased = $livewire->getOwnerRecord();
 
