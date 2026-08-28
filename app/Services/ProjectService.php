@@ -187,14 +187,7 @@ class ProjectService
     public function recalculateBudget(Project $project): void
     {
         DB::transaction(function () use ($project) {
-
             $project->load(['expenses', 'milestones.expenses']);
-
-            $totalSpent = $project->expenses->sum('amount');
-
-            $project->update([
-                'budget_spent' => $totalSpent,
-            ]);
 
             foreach ($project->milestones as $milestone) {
                 $milestone->update([

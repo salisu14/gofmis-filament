@@ -19,6 +19,7 @@ use App\Models\Institution;
 use App\Models\Orphan;
 use App\Models\OrphanEducation;
 use App\Models\Project;
+use App\Models\ProjectExpense;
 use App\Models\User;
 use App\Models\Widow;
 use App\Models\WidowLoan;
@@ -645,9 +646,16 @@ test('25. project budget remaining formula is correct', function () {
         'name' => 'Health Clinic Renovation',
         'type' => ProjectType::CLINIC,
         'budget_allocated' => 500000.00,
-        'budget_spent' => 150000.00,
         'status' => ProjectStatus::IN_PROGRESS,
         'zone_id' => $this->zone->id,
+    ]);
+
+    ProjectExpense::create([
+        'project_id' => $project->id,
+        'category' => 'Materials',
+        'description' => 'Initial Materials',
+        'amount' => 150000.00,
+        'expense_date' => now(),
     ]);
 
     expect((float) $project->budget_remaining)->toBe(350000.00)
@@ -659,13 +667,25 @@ test('26. project expense updates spent total accurately', function () {
         'name' => 'Community School Roofing',
         'type' => ProjectType::SCHOOL,
         'budget_allocated' => 100000.00,
-        'budget_spent' => 20000.00,
         'status' => ProjectStatus::IN_PROGRESS,
         'zone_id' => $this->zone->id,
     ]);
 
-    $project->budget_spent += 30000.00;
-    $project->save();
+    ProjectExpense::create([
+        'project_id' => $project->id,
+        'category' => 'Materials',
+        'description' => 'Roofing Sheets',
+        'amount' => 20000.00,
+        'expense_date' => now(),
+    ]);
+
+    ProjectExpense::create([
+        'project_id' => $project->id,
+        'category' => 'Labor',
+        'description' => 'Carpentry Labor',
+        'amount' => 30000.00,
+        'expense_date' => now(),
+    ]);
 
     expect((float) $project->fresh()->budget_spent)->toBe(50000.00)
         ->and((float) $project->fresh()->budget_remaining)->toBe(50000.00);
@@ -676,13 +696,25 @@ test('27. over-budget project expense marks project as over budget', function ()
         'name' => 'Solar Borehole Project',
         'type' => ProjectType::WATER,
         'budget_allocated' => 200000.00,
-        'budget_spent' => 190000.00,
         'status' => ProjectStatus::IN_PROGRESS,
         'zone_id' => $this->zone->id,
     ]);
 
-    $project->budget_spent += 20000.00;
-    $project->save();
+    ProjectExpense::create([
+        'project_id' => $project->id,
+        'category' => 'Equipment',
+        'description' => 'Solar Pump',
+        'amount' => 190000.00,
+        'expense_date' => now(),
+    ]);
+
+    ProjectExpense::create([
+        'project_id' => $project->id,
+        'category' => 'Transport',
+        'description' => 'Delivery Fee',
+        'amount' => 20000.00,
+        'expense_date' => now(),
+    ]);
 
     expect($project->fresh()->is_over_budget)->toBeTrue();
 });
@@ -692,9 +724,16 @@ test('28. project expense updates are idempotent when properly scoped', function
         'name' => 'Mosque Repair',
         'type' => ProjectType::MOSQUE,
         'budget_allocated' => 80000.00,
-        'budget_spent' => 10000.00,
         'status' => ProjectStatus::IN_PROGRESS,
         'zone_id' => $this->zone->id,
+    ]);
+
+    ProjectExpense::create([
+        'project_id' => $project->id,
+        'category' => 'Maintenance',
+        'description' => 'Paint',
+        'amount' => 10000.00,
+        'expense_date' => now(),
     ]);
 
     expect((float) $project->budget_remaining)->toBe(70000.00);
