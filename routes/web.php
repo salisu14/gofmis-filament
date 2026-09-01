@@ -3,13 +3,12 @@
 use App\Http\Controllers\IdCardController;
 use App\Http\Controllers\IdCardDownloadController;
 use App\Http\Controllers\OrphanReportController;
+use App\Http\Controllers\PortalController;
 use App\Http\Controllers\WidowLoanRepaymentController;
 use App\Http\Controllers\WidowLoanWriteOffController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    return view('welcome');
-});
+Route::get('/', PortalController::class)->name('home');
 
 Route::get('/id-cards/{idCard}/download', IdCardDownloadController::class)
     ->name('id-cards.download')
