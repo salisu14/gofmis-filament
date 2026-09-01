@@ -2,7 +2,6 @@
 
 namespace App\Filament\Resources\BankAccounts\Tables;
 
-use App\Exceptions\InsufficientBankBalanceException;
 use App\Models\BankAccount;
 use App\Models\Transaction;
 use Filament\Actions\Action;
@@ -59,7 +58,7 @@ class BankAccountsTable
                     ->money('NGN')
                     ->alignEnd()
                     ->weight('bold')
-                    ->visible(fn($record) => $record?->isMainAccount())
+                    ->visible(fn ($record) => $record?->isMainAccount())
                     ->tooltip('Own balance + Sub-accounts balance'),
 
                 TextColumn::make('opening_balance')
@@ -84,9 +83,9 @@ class BankAccountsTable
 
                 TextColumn::make('available_balance')
                     ->label('Available')
-                    ->state(fn(BankAccount $record) => $record->ledger_balance - $record->reserved_balance)
+                    ->state(fn (BankAccount $record) => $record->ledger_balance - $record->reserved_balance)
                     ->money('NGN')
-                    ->color(fn($state) => $state > 0 ? 'success' : 'danger')
+                    ->color(fn ($state) => $state > 0 ? 'success' : 'danger')
                     ->weight('bold')
                     ->alignEnd(),
 
@@ -149,75 +148,109 @@ class BankAccountsTable
                         ->color('info')
                         ->visible(fn (BankAccount $record): bool => $record->canPerformManualBankMovement())
                         ->modalHeading('Transfer Funds Between Accounts')
-                        ->modalDescription(fn(BankAccount $record) => "Source Account: {$record->account_name} (Balance: ₦" . number_format($record->ledger_balance, 2) . ")")
+                        ->modalDescription(fn (BankAccount $record) => "Source Account: {$record->account_name} (Balance: ₦".number_format($record->ledger_balance, 2).')')
                         ->requiresConfirmation()
-                        ->schema(fn(BankAccount $record) => [ // ✅ Inject the $record into the form
-                            Select::make('destination_bank_account_id')
-                                ->label('Destination Account')
-                                ->options(fn () => BankAccount::query()
-                                    ->whereKeyNot($record->id)
-                                    ->orderBy('account_name')
-                                    ->get()
-                                    ->mapWithKeys(fn (BankAccount $account) => [
-                                        $account->id => "{$account->account_name} ({$account->account_number}) - {$account->usage_label}",
-                                    ])
-                                    ->toArray())
-                                ->searchable()
-                                ->preload()
-                                ->required(),
+                        ->schema(function (BankAccount $record): array {
+                            $availableBalance = (float) $record->ledger_balance - (float) ($record->reserved_balance ?? 0);
+                            $hasAvailableFunds = $availableBalance > 0;
 
-                            TextInput::make('amount')
+                            $amountField = TextInput::make('amount')
                                 ->label('Transfer Amount')
                                 ->numeric()
                                 ->prefix('₦')
                                 ->required()
-                                ->minValue(0.01)
-                                ->maxValue(fn (BankAccount $record): float => (float) $record->ledger_balance - (float) $record->reserved_balance)
-                                ->step(0.01),
+                                ->step(0.01);
 
-                            DatePicker::make('date')
-                                ->label('Transfer Date')
-                                ->default(now())
-                                ->required()
-                                ->native(false),
+                            if ($hasAvailableFunds) {
+                                $amountField
+                                    ->minValue(0.01)
+                                    ->maxValue($availableBalance)
+                                    ->validationMessages([
+                                        'max' => 'Transfer amount cannot exceed the available balance of NGN '.number_format($availableBalance, 2).'.',
+                                        'min' => 'Transfer amount must be at least NGN 0.01.',
+                                    ])
+                                    ->helperText('Available to transfer: ₦'.number_format($availableBalance, 2));
+                            } else {
+                                $amountField
+                                    ->disabled()
+                                    ->helperText('This source account has no available funds to transfer.');
+                            }
 
-                            TextInput::make('reference')
-                                ->label('Reference')
-                                ->default(fn () => Transaction::generateReference('transfer'))
-                                ->required()
-                                ->maxLength(255),
+                            return [
+                                Select::make('destination_bank_account_id')
+                                    ->label('Destination Account')
+                                    ->options(fn () => BankAccount::query()
+                                        ->whereKeyNot($record->id)
+                                        ->orderBy('account_name')
+                                        ->get()
+                                        ->mapWithKeys(fn (BankAccount $account) => [
+                                            $account->id => "{$account->account_name} ({$account->account_number}) - {$account->usage_label}",
+                                        ])
+                                        ->toArray())
+                                    ->searchable()
+                                    ->preload()
+                                    ->required(),
 
-                            Textarea::make('description')
-                                ->label('Reason for Transfer')
-                                ->placeholder('e.g., Moving funds to repayment bucket')
-                                ->required()
-                                ->columnSpanFull(),
-                        ])
+                                $amountField,
+
+                                DatePicker::make('date')
+                                    ->label('Transfer Date')
+                                    ->default(now())
+                                    ->required()
+                                    ->native(false),
+
+                                TextInput::make('reference')
+                                    ->label('Reference')
+                                    ->default(fn () => Transaction::generateReference('transfer'))
+                                    ->required()
+                                    ->maxLength(255),
+
+                                Textarea::make('description')
+                                    ->label('Reason for Transfer')
+                                    ->placeholder('e.g., Moving funds to repayment bucket')
+                                    ->required()
+                                    ->columnSpanFull(),
+                            ];
+                        })
                         ->action(function (BankAccount $record, array $data) {
                             try {
-                                // Create the Transaction.
-                                // The Transaction model's booted() method will automatically
-                                // call postToBank() which handles debiting the source and
-                                // crediting the destination!
-                                Transaction::create([
-                                    'bank_account_id' => $record->id,
-                                    'destination_bank_account_id' => $data['destination_bank_account_id'],
-                                    'type' => 'transfer',
-                                    'amount' => $data['amount'],
-                                    'date' => $data['date'],
-                                    'reference' => $data['reference'],
-                                    'description' => $data['description'],
-                                    'is_system' => false, // Manual transfer
-                                ]);
+                                \Illuminate\Support\Facades\DB::transaction(function () use ($record, $data) {
+                                    $sourceAccount = BankAccount::query()
+                                        ->whereKey($record->id)
+                                        ->lockForUpdate()
+                                        ->firstOrFail();
 
-                                \Filament\Notifications\Notification::make()
+                                    $availableBalance = (float) $sourceAccount->ledger_balance - (float) ($sourceAccount->reserved_balance ?? 0);
+                                    $requestedAmount = (float) $data['amount'];
+
+                                    if ($availableBalance <= 0 || $requestedAmount > $availableBalance) {
+                                        throw \Illuminate\Validation\ValidationException::withMessages([
+                                            'amount' => 'Transfer amount cannot exceed the available balance of NGN '.number_format(max(0, $availableBalance), 2).'.',
+                                        ]);
+                                    }
+
+                                    Transaction::create([
+                                        'bank_account_id' => $sourceAccount->id,
+                                        'destination_bank_account_id' => $data['destination_bank_account_id'],
+                                        'type' => 'transfer',
+                                        'amount' => $requestedAmount,
+                                        'date' => $data['date'],
+                                        'reference' => $data['reference'],
+                                        'description' => $data['description'],
+                                        'is_system' => false,
+                                    ]);
+                                });
+
+                                Notification::make()
                                     ->title('Transfer Successful')
                                     ->body('Funds have been moved between accounts.')
                                     ->success()
                                     ->send();
 
+                            } catch (\Illuminate\Validation\ValidationException $e) {
+                                throw $e;
                             } catch (\App\Exceptions\InsufficientBankBalanceException $e) {
-                                \Filament\Notifications\Notification::make()
+                                Notification::make()
                                     ->title('Insufficient Funds')
                                     ->body('The source account does not have enough balance for this transfer.')
                                     ->danger()
@@ -230,63 +263,100 @@ class BankAccountsTable
                         ->icon('heroicon-m-arrow-up-circle')
                         ->color('danger')
                         ->visible(fn (BankAccount $record): bool => $record->canPerformManualBankMovement())
-                        ->modalHeading(fn(BankAccount $record) => "Record Withdrawal from {$record->account_name} (Balance: ₦" . number_format($record->ledger_balance, 2) . ")")
+                        ->modalHeading(fn (BankAccount $record) => "Record Withdrawal from {$record->account_name} (Balance: ₦".number_format($record->ledger_balance, 2).')')
                         ->requiresConfirmation()
-                        ->schema([
-                            TextInput::make('amount')
+                        ->schema(function (BankAccount $record): array {
+                            $availableBalance = (float) $record->ledger_balance - (float) ($record->reserved_balance ?? 0);
+                            $hasAvailableFunds = $availableBalance > 0;
+
+                            $amountField = TextInput::make('amount')
                                 ->label('Withdrawal Amount')
                                 ->numeric()
                                 ->prefix('₦')
                                 ->required()
-                                ->minValue(0.01)
-                                ->maxValue(fn (BankAccount $record): float => (float) $record->ledger_balance - (float) $record->reserved_balance)
-                                ->step(0.01),
+                                ->step(0.01);
 
-                            DatePicker::make('date')
-                                ->label('Withdrawal Date')
-                                ->default(now())
-                                ->required()
-                                ->native(false),
+                            if ($hasAvailableFunds) {
+                                $amountField
+                                    ->minValue(0.01)
+                                    ->maxValue($availableBalance)
+                                    ->validationMessages([
+                                        'max' => 'Withdrawal amount cannot exceed the available balance of NGN '.number_format($availableBalance, 2).'.',
+                                        'min' => 'Withdrawal amount must be at least NGN 0.01.',
+                                    ])
+                                    ->helperText('Available balance: ₦'.number_format($availableBalance, 2));
+                            } else {
+                                $amountField
+                                    ->disabled()
+                                    ->helperText('This account has no available funds to withdraw.');
+                            }
 
-                            TextInput::make('reference')
-                                ->label('Reference / Cheque No.')
-                                ->maxLength(255)
-                                ->placeholder('e.g., CHQ-00345 or leave blank for auto')
-                                ->default(fn () => Transaction::generateReference('withdrawal')),
+                            return [
+                                $amountField,
 
-                            Textarea::make('description')
-                                ->label('Reason / Description')
-                                ->placeholder('e.g., Bank charges, Emergency plumbing repair, Stationery')
-                                ->required()
-                                ->columnSpanFull(),
-                        ])
+                                DatePicker::make('date')
+                                    ->label('Withdrawal Date')
+                                    ->default(now())
+                                    ->required()
+                                    ->native(false),
+
+                                TextInput::make('reference')
+                                    ->label('Reference / Cheque No.')
+                                    ->maxLength(255)
+                                    ->placeholder('e.g., CHQ-00345 or leave blank for auto')
+                                    ->default(fn () => Transaction::generateReference('withdrawal')),
+
+                                Textarea::make('description')
+                                    ->label('Reason / Description')
+                                    ->placeholder('e.g., Bank charges, Emergency plumbing repair, Stationery')
+                                    ->required()
+                                    ->columnSpanFull(),
+                            ];
+                        })
                         ->action(function (BankAccount $record, array $data) {
                             try {
-                                Transaction::create([
-                                    'bank_account_id' => $record->id,
-                                    'type' => 'withdrawal',
-                                    'amount' => $data['amount'],
-                                    'date' => $data['date'],
-                                    'reference' => $data['reference'],
-                                    'description' => $data['description'],
-                                    'is_system' => false,
-                                ]);
+                                \Illuminate\Support\Facades\DB::transaction(function () use ($record, $data) {
+                                    $sourceAccount = BankAccount::query()
+                                        ->whereKey($record->id)
+                                        ->lockForUpdate()
+                                        ->firstOrFail();
+
+                                    $availableBalance = (float) $sourceAccount->ledger_balance - (float) ($sourceAccount->reserved_balance ?? 0);
+                                    $requestedAmount = (float) $data['amount'];
+
+                                    if ($availableBalance <= 0 || $requestedAmount > $availableBalance) {
+                                        throw \Illuminate\Validation\ValidationException::withMessages([
+                                            'amount' => 'Withdrawal amount cannot exceed the available balance of NGN '.number_format(max(0, $availableBalance), 2).'.',
+                                        ]);
+                                    }
+
+                                    Transaction::create([
+                                        'bank_account_id' => $sourceAccount->id,
+                                        'type' => 'withdrawal',
+                                        'amount' => $requestedAmount,
+                                        'date' => $data['date'],
+                                        'reference' => $data['reference'],
+                                        'description' => $data['description'],
+                                        'is_system' => false,
+                                    ]);
+                                });
 
                                 Notification::make()
-                                    ->title('Withdrawal Recorded')
-                                    ->body('₦' . number_format($data['amount'], 2) . ' has been deducted from the account.')
+                                    ->title('Withdrawal Successful')
+                                    ->body('Funds have been withdrawn.')
                                     ->success()
                                     ->send();
-
-                            } catch (InsufficientBankBalanceException $e) {
+                            } catch (\Illuminate\Validation\ValidationException $e) {
+                                throw $e;
+                            } catch (\App\Exceptions\InsufficientBankBalanceException $e) {
                                 Notification::make()
                                     ->title('Insufficient Funds')
-                                    ->body('This account does not have enough balance to cover this withdrawal.')
+                                    ->body('The account does not have enough balance for this withdrawal.')
                                     ->danger()
                                     ->send();
                             }
                         }),
-                ])
+                ]),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

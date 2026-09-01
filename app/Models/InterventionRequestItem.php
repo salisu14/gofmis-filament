@@ -18,7 +18,7 @@ class InterventionRequestItem extends Model
         'specification',
         'quantity_requested',
         'orphan_class',
-        'quantity_fulfilled'
+        'quantity_fulfilled',
     ];
 
     protected $casts = [
@@ -35,6 +35,7 @@ class InterventionRequestItem extends Model
     {
         return $this->belongsTo(InterventionType::class, 'intervention_type_id');
     }
+
     public function request(): BelongsTo
     {
         return $this->belongsTo(InterventionRequest::class);
@@ -52,13 +53,20 @@ class InterventionRequestItem extends Model
         return $this->quantity_fulfilled >= $this->quantity_requested;
     }
 
-    // Add to booted() to auto-snapshot the name
+    // Auto-snapshot the item_name authoritatively on save
     protected static function booted(): void
     {
-        static::creating(function ($model) {
-            if (!empty($model->item_id) && empty($model->item_name)) {
-                $model->item_name = $model->item?->name;
+        static::saving(function ($model) {
+            if (blank($model->item_id)) {
+                return;
             }
+
+            $item = Item::find($model->item_id);
+            if (! $item) {
+                return;
+            }
+
+            $model->item_name = $item->name;
         });
     }
 }

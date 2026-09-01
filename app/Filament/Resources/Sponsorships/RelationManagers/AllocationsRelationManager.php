@@ -2,7 +2,6 @@
 
 namespace App\Filament\Resources\Sponsorships\RelationManagers;
 
-use App\Filament\Resources\Sponsorships\SponsorshipResource;
 use App\Models\OrphanEducation;
 use App\Models\Sponsorship;
 use Filament\Actions\BulkActionGroup;
@@ -10,8 +9,8 @@ use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
-use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Placeholder;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Components\Section;
@@ -24,7 +23,6 @@ use Filament\Tables\Table;
 class AllocationsRelationManager extends RelationManager
 {
     protected static string $relationship = 'allocations';
-    protected static ?string $relatedResource = SponsorshipResource::class;
 
     protected static ?string $title = 'Fund Allocations';
 
@@ -49,8 +47,8 @@ class AllocationsRelationManager extends RelationManager
                                     ->where('orphan_id', $sponsorship->orphan_id)
                                     ->with('institution')
                                     ->get()
-                                    ->mapWithKeys(fn($edu) => [
-                                        $edu->id => "{$edu->institution->name} — {$edu->orphanClass->name}"
+                                    ->mapWithKeys(fn ($edu) => [
+                                        $edu->id => "{$edu->institution->name} — {$edu->orphanClass->name}",
                                     ])
                                     ->toArray();
                             }),

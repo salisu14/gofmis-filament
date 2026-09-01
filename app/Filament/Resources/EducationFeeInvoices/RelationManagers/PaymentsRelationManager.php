@@ -2,7 +2,6 @@
 
 namespace App\Filament\Resources\EducationFeeInvoices\RelationManagers;
 
-use App\Filament\Resources\EducationFeeInvoices\EducationFeeInvoiceResource;
 use App\Models\BankAccount;
 use App\Models\EducationFeePayment;
 use App\Services\EducationFeeInvoiceService;
@@ -24,8 +23,6 @@ use Filament\Tables\Table;
 class PaymentsRelationManager extends RelationManager
 {
     protected static string $relationship = 'payments';
-
-    protected static ?string $relatedResource = EducationFeeInvoiceResource::class;
 
     protected static ?string $recordTitleAttribute = 'reference';
 
@@ -54,7 +51,7 @@ class PaymentsRelationManager extends RelationManager
 
                             Placeholder::make('summary_paid')
                                 ->label('Amount Already Paid')
-                                ->content('₦'.number_format((float) $invoice->total_paid, 2)),
+                                ->content('₦'.number_format((float) $invoice->paid_amount, 2)),
 
                             Placeholder::make('summary_balance')
                                 ->label('Outstanding Balance')
@@ -93,7 +90,6 @@ class PaymentsRelationManager extends RelationManager
                                 ->required()
                                 ->minValue(0.01)
                                 ->step(0.01)
-                                ->maxValue(fn () => max(0, (float) $this->getOwnerRecord()->balance))
                                 ->disabledOn('edit')
                                 ->helperText(fn () => 'Outstanding balance: ₦'.number_format(max(0, (float) $this->getOwnerRecord()->balance), 2)),
 
