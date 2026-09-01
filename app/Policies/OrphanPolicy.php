@@ -13,7 +13,7 @@ class OrphanPolicy
 
     public function viewAny(User $user): bool
     {
-        if ($user->hasRole('super_admin')) {
+        if ($user->isDemoObserver() || $user->hasRole('super_admin')) {
             return true;
         }
 
@@ -22,7 +22,7 @@ class OrphanPolicy
 
     public function view(User $user, Orphan $orphan): bool
     {
-        if ($user->hasRole('super_admin')) {
+        if ($user->isDemoObserver() || $user->hasRole('super_admin')) {
             return true;
         }
 
@@ -31,16 +31,28 @@ class OrphanPolicy
 
     public function create(User $user): bool
     {
+        if ($user->isDemoObserver()) {
+            return false;
+        }
+
         return $user->hasAnyRole(['super_admin', 'admin', 'coordinator']);
     }
 
     public function update(User $user, Orphan $orphan): bool
     {
+        if ($user->isDemoObserver()) {
+            return false;
+        }
+
         return $user->hasAnyRole(['super_admin', 'admin']);
     }
 
     public function delete(User $user, Orphan $orphan): bool
     {
+        if ($user->isDemoObserver()) {
+            return false;
+        }
+
         if ($this->isArchivedOrHasHistory($orphan)) {
             return false;
         }
@@ -50,6 +62,10 @@ class OrphanPolicy
 
     public function forceDelete(User $user, Orphan $orphan): bool
     {
+        if ($user->isDemoObserver()) {
+            return false;
+        }
+
         if ($this->isArchivedOrHasHistory($orphan)) {
             return false;
         }
@@ -59,6 +75,10 @@ class OrphanPolicy
 
     public function restore(User $user, Orphan $orphan): bool
     {
+        if ($user->isDemoObserver()) {
+            return false;
+        }
+
         return $user->hasRole('super_admin');
     }
 

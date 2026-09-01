@@ -13,6 +13,8 @@ class PrescriptionReportController extends Controller
 {
     public function exportPdf(Request $request): Response
     {
+        \App\Services\Security\DemoReadOnlyGuard::ensureCanExportSensitiveData();
+
         $user = auth()->user();
 
         if (! $user || (! $user->isAdmin() && ! $user->isSuperAdmin())) {

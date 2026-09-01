@@ -65,6 +65,10 @@ class AdminPanelProvider extends PanelProvider
                 \App\Http\Middleware\EnsureActiveUser::class,
                 \App\Http\Middleware\EnsureMfaVerified::class,
             ])
+            ->renderHook(
+                'panels::body.start',
+                fn () => auth()->user()?->isDemoObserver() ? view('filament.components.demo-mode-banner') : ''
+            )
             ->navigation(function (NavigationBuilder $builder): NavigationBuilder {
                 $user = auth()->user();
 
@@ -363,7 +367,7 @@ class AdminPanelProvider extends PanelProvider
                 }
 
                 // Auth/Settings (super-admin ONLY)
-                if ($user?->isSuperAdmin() || $user?->isAdmin()) {
+                if ($user?->isSuperAdmin() || $user?->isAdmin() || $user?->isDemoObserver()) {
                     $builder = $builder->group(
                         NavigationGroup::make('Security')
                             ->collapsible()

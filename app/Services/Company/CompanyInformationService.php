@@ -17,11 +17,19 @@ class CompanyInformationService
 {
     private const DISK = 'public';
 
-    private const LOGO_MAX_SIZE_KB    = 2048;
+    private const PRIVATE_DISK = 'local';
+
+    private const LOGO_MAX_SIZE_KB = 2048;
+
     private const FAVICON_MAX_SIZE_KB = 512;
 
-    private const LOGO_DIRECTORY    = 'company/logos';
+    private const SIGNATURE_MAX_SIZE_KB = 2048;
+
+    private const LOGO_DIRECTORY = 'company/logos';
+
     private const FAVICON_DIRECTORY = 'company/favicons';
+
+    private const SIGNATURE_DIRECTORY = 'company/signatures';
 
     private const LOGO_ALLOWED_TYPES = [
         'image/jpeg',
@@ -35,6 +43,13 @@ class CompanyInformationService
         'image/png',
         'image/svg+xml',
         'image/vnd.microsoft.icon',
+    ];
+
+    private const SIGNATURE_ALLOWED_TYPES = [
+        'image/jpeg',
+        'image/png',
+        'image/webp',
+        'image/svg+xml',
     ];
 
     public function __construct(
@@ -52,18 +67,22 @@ class CompanyInformationService
     }
 
     /**
-     * Update company information. Form data is expected to have `logo_path`
-     * and `favicon_path` set (by Filament's FileUpload after storeLogo /
-     * storeFavicon have run).
+     * Update company information. Form data is expected to have `logo_path`,
+     * `favicon_path`, and `report_signature_path` set (by Filament's FileUpload after storeLogo /
+     * storeFavicon / storeSignature have run).
      */
     public function update(array $data, ?CompanyInformation $company = null): CompanyInformation
     {
-        $company        = $company ?? CompanyInformation::instance();
-        $oldLogoPath    = $company->logo_path;
-        $oldFaviconPath = $company->favicon_path;
+        \App\Services\Security\DemoReadOnlyGuard::ensureCanMutate();
 
-        $newLogoPath    = $data['logo_path']    ?? null;
+        $company = $company ?? CompanyInformation::instance();
+        $oldLogoPath = $company->logo_path;
+        $oldFaviconPath = $company->favicon_path;
+        $oldSignaturePath = $company->report_signature_path;
+
+        $newLogoPath = $data['logo_path'] ?? null;
         $newFaviconPath = $data['favicon_path'] ?? null;
+        $newSignaturePath = $data['report_signature_path'] ?? null;
 
         $updateData = array_intersect_key(
             $data,
@@ -73,10 +92,11 @@ class CompanyInformationService
         try {
             $updated = DB::transaction(function () use ($company, $updateData) {
                 $company->update($updateData);
+
                 return $company->fresh();
             });
         } catch (Throwable $e) {
-            $this->safeDelete(array_filter([$newLogoPath, $newFaviconPath]));
+            $this->safeDelete(array_filter([$newLogoPath, $newFaviconPath, $newSignaturePath]));
             throw $e;
         }
 
@@ -85,6 +105,9 @@ class CompanyInformationService
         }
         if ($oldFaviconPath !== $newFaviconPath) {
             $this->safeDelete([$oldFaviconPath]);
+        }
+        if ($oldSignaturePath !== $newSignaturePath) {
+            $this->safeDelete([$oldSignaturePath]);
         }
 
         return $updated;
@@ -132,6 +155,18 @@ class CompanyInformationService
         );
     }
 
+    public function storeSignature(UploadedFile $file): string
+    {
+        return $this->storeImage(
+            $file,
+            self::SIGNATURE_DIRECTORY,
+            self::SIGNATURE_ALLOWED_TYPES,
+            self::SIGNATURE_MAX_SIZE_KB,
+            'report_signature_path',
+            self::PRIVATE_DISK
+        );
+    }
+
     // ─── Internals ────────────────────────────────────────────────
 
     private function storeImage(
@@ -139,13 +174,16 @@ class CompanyInformationService
         string $directory,
         array $allowedTypes,
         int $maxSizeKb,
-        string $fieldName
+        string $fieldName,
+        string $disk = self::DISK
     ): string {
+        \App\Services\Security\DemoReadOnlyGuard::ensureCanMutate();
+
         $mime = $file->getMimeType();
 
         if (! in_array($mime, $allowedTypes, true)) {
             throw ValidationException::withMessages([
-                $fieldName => 'Invalid file type. Allowed: ' . implode(', ', $allowedTypes) . '.',
+                $fieldName => 'Invalid file type. Allowed: '.implode(', ', $allowedTypes).'.',
             ]);
         }
 
@@ -155,41 +193,46 @@ class CompanyInformationService
             ]);
         }
 
-        $filename = Str::uuid() . '.' . $file->getClientOriginalExtension();
-        $path     = $file->storeAs($directory, $filename, self::DISK);
+        $filename = Str::uuid().'.'.$file->getClientOriginalExtension();
+        $path = $file->storeAs($directory, $filename, $disk);
 
         if ($mime === 'image/svg+xml') {
-            $this->sanitizeStoredSvg($path, $fieldName);
+            $this->sanitizeStoredSvg($path, $fieldName, $disk);
         }
 
         return $path;
     }
 
-    private function sanitizeStoredSvg(string $path, string $fieldName): void
+    private function sanitizeStoredSvg(string $path, string $fieldName, string $disk = self::DISK): void
     {
-        $contents = Storage::disk(self::DISK)->get($path);
-        $clean    = $this->svgSanitizer->sanitize($contents);
+        $contents = Storage::disk($disk)->get($path);
+        $clean = $this->svgSanitizer->sanitize($contents);
 
         if (! is_string($clean) || $clean === '') {
-            Storage::disk(self::DISK)->delete($path);
+            Storage::disk($disk)->delete($path);
             throw ValidationException::withMessages([
                 $fieldName => 'SVG could not be sanitized.',
             ]);
         }
 
-        Storage::disk(self::DISK)->put($path, $clean);
+        Storage::disk($disk)->put($path, $clean);
     }
 
     private function safeDelete(array $paths): void
     {
         foreach (array_unique(array_filter($paths)) as $path) {
-            try {
-                Storage::disk(self::DISK)->delete($path);
-            } catch (Throwable $e) {
-                Log::warning('Failed to delete company asset', [
-                    'path'  => $path,
-                    'error' => $e->getMessage(),
-                ]);
+            foreach ([self::DISK, self::PRIVATE_DISK] as $disk) {
+                try {
+                    if (Storage::disk($disk)->exists($path)) {
+                        Storage::disk($disk)->delete($path);
+                    }
+                } catch (Throwable $e) {
+                    Log::warning('Failed to delete company asset', [
+                        'disk' => $disk,
+                        'path' => $path,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
             }
         }
     }

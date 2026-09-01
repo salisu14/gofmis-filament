@@ -108,7 +108,7 @@ class WidowsTable
                 TrashedFilter::make(),
             ])
             ->headerActions([
-                ExportAction::make()
+                ExportAction::make()->visible(fn () => ! auth()->user()?->isDemoObserver())
                     ->exporter(WidowExporter::class)
                     ->enableVisibleTableColumnsByDefault(),
             ])

@@ -60,6 +60,18 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(\App\Models\Orphan::class, \App\Policies\OrphanPolicy::class);
 
         Gate::before(function ($user, $ability, $arguments = []) {
+            if ($user instanceof \App\Models\User && $user->isDemoObserver()) {
+                if (in_array($ability, ['export', 'export_reports', 'export-reports', 'download'], true) || str_starts_with($ability, 'export') || str_starts_with($ability, 'download')) {
+                    return false;
+                }
+
+                if (in_array($ability, ['viewAny', 'view', 'view-any'], true) || str_starts_with($ability, 'view')) {
+                    return true;
+                }
+
+                return false;
+            }
+
             // For security models (User, Role, Permission) and protected models (Orphan), ALWAYS fall back to policy to enforce invariants.
             $target = is_array($arguments) ? reset($arguments) : $arguments;
             if ($target) {

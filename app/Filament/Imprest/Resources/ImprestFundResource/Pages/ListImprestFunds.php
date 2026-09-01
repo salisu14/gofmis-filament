@@ -18,9 +18,9 @@ class ListImprestFunds extends ListRecords
             Actions\CreateAction::make()
                 ->icon('heroicon-m-plus'),
 
-            ExportAction::make()
+            ExportAction::make()->visible(fn () => ! auth()->user()?->isDemoObserver())
                 ->exporter(TransactionExporter::class)
-                ->fileName(fn(): string => 'transactions-' . now()->format('Y-m-d')),
+                ->fileName(fn (): string => 'transactions-'.now()->format('Y-m-d')),
         ];
     }
 }

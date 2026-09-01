@@ -135,7 +135,7 @@ class Project extends Model
         static::addGlobalScope('zone', function ($query) {
             $user = auth()->user();
 
-            if (! $user || $user->hasAnyRole(['admin', 'super_admin'])) {
+            if (! $user || $user->hasAnyRole(['admin', 'super_admin']) || $user->isDemoObserver()) {
                 return;
             }
 

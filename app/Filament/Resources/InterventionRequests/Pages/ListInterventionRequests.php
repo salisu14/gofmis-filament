@@ -17,7 +17,7 @@ class ListInterventionRequests extends ListRecords
         return [
             CreateAction::make(),
 
-            ExportAction::make()
+            ExportAction::make()->visible(fn () => ! auth()->user()?->isDemoObserver())
                 ->exporter(InterventionRequestExporter::class)
                 ->enableVisibleTableColumnsByDefault(),
         ];

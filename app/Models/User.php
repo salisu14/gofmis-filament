@@ -45,6 +45,7 @@ class User extends Authenticatable implements FilamentUser, HasAppAuthentication
         'date_of_birth',
         'gender',
         'is_active',
+        'is_protected_system_account',
         'status',
         'disabled_at',
         'disabled_by',
@@ -75,6 +76,7 @@ class User extends Authenticatable implements FilamentUser, HasAppAuthentication
             'password' => 'hashed',
             'date_of_birth' => 'date',
             'is_active' => 'boolean',
+            'is_protected_system_account' => 'boolean',
             'status' => \App\Enums\UserStatus::class,
             'disabled_at' => 'datetime',
             'suspended_at' => 'datetime',
@@ -156,6 +158,16 @@ class User extends Authenticatable implements FilamentUser, HasAppAuthentication
         return $this->hasRole('staff');
     }
 
+    public function isDemoObserver(): bool
+    {
+        return $this->hasRole('demo_observer');
+    }
+
+    public function isProtectedSystemAccount(): bool
+    {
+        return (bool) ($this->is_protected_system_account ?? false) || $this->isDemoObserver();
+    }
+
     public function hasElevatedPrivileges(): bool
     {
         return $this->isAdmin() || $this->isSuperAdmin();
@@ -198,6 +210,10 @@ class User extends Authenticatable implements FilamentUser, HasAppAuthentication
 
     public function disable(\App\Models\User $by): void
     {
+        if ($this->isProtectedSystemAccount()) {
+            throw new \RuntimeException('Protected system accounts cannot be disabled.');
+        }
+
         $this->update([
             'is_active' => false,
             'status' => \App\Enums\UserStatus::DISABLED,
@@ -208,6 +224,10 @@ class User extends Authenticatable implements FilamentUser, HasAppAuthentication
 
     public function suspend(\App\Models\User $by, string $reason): void
     {
+        if ($this->isProtectedSystemAccount()) {
+            throw new \RuntimeException('Protected system accounts cannot be suspended.');
+        }
+
         $this->update([
             'is_active' => false,
             'status' => \App\Enums\UserStatus::SUSPENDED,
@@ -254,10 +274,10 @@ class User extends Authenticatable implements FilamentUser, HasAppAuthentication
             return false;
         }
         $panelRoles = [
-            'admin' => ['super_admin', 'admin'],
+            'admin' => ['super_admin', 'admin', 'demo_observer'],
             'coordinator' => ['super_admin', 'admin', 'coordinator'],
         ];
-        $allowedRoles = $panelRoles[$panel->getId()] ?? ['super_admin', 'admin'];
+        $allowedRoles = $panelRoles[$panel->getId()] ?? ['super_admin', 'admin', 'demo_observer'];
 
         return $this->hasAnyRole($allowedRoles);
     }
@@ -269,7 +289,7 @@ class User extends Authenticatable implements FilamentUser, HasAppAuthentication
 
     public function isMfaMandatoryByRole(): bool
     {
-        $mandatoryRoles = config('security.mfa.mandatory_roles', ['super_admin', 'admin']);
+        $mandatoryRoles = config('security.mfa.mandatory_roles', ['super_admin', 'admin', 'custodian', 'auditor']);
 
         return $this->hasAnyRole($mandatoryRoles);
     }
@@ -304,6 +324,12 @@ class User extends Authenticatable implements FilamentUser, HasAppAuthentication
 
     protected static function booted(): void
     {
+        static::deleting(function (User $user) {
+            if ($user->isProtectedSystemAccount()) {
+                throw new \RuntimeException('Protected system accounts cannot be deleted.');
+            }
+        });
+
         static::created(function (User $user) {
             \App\Services\SecurityAuditService::log('USER_CREATED', "User account created for {$user->email}", auth()->user(), $user);
         });
@@ -372,6 +398,25 @@ class User extends Authenticatable implements FilamentUser, HasAppAuthentication
 
     public function syncRoles(...$roles)
     {
+        if ($this->exists && $this->isProtectedSystemAccount()) {
+            $roleNames = collect($roles)->flatten()->map(function ($r) {
+                if ($r instanceof \Spatie\Permission\Models\Role || $r instanceof Role) {
+                    return $r->name;
+                }
+                if (is_string($r)) {
+                    $roleObj = Role::where('uuid', $r)->orWhere('name', $r)->first();
+
+                    return $roleObj ? $roleObj->name : $r;
+                }
+
+                return $r;
+            })->toArray();
+
+            if (! in_array('demo_observer', $roleNames, true) || count($roleNames) > 1) {
+                throw new \RuntimeException('Protected system accounts must retain the demo_observer role and cannot be reassigned to other roles.');
+            }
+        }
+
         $rolesToSync = collect($roles)->flatten()->map(function ($role) {
             if ($role instanceof \Spatie\Permission\Models\Role) {
                 return $role;
@@ -427,6 +472,13 @@ class User extends Authenticatable implements FilamentUser, HasAppAuthentication
 
     public function removeRole($role)
     {
+        if ($this->isProtectedSystemAccount()) {
+            $roleName = $role instanceof \Spatie\Permission\Models\Role || $role instanceof Role ? $role->name : $role;
+            if ($roleName === 'demo_observer') {
+                throw new \RuntimeException('The demo_observer role cannot be removed from a protected system account.');
+            }
+        }
+
         $resolved = ($role instanceof \Spatie\Permission\Models\Role)
             ? $role
             : \App\Models\Role::where('uuid', $role)->orWhere('name', $role)->first();

@@ -11,6 +11,8 @@ class IdCardDownloadController extends Controller
 {
     public function __invoke(IdCard $idCard, Request $request)
     {
+        \App\Services\Security\DemoReadOnlyGuard::ensureCanExportSensitiveData();
+
         $this->authorizeCardAccess($idCard);
 
         // Mark as printed if it's a real download (not just a preview)

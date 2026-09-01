@@ -189,8 +189,36 @@
         @yield('content')
     </div>
 
+    @php
+        $signatory = $company['signatory'] ?? [
+            'name' => $company['signatory_name'] ?? null,
+            'title' => $company['signatory_title'] ?? null,
+            'signature_data_uri' => $company['signature_data_uri'] ?? null,
+        ];
+    @endphp
+
+    @if(!empty($signatory['signature_data_uri']) || !empty($signatory['name']) || !empty($signatory['title']))
+        <table class="signatures">
+            <tr>
+                <td></td>
+                <td></td>
+                <td>
+                    @if(!empty($signatory['signature_data_uri']))
+                        <img src="{{ $signatory['signature_data_uri'] }}" style="max-height: 45px; max-width: 140px; object-fit: contain; margin-bottom: 2px;" alt="Signature">
+                    @endif
+                    <div class="signature-line" style="margin-top: {{ !empty($signatory['signature_data_uri']) ? '5px' : '45px' }};">
+                        {{ $signatory['name'] ?: 'Authorized Signatory' }}<br>
+                        <span class="muted" style="font-weight: normal; font-size: 9px;">
+                            {{ $signatory['title'] ?: 'Welfare Department' }}
+                        </span>
+                    </div>
+                </td>
+            </tr>
+        </table>
+    @endif
+
     <div class="footer">
-        {{ $company['footer_text'] ?: ($company['organisation_name'] . ' — GOF MIS Official Document') }}
+        {{ $company['footer_text'] ?: ($company['organisation_name'] . ' — Welfare Department') }}
         &nbsp;|&nbsp; Generated on {{ now()->format('d M Y, h:i A') }} by {{ auth()->user()?->name ?? 'System' }}
     </div>
 </body>

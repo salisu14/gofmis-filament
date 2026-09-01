@@ -170,5 +170,12 @@ class RolesAndPermissionsSeeder extends Seeder
             'view_loans', 'view_repayments',
             'view_reports', 'export_reports',
         ]);
+
+        // --------------------------------------------------------------
+        // Demo Observer: Secure System-Wide Read-Only Demonstration Account
+        // --------------------------------------------------------------
+        $demoObserver = Role::firstOrCreate(['name' => 'demo_observer', 'guard_name' => $guard]);
+        $viewPermissions = array_values(array_filter($permissions, fn ($p) => str_starts_with($p, 'view') || in_array($p, ['admin_dashboard_access', 'imprest_view_transactions', 'imprest_view_funds'], true)));
+        $demoObserver->syncPermissions($viewPermissions);
     }
 }

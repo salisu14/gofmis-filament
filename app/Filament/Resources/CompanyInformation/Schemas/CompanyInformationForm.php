@@ -167,6 +167,36 @@ class CompanyInformationForm
                             ->email()
                             ->maxLength(255),
                     ]),
+
+                Section::make('Authorized Report Signatory')
+                    ->description('Configure authorized signature and signatory details rendered on official reports, receipts, and statements.')
+                    ->schema([
+                        Grid::make(2)
+                            ->schema([
+                                TextInput::make('report_signatory_name')
+                                    ->label('Signatory Name')
+                                    ->placeholder('e.g. Dr. Aminu Garko')
+                                    ->maxLength(255),
+
+                                TextInput::make('report_signatory_title')
+                                    ->label('Signatory Title / Role')
+                                    ->placeholder('e.g. Head of Welfare / Executive Director')
+                                    ->maxLength(255),
+                            ]),
+
+                        FileUpload::make('report_signature_path')
+                            ->label('Authorized Signature Image')
+                            ->disk('local')
+                            ->directory('company/signatures')
+                            ->image()
+                            ->maxSize(2048)
+                            ->visibility('private')
+                            ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'])
+                            ->helperText('Upload authorized signature image for reports and receipts (PNG, JPG, WebP, SVG. Max 2MB. Stored securely in private storage).')
+                            ->saveUploadedFileUsing(function (UploadedFile $file): string {
+                                return app(CompanyInformationService::class)->storeSignature($file);
+                            }),
+                    ]),
             ]);
     }
 }

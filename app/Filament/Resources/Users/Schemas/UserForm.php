@@ -46,6 +46,7 @@ class UserForm
                                             ->label('Full Name')
                                             ->required()
                                             ->maxLength(255)
+                                            ->disabled(fn ($record) => $record?->isProtectedSystemAccount())
                                             ->autocomplete('name'),
 
                                         TextInput::make('email')
@@ -54,6 +55,7 @@ class UserForm
                                             ->required()
                                             ->unique(ignoreRecord: true)
                                             ->maxLength(255)
+                                            ->disabled(fn ($record) => $record?->isProtectedSystemAccount())
                                             ->autocomplete('email')
                                             ->prefixIcon('heroicon-o-envelope'),
 
@@ -89,6 +91,7 @@ class UserForm
                                             ->offIcon('heroicon-o-x-mark')
                                             ->onColor('success')
                                             ->offColor('danger')
+                                            ->disabled(fn ($record) => $record?->isProtectedSystemAccount())
                                             ->helperText('Inactive users cannot log in.')
                                             ->rules([
                                                 function ($record) {
@@ -100,6 +103,11 @@ class UserForm
                                                             return;
                                                         }
                                                         if ($record && ! $value) {
+                                                            if ($record->isProtectedSystemAccount()) {
+                                                                $fail('Unauthorized: Protected system accounts cannot be deactivated.');
+
+                                                                return;
+                                                            }
                                                             if ($record->isSuperAdmin() && ! $actor->isSuperAdmin()) {
                                                                 $fail('Unauthorized: Admins cannot deactivate a Super Admin.');
 
@@ -120,6 +128,7 @@ class UserForm
                                             ->options(\App\Enums\UserStatus::class)
                                             ->required()
                                             ->default(\App\Enums\UserStatus::ACTIVE)
+                                            ->disabled(fn ($record) => $record?->isProtectedSystemAccount())
                                             ->rules([
                                                 function ($record) {
                                                     return function ($attribute, $value, $fail) use ($record) {
@@ -130,6 +139,11 @@ class UserForm
                                                             return;
                                                         }
                                                         if ($record) {
+                                                            if ($record->isProtectedSystemAccount() && ($value !== 'active' && $value !== \App\Enums\UserStatus::ACTIVE->value && $value !== \App\Enums\UserStatus::ACTIVE)) {
+                                                                $fail('Unauthorized: Protected system accounts cannot be disabled or suspended.');
+
+                                                                return;
+                                                            }
                                                             if ($record->isSuperAdmin() && ! $actor->isSuperAdmin() && $value !== 'active') {
                                                                 $fail('Unauthorized: Admins cannot change the status of a Super Admin.');
 
@@ -225,7 +239,10 @@ class UserForm
                                 return \App\Models\Role::where('name', '!=', 'super_admin')
                                     ->pluck('name', 'uuid');
                             })
-                            ->disabled(function (): bool {
+                            ->disabled(function ($record): bool {
+                                if ($record?->isProtectedSystemAccount()) {
+                                    return true;
+                                }
                                 $user = auth()->user();
 
                                 return ! ($user?->can('assign_roles') || $user?->can('role_edit'));
@@ -249,6 +266,25 @@ class UserForm
                                             return;
                                         }
 
+                                        if ($record && $record->isProtectedSystemAccount()) {
+                                            $selectedRoleNames = \App\Models\Role::whereIn('uuid', (array) $value)
+                                                ->orWhereIn('name', (array) $value)
+                                                ->pluck('name')
+                                                ->toArray();
+
+                                            if (! in_array('demo_observer', $selectedRoleNames, true)) {
+                                                $fail('Unauthorized: The demo_observer role cannot be removed from a protected system account.');
+
+                                                return;
+                                            }
+
+                                            if (count($selectedRoleNames) > 1) {
+                                                $fail('Unauthorized: Protected system accounts cannot be assigned additional roles.');
+
+                                                return;
+                                            }
+                                        }
+
                                         if ($record) {
                                             if ($record->isSuperAdmin() && ! $actor->isSuperAdmin()) {
                                                 $fail('Unauthorized: Only super administrators can modify a super administrator account.');
@@ -262,7 +298,7 @@ class UserForm
                                             }
                                         }
 
-                                        foreach ($value as $roleId) {
+                                        foreach ((array) $value as $roleId) {
                                             $role = \App\Models\Role::where('uuid', $roleId)->orWhere('name', $roleId)->first();
                                             if ($role) {
                                                 if ($role->name === 'super_admin' && ! $actor->isSuperAdmin()) {
@@ -279,8 +315,8 @@ class UserForm
                                         }
 
                                         if ($record && $record->isSuperAdmin()) {
-                                            $selectedRoleNames = \App\Models\Role::whereIn('uuid', $value)->pluck('name')->toArray();
-                                            if (! in_array('super_admin', $selectedRoleNames)) {
+                                            $selectedRoleNames = \App\Models\Role::whereIn('uuid', (array) $value)->pluck('name')->toArray();
+                                            if (! in_array('super_admin', $selectedRoleNames, true)) {
                                                 if (\App\Models\User::getActiveSuperAdminCount() <= 1) {
                                                     $fail('Unauthorized: Cannot remove the Super Admin role from the last active Super Admin.');
                                                 }

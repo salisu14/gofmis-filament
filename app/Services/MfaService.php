@@ -212,6 +212,8 @@ class MfaService
      */
     public function resetMfa(User $actor, User $target): void
     {
+        \App\Services\Security\DemoReadOnlyGuard::ensureCanMutate($actor);
+
         if (Gate::forUser($actor)->denies('resetMfa', $target)) {
             throw ValidationException::withMessages([
                 'mfa' => ['Unauthorized: You are not authorized to reset MFA for this user.'],
@@ -250,6 +252,8 @@ class MfaService
      */
     public function requireMfaEnrollment(User $actor, User $target): void
     {
+        \App\Services\Security\DemoReadOnlyGuard::ensureCanMutate($actor);
+
         if (Gate::forUser($actor)->denies('update', $target)) {
             throw ValidationException::withMessages([
                 'mfa' => ['Unauthorized: You are not authorized to force MFA enrollment for this user.'],
@@ -274,6 +278,8 @@ class MfaService
      */
     public function removeMfaEnrollmentRequirement(User $actor, User $target): void
     {
+        \App\Services\Security\DemoReadOnlyGuard::ensureCanMutate($actor);
+
         if (Gate::forUser($actor)->denies('update', $target)) {
             throw ValidationException::withMessages([
                 'mfa' => ['Unauthorized: You are not authorized to remove forced MFA enrollment for this user.'],

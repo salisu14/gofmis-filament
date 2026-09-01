@@ -180,8 +180,8 @@
 <div class="divider"></div>
 
 <div class="text-center" style="font-size: 7px; color: #333;">
-    Printed: {{ $generatedAt->format('d/m/Y H:i:s') }}<br>
-    {{ $company['name'] }} - WRL Program
+    Printed: {{ now()->format('d/m/Y H:i:s') }}<br>
+    {{ $company['name'] }} - Welfare Department - WRL Program
 </div>
 
 </body>

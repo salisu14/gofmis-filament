@@ -127,7 +127,7 @@ class OrphansTable
             ])
             ->defaultSort('created_at', 'desc')
             ->headerActions([
-                ExportAction::make()
+                ExportAction::make()->visible(fn () => ! auth()->user()?->isDemoObserver())
                     ->exporter(OrphanExporter::class)
                     ->enableVisibleTableColumnsByDefault(),
             ])

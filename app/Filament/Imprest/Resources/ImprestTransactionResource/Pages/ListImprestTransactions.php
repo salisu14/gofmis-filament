@@ -17,9 +17,9 @@ class ListImprestTransactions extends ListRecords
             Actions\CreateAction::make()
                 ->icon('heroicon-m-plus'),
 
-            \Filament\Actions\ExportAction::make()
+            \Filament\Actions\ExportAction::make()->visible(fn () => ! auth()->user()?->isDemoObserver())
                 ->exporter(TransactionExporter::class)
-                ->fileName(fn(): string => 'transactions-' . now()->format('Y-m-d'))
+                ->fileName(fn (): string => 'transactions-'.now()->format('Y-m-d'))
                 ->icon('heroicon-m-arrow-down-tray'),
         ];
     }

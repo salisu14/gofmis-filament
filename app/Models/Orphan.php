@@ -4,8 +4,8 @@ namespace App\Models;
 
 use App\Enums\Gender;
 use App\Enums\OrphanStatus;
-use App\Models\Scopes\EligibleOrphanScope;
 use App\Models\Concerns\HasProfilePhoto;
+use App\Models\Scopes\EligibleOrphanScope;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -326,7 +326,7 @@ class Orphan extends Model
         static::addGlobalScope('zone', function ($query) {
             $user = auth()->user();
 
-            if (! $user || $user->hasAnyRole(['admin', 'super_admin'])) {
+            if (! $user || $user->hasAnyRole(['admin', 'super_admin']) || $user->isDemoObserver()) {
                 return;
             }
 

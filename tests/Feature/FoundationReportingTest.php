@@ -374,7 +374,7 @@ test('orphan dossier and WRL thermal report use canonical Company Information br
 
     expect($thermalView)
         ->toContain('CUSTOM FOUNDATION NAME') // thermal report uses uppercase in header
-        ->toContain('Custom Foundation Name - WRL Program') // thermal report footer
+        ->toContain('Custom Foundation Name - Welfare Department - WRL Program') // thermal report footer
         ->toContain('123 Foundation Way')
         ->toContain('08012345678')
         ->toContain('contact@customfoundation.org')

@@ -11,6 +11,10 @@ class UserPolicy
 
     private function canManageTarget(User $actor, User $target): bool
     {
+        if ($actor->isDemoObserver()) {
+            return false;
+        }
+
         // Super admin can manage anyone
         if ($actor->isSuperAdmin()) {
             return true;
@@ -36,11 +40,15 @@ class UserPolicy
 
     public function viewAny(User $user): bool
     {
-        return $user->can('view_users') || $user->can('user_access') || $user->isSuperAdmin();
+        return $user->isDemoObserver() || $user->can('view_users') || $user->can('user_access') || $user->isSuperAdmin();
     }
 
     public function view(User $user, User $model): bool
     {
+        if ($user->isDemoObserver()) {
+            return true;
+        }
+
         if ($user->isSuperAdmin()) {
             return true;
         }
@@ -53,7 +61,7 @@ class UserPolicy
 
     public function create(User $user): bool
     {
-        if ($user->isCoordinator()) {
+        if ($user->isDemoObserver() || $user->isCoordinator()) {
             return false;
         }
 
@@ -71,6 +79,11 @@ class UserPolicy
 
     public function delete(User $user, User $model): bool
     {
+        // Protected system accounts cannot be deleted by anyone.
+        if ($model->isProtectedSystemAccount()) {
+            return false;
+        }
+
         // A Super Admin cannot accidentally delete their own account.
         if ($user->id === $model->id) {
             return false;
@@ -92,6 +105,11 @@ class UserPolicy
 
     public function disable(User $user, User $model): bool
     {
+        // Protected system accounts cannot be disabled.
+        if ($model->isProtectedSystemAccount()) {
+            return false;
+        }
+
         // A Super Admin cannot disable themselves.
         if ($user->id === $model->id) {
             return false;
@@ -109,6 +127,11 @@ class UserPolicy
 
     public function suspend(User $user, User $model): bool
     {
+        // Protected system accounts cannot be suspended.
+        if ($model->isProtectedSystemAccount()) {
+            return false;
+        }
+
         // A Super Admin cannot suspend themselves.
         if ($user->id === $model->id) {
             return false;
@@ -126,6 +149,11 @@ class UserPolicy
 
     public function resetPassword(User $user, User $model): bool
     {
+        // Super Admin can reset protected system account password through explicit action
+        if ($model->isProtectedSystemAccount()) {
+            return $user->isSuperAdmin();
+        }
+
         return $this->update($user, $model);
     }
 
@@ -141,6 +169,10 @@ class UserPolicy
 
     public function changeRoles(User $user, User $model): bool
     {
+        if ($model->isProtectedSystemAccount()) {
+            return false;
+        }
+
         return $this->update($user, $model);
     }
 }

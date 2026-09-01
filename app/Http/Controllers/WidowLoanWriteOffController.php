@@ -13,6 +13,8 @@ class WidowLoanWriteOffController extends Controller
      */
     public function downloadDocument(Request $request, WidowLoanWriteOff $writeOff)
     {
+        \App\Services\Security\DemoReadOnlyGuard::ensureCanExportSensitiveData();
+
         if (! auth()->check()) {
             abort(403, 'Unauthorized.');
         }

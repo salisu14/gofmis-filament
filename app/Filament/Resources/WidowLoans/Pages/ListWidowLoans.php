@@ -17,7 +17,7 @@ class ListWidowLoans extends ListRecords
         return [
             CreateAction::make(),
 
-            ExportAction::make()
+            ExportAction::make()->visible(fn () => ! auth()->user()?->isDemoObserver())
                 ->exporter(WidowLoanExporter::class)
                 ->enableVisibleTableColumnsByDefault(),
         ];

@@ -46,7 +46,7 @@ class CompanyInformationInfolist
                             ->placeholder('-'),
                         TextEntry::make('country_code')
                             ->label('Country'),
-//                            ->formatStateUsing(fn (?string $state): string => CountryCode::tryFrom((string) $state)?->label() ?? (string) $state),
+                        //                            ->formatStateUsing(fn (?string $state): string => CountryCode::tryFrom((string) $state)?->label() ?? (string) $state),
                         TextEntry::make('phone_no')
                             ->placeholder('-')
                             ->copyable()
@@ -60,11 +60,11 @@ class CompanyInformationInfolist
                             ->placeholder('-')
                             ->copyable()
                             ->icon('heroicon-o-envelope')
-                            ->url(fn(?string $state): ?string => $state ? "mailto:{$state}" : null),
+                            ->url(fn (?string $state): ?string => $state ? "mailto:{$state}" : null),
                         TextEntry::make('website')
                             ->placeholder('-')
                             ->icon('heroicon-o-globe-alt')
-                            ->url(fn(?string $state): ?string => $state ? (str_starts_with($state, 'http') ? $state : "https://{$state}") : null)
+                            ->url(fn (?string $state): ?string => $state ? (str_starts_with($state, 'http') ? $state : "https://{$state}") : null)
                             ->openUrlInNewTab(),
                     ])->columns(3),
 
@@ -78,7 +78,7 @@ class CompanyInformationInfolist
                             ->placeholder('-'),
                         TextEntry::make('contact_person_email')
                             ->placeholder('-')
-                            ->url(fn(?string $state): ?string => $state ? "mailto:{$state}" : null),
+                            ->url(fn (?string $state): ?string => $state ? "mailto:{$state}" : null),
                     ])->columns(2),
 
                 Section::make('Branding & Banking')
@@ -100,6 +100,20 @@ class CompanyInformationInfolist
                         TextEntry::make('swift_code')
                             ->placeholder('-'),
                     ])->columns(2),
+
+                Section::make('Authorized Report Signatory')
+                    ->schema([
+                        TextEntry::make('report_signatory_name')
+                            ->label('Signatory Name')
+                            ->placeholder('-'),
+                        TextEntry::make('report_signatory_title')
+                            ->label('Signatory Title / Role')
+                            ->placeholder('-'),
+                        ImageEntry::make('report_signature_path')
+                            ->label('Authorized Signature')
+                            ->disk('local')
+                            ->imageHeight(48),
+                    ])->columns(3),
             ]);
     }
 }
