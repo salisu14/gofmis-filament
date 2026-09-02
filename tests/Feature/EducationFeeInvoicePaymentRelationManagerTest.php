@@ -260,4 +260,111 @@ class EducationFeeInvoicePaymentRelationManagerTest extends TestCase
         expect((float) $this->invoice->fresh()->paid_amount)->toBe($initialPaidAmount);
         expect($this->invoice->payments()->count())->toBe(0);
     }
+
+    public function test_9_multiple_partial_payments_accumulate_correctly_and_update_status_to_partial(): void
+    {
+        // First partial payment
+        Livewire::actingAs($this->admin)
+            ->test(\App\Filament\Resources\EducationFeeInvoices\RelationManagers\PaymentsRelationManager::class, [
+                'ownerRecord' => $this->invoice,
+                'pageClass' => \App\Filament\Resources\EducationFeeInvoices\Pages\EditEducationFeeInvoice::class,
+            ])
+            ->callTableAction('create', data: [
+                'bank_account_id' => $this->bankAccount->id,
+                'amount' => 15000.00,
+                'payment_date' => now()->format('Y-m-d'),
+                'payment_method' => 'transfer',
+            ]);
+
+        $fresh = $this->invoice->fresh();
+        expect($fresh->paid_amount)->toEqual(15000.00);
+        expect($fresh->balance)->toEqual(35000.00);
+        expect($fresh->status)->toBe('partial');
+
+        // Second partial payment
+        Livewire::actingAs($this->admin)
+            ->test(\App\Filament\Resources\EducationFeeInvoices\RelationManagers\PaymentsRelationManager::class, [
+                'ownerRecord' => $this->invoice->fresh(),
+                'pageClass' => \App\Filament\Resources\EducationFeeInvoices\Pages\EditEducationFeeInvoice::class,
+            ])
+            ->callTableAction('create', data: [
+                'bank_account_id' => $this->bankAccount->id,
+                'amount' => 20000.00,
+                'payment_date' => now()->format('Y-m-d'),
+                'payment_method' => 'transfer',
+            ]);
+
+        $fresh = $this->invoice->fresh();
+        expect($fresh->paid_amount)->toEqual(35000.00);
+        expect($fresh->balance)->toEqual(15000.00);
+        expect($fresh->status)->toBe('partial');
+
+        // Final settling payment
+        Livewire::actingAs($this->admin)
+            ->test(\App\Filament\Resources\EducationFeeInvoices\RelationManagers\PaymentsRelationManager::class, [
+                'ownerRecord' => $this->invoice->fresh(),
+                'pageClass' => \App\Filament\Resources\EducationFeeInvoices\Pages\EditEducationFeeInvoice::class,
+            ])
+            ->callTableAction('create', data: [
+                'bank_account_id' => $this->bankAccount->id,
+                'amount' => 15000.00,
+                'payment_date' => now()->format('Y-m-d'),
+                'payment_method' => 'transfer',
+            ]);
+
+        $fresh = $this->invoice->fresh();
+        expect($fresh->paid_amount)->toEqual(50000.00);
+        expect($fresh->balance)->toEqual(0.00);
+        expect($fresh->status)->toBe('paid');
+    }
+
+    public function test_10_overpayment_via_livewire_table_action_returns_validation_error(): void
+    {
+        Livewire::actingAs($this->admin)
+            ->test(\App\Filament\Resources\EducationFeeInvoices\RelationManagers\PaymentsRelationManager::class, [
+                'ownerRecord' => $this->invoice,
+                'pageClass' => \App\Filament\Resources\EducationFeeInvoices\Pages\EditEducationFeeInvoice::class,
+            ])
+            ->callTableAction('create', data: [
+                'bank_account_id' => $this->bankAccount->id,
+                'amount' => 60000.00,
+                'payment_date' => now()->format('Y-m-d'),
+                'payment_method' => 'transfer',
+            ])
+            ->assertHasTableActionErrors();
+    }
+
+    public function test_11_zero_or_negative_payment_amount_is_rejected(): void
+    {
+        Livewire::actingAs($this->admin)
+            ->test(\App\Filament\Resources\EducationFeeInvoices\RelationManagers\PaymentsRelationManager::class, [
+                'ownerRecord' => $this->invoice,
+                'pageClass' => \App\Filament\Resources\EducationFeeInvoices\Pages\EditEducationFeeInvoice::class,
+            ])
+            ->callTableAction('create', data: [
+                'bank_account_id' => $this->bankAccount->id,
+                'amount' => 0.00,
+                'payment_date' => now()->format('Y-m-d'),
+                'payment_method' => 'transfer',
+            ])
+            ->assertHasTableActionErrors(['amount']);
+    }
+
+    public function test_12_posted_payment_with_linked_transaction_hides_edit_and_delete_actions(): void
+    {
+        $payment = app(\App\Services\EducationFeeInvoiceService::class)->recordPayment($this->invoice, [
+            'bank_account_id' => $this->bankAccount->id,
+            'amount' => 10000.00,
+            'payment_date' => now()->format('Y-m-d'),
+            'payment_method' => 'transfer',
+        ]);
+
+        Livewire::actingAs($this->admin)
+            ->test(\App\Filament\Resources\EducationFeeInvoices\RelationManagers\PaymentsRelationManager::class, [
+                'ownerRecord' => $this->invoice->fresh(),
+                'pageClass' => \App\Filament\Resources\EducationFeeInvoices\Pages\EditEducationFeeInvoice::class,
+            ])
+            ->assertTableActionHidden('edit', $payment)
+            ->assertTableActionHidden('delete', $payment);
+    }
 }
