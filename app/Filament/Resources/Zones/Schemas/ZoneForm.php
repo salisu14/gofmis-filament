@@ -5,13 +5,11 @@ namespace App\Filament\Resources\Zones\Schemas;
 use App\Models\City;
 use App\Models\State;
 use App\Models\Town;
-use App\Models\Zone;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
-use Illuminate\Validation\Rule;
 
 class ZoneForm
 {
@@ -94,15 +92,16 @@ class ZoneForm
                             )
                             ->searchable()
                             ->preload()
-                            ->required()
-                            // ✅ VALIDATION RULE: Prevent duplicate assignment at form level
-                            ->rules([
-                                fn (string $context, ?Zone $record) => Rule::unique('zones', 'coordinator_id')
-                                    ->ignore($record?->id, 'id'),
-                            ])
-                            ->validationMessages([
-                                'unique' => 'This coordinator is already assigned to another zone.',
-                            ]),
+                            ->nullable()
+                            ->placeholder('Select coordinator (or leave unassigned)')
+                            ->helperText('Assigning a coordinator currently assigned to another zone will automatically perform an atomic reassignment and log the history.'),
+
+                        TextInput::make('assignment_reason')
+                            ->label('Reason for Reassignment / Notes')
+                            ->placeholder('e.g. Operational restructuring, staff transfer...')
+                            ->maxLength(255)
+                            ->dehydrated(false)
+                            ->columnSpanFull(),
                     ])->columns(3),
             ]);
     }

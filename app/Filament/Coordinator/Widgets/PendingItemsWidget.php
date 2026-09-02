@@ -11,9 +11,9 @@ use Filament\Widgets\Widget;
 
 class PendingItemsWidget extends Widget
 {
-    protected static ?int $sort = 4;
+    protected static ?int $sort = 5;
 
-    protected int|string|array $columnSpan = ['lg' => 2];
+    protected int|string|array $columnSpan = ['lg' => 1];
 
     protected string $view = 'filament.coordinator.widgets.pending-items';
 
@@ -34,13 +34,17 @@ class PendingItemsWidget extends Widget
             ];
         }
 
-        // Counts — global scopes on Widow/Orphan auto-filter by zone
+        // Counts — zone scoped
         $counts = [
             'loans' => WidowLoan::where('status', WidowLoanStatus::PENDING)->count(),
             'education' => InterventionRequest::where('status', 'pending')
                 ->whereHas('type', fn ($q) => $q->where('name', 'like', '%education%'))
                 ->count(),
-            'healthcare' => \App\Models\Prescription::whereMonth('created_at', now()->month)->count(),
+            'healthcare' => \App\Models\Prescription::where(function (\Illuminate\Database\Eloquent\Builder $q) use ($zoneId) {
+                $q->whereHasMorph('prescribable', [\App\Models\Orphan::class, \App\Models\Widow::class], function ($q2) use ($zoneId) {
+                    $q2->whereHas('deceased', fn ($q3) => $q3->where('zone_id', $zoneId));
+                });
+            })->whereMonth('created_at', now()->month)->count(),
             'welfare' => WelfareBeneficiary::where('status', BeneficiaryStatus::PENDING)
                 ->whereHas('deceased', fn ($q) => $q->where('zone_id', $zoneId))
                 ->count(),

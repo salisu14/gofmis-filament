@@ -6,7 +6,6 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Validation\ValidationException;
 
 class Zone extends Model
 {
@@ -77,23 +76,5 @@ class Zone extends Model
     public function coordinatorHistories(): HasMany
     {
         return $this->hasMany(ZoneCoordinatorHistory::class);
-    }
-
-    protected static function booted(): void
-    {
-        static::saving(function ($zone) {
-
-            if ($zone->coordinator_id) {
-                $exists = Zone::where('coordinator_id', $zone->coordinator_id)
-                    ->where('id', '!=', $zone->id)
-                    ->exists();
-
-                if ($exists) {
-                    throw ValidationException::withMessages([
-                        'coordinator_id' => 'This user is already assigned to another zone.',
-                    ]);
-                }
-            }
-        });
     }
 }

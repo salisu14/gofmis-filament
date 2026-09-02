@@ -14,10 +14,13 @@ class CreateZone extends CreateRecord
     protected function afterCreate(): void
     {
         if ($this->record->coordinator_id) {
+            $reason = $this->data['assignment_reason'] ?? null;
+
             app(ZoneCoordinatorService::class)->assignCoordinator(
                 $this->record,
                 $this->record->coordinator_id,
                 auth()->id(),
+                $reason
             );
 
             // Only send success notification — validation errors are handled by form rules now

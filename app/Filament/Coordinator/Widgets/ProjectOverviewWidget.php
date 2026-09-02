@@ -1,4 +1,5 @@
 <?php
+
 // app/Filament/Coordinator/Widgets/ProjectOverviewWidget.php
 
 namespace App\Filament\Coordinator\Widgets;
@@ -10,7 +11,7 @@ use Filament\Widgets\StatsOverviewWidget\Stat;
 
 class ProjectOverviewWidget extends BaseWidget
 {
-    protected static ?int $sort = 1;
+    protected static ?int $sort = 2;
 
     protected function getStats(): array
     {
@@ -20,9 +21,13 @@ class ProjectOverviewWidget extends BaseWidget
 
         $baseQuery = Project::query();
 
-        // Only filter by zone for non-admin coordinators who have a coordinated zone
-        if (!$isAdmin && $zoneId) {
-            $baseQuery->where('zone_id', $zoneId);
+        // Filter by zone for non-admin coordinators
+        if (! $isAdmin) {
+            if ($zoneId) {
+                $baseQuery->where('zone_id', $zoneId);
+            } else {
+                $baseQuery->whereRaw('1 = 0');
+            }
         }
 
         return [
@@ -38,7 +43,7 @@ class ProjectOverviewWidget extends BaseWidget
                 ->icon('heroicon-m-check-circle')
                 ->color('success'),
 
-            Stat::make('Total Budget', '₦' . number_format($baseQuery->clone()->sum('budget_allocated'), 2))
+            Stat::make('Total Budget', '₦'.number_format($baseQuery->clone()->sum('budget_allocated'), 2))
                 ->icon('heroicon-m-banknotes')
                 ->color('info'),
         ];

@@ -16,9 +16,9 @@ use Illuminate\Database\Eloquent\Builder;
 
 class RecentActivityWidget extends Widget
 {
-    protected static ?int $sort = 3;
+    protected static ?int $sort = 4;
 
-    protected int|string|array $columnSpan = ['lg' => 2];
+    protected int|string|array $columnSpan = ['lg' => 1];
 
     protected string $view = 'filament.coordinator.widgets.recent-activity';
 
@@ -177,10 +177,10 @@ class RecentActivityWidget extends Widget
                 'url' => \App\Filament\Coordinator\Resources\WelfareRequestResource::getUrl('view', ['record' => $item]),
             ]));
 
-        // Sort by time and take top 15
+        // Sort by time and take top 5 for compact dashboard preview
         $sortedActivities = $activities
             ->sortByDesc('time')
-            ->take(15)
+            ->take(5)
             ->values();
 
         return [

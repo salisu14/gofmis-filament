@@ -28,6 +28,7 @@ class ZoneCoordinatorHistory extends Model
         'assigned_at',
         'unassigned_at',
         'changed_by',
+        'reason',
     ];
 
     /**

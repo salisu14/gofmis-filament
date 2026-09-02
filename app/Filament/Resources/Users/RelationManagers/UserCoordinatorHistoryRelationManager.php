@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Filament\Resources\Zones\RelationManagers;
+namespace App\Filament\Resources\Users\RelationManagers;
 
 use App\Models\ZoneCoordinatorHistory;
 use Filament\Actions\ViewAction;
@@ -13,52 +13,50 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 
-class CoordinatorHistoryRelationManager extends RelationManager
+class UserCoordinatorHistoryRelationManager extends RelationManager
 {
-    /**
-     * Relationship defined in the Zone model.
-     * Ensure Zone.php has: public function coordinatorHistories() { return $this->hasMany(ZoneCoordinatorHistory::class, 'zone_id'); }
-     */
     protected static string $relationship = 'coordinatorHistories';
 
     protected static ?string $recordTitleAttribute = 'id';
 
-    protected static ?string $title = 'Coordinator Assignment History';
+    protected static ?string $title = 'Zone Assignment History';
 
     protected $listeners = ['refreshRelation' => '$refresh'];
 
-    /**
-     * View-only form for inspecting historical assignment details.
-     */
     public function form(Schema $schema): Schema
     {
         return $schema
             ->schema([
                 Section::make('Assignment Context')
-                    ->description('Details regarding this specific period of responsibility.')
+                    ->description('Details regarding this specific period of zone responsibility.')
                     ->schema([
                         Grid::make(2)->schema([
-                            Forms\Components\Select::make('user_id')
-                                ->label('Coordinator')
-                                ->relationship('coordinator', 'name')
+                            Forms\Components\Select::make('zone_id')
+                                ->label('Zone')
+                                ->relationship('zone', 'name')
                                 ->disabled(),
 
                             Forms\Components\Select::make('changed_by')
-                                ->label('Authorized By')
+                                ->label('Assigned By')
                                 ->relationship('changer', 'name')
                                 ->disabled(),
                         ]),
 
                         Grid::make(2)->schema([
                             Forms\Components\DateTimePicker::make('assigned_at')
-                                ->label('Start Date')
+                                ->label('Assigned From')
                                 ->disabled(),
 
                             Forms\Components\DateTimePicker::make('unassigned_at')
-                                ->label('End Date')
-                                ->placeholder('Currently Active')
+                                ->label('Assigned Until')
+                                ->placeholder('Current Assignment')
                                 ->disabled(),
                         ]),
+
+                        Forms\Components\Textarea::make('reason')
+                            ->label('Reason / Notes')
+                            ->disabled()
+                            ->columnSpanFull(),
                     ]),
             ]);
     }
@@ -67,18 +65,11 @@ class CoordinatorHistoryRelationManager extends RelationManager
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('coordinator.name')
-                    ->label('Staff Member')
+                Tables\Columns\TextColumn::make('zone.name')
+                    ->label('Zone')
                     ->searchable()
                     ->sortable()
                     ->weight('bold'),
-
-                Tables\Columns\TextColumn::make('status')
-                    ->label('Status')
-                    ->state(fn (ZoneCoordinatorHistory $record) => $record->isActive() ? 'Current' : 'Previous')
-                    ->badge()
-                    ->color(fn ($state) => $state === 'Current' ? 'success' : 'gray')
-                    ->icon(fn ($state) => $state === 'Current' ? 'heroicon-m-check-circle' : 'heroicon-m-clock'),
 
                 Tables\Columns\TextColumn::make('assigned_at')
                     ->label('Assigned From')
@@ -90,6 +81,13 @@ class CoordinatorHistoryRelationManager extends RelationManager
                     ->dateTime('d M, Y H:i')
                     ->placeholder('—')
                     ->sortable(),
+
+                Tables\Columns\TextColumn::make('status')
+                    ->label('Status')
+                    ->state(fn (ZoneCoordinatorHistory $record) => $record->isActive() ? 'Current' : 'Previous')
+                    ->badge()
+                    ->color(fn ($state) => $state === 'Current' ? 'success' : 'gray')
+                    ->icon(fn ($state) => $state === 'Current' ? 'heroicon-m-check-circle' : 'heroicon-m-clock'),
 
                 Tables\Columns\TextColumn::make('changer.name')
                     ->label('Assigned By')
@@ -106,7 +104,7 @@ class CoordinatorHistoryRelationManager extends RelationManager
                 Tables\Filters\TernaryFilter::make('is_active')
                     ->label('Assignment Status')
                     ->placeholder('All Records')
-                    ->trueLabel('Only Active')
+                    ->trueLabel('Only Current')
                     ->falseLabel('Historical Only')
                     ->queries(
                         true: fn (Builder $query) => $query->whereNull('unassigned_at'),
@@ -117,9 +115,9 @@ class CoordinatorHistoryRelationManager extends RelationManager
                 ViewAction::make(),
             ])
             ->toolbarActions([
-                // Preserving history for audit integrity
+                // Read-only audit trail
             ])
-            ->emptyStateHeading('No assignment history found.')
-            ->emptyStateDescription('History logs are generated automatically when a zone coordinator is updated.');
+            ->emptyStateHeading('No zone assignment history found.')
+            ->emptyStateDescription('History logs are generated automatically when a zone coordinator is assigned or reassigned.');
     }
 }

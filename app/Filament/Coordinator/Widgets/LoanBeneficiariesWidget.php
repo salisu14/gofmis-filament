@@ -1,4 +1,5 @@
 <?php
+
 // app/Filament/Coordinator/Widgets/LoanBeneficiariesWidget.php
 
 namespace App\Filament\Coordinator\Widgets;
@@ -13,7 +14,9 @@ use Illuminate\Database\Eloquent\Builder;
 class LoanBeneficiariesWidget extends BaseWidget
 {
     protected static ?string $heading = 'Loan Beneficiaries';
-    protected static ?int $sort = 3;
+
+    protected static ?int $sort = 6;
+
     protected int|string|array $columnSpan = 'full';
 
     public function table(Table $table): Table
@@ -25,29 +28,41 @@ class LoanBeneficiariesWidget extends BaseWidget
         return $table
             ->query(
                 Widow::query()
-                    ->when(!$isAdmin && $zoneId, function (Builder $query) use ($zoneId) {
-                        $query->whereHas('deceased', fn($q) => $q->where('zone_id', $zoneId));
+                    ->when(! $isAdmin, function (Builder $query) use ($zoneId) {
+                        if ($zoneId) {
+                            $query->whereHas('deceased', fn ($q) => $q->where('zone_id', $zoneId));
+                        } else {
+                            $query->whereRaw('1 = 0');
+                        }
                     })
-                    ->whereHas('widowLoans', fn($q) => $q->where('status', '!=', 'rejected'))
-                    ->withCount(['widowLoans as total_loans' => fn($q) => $q->where('status', '!=', 'rejected')])
-                    ->withSum(['widowLoans as total_principal' => fn($q) => $q->where('status', '!=', 'rejected')], 'principal_amount')
-                    ->withSum(['widowLoans as total_repaid' => fn($q) => $q->where('status', '!=', 'rejected')], 'total_paid')
+                    ->whereHas('widowLoans', fn ($q) => $q->where('status', '!=', 'rejected'))
+                    ->withCount(['widowLoans as total_loans' => fn ($q) => $q->where('status', '!=', 'rejected')])
+                    ->withSum(['widowLoans as total_principal' => fn ($q) => $q->where('status', '!=', 'rejected')], 'principal_amount')
+                    ->withSum(['widowLoans as total_repaid' => fn ($q) => $q->where('status', '!=', 'rejected')], 'total_paid')
             )
             ->heading('Loan Beneficiaries Summary')
             ->description(function () use ($zoneId, $isAdmin) {
                 $baseQuery = Widow::whereHas('widowLoans');
 
-                if (!$isAdmin && $zoneId) {
-                    $baseQuery->whereHas('deceased', fn($q) => $q->where('zone_id', $zoneId));
+                if (! $isAdmin) {
+                    if ($zoneId) {
+                        $baseQuery->whereHas('deceased', fn ($q) => $q->where('zone_id', $zoneId));
+                    } else {
+                        $baseQuery->whereRaw('1 = 0');
+                    }
                 }
 
                 $loanQuery = WidowLoan::where('status', '!=', 'rejected');
-                if (!$isAdmin && $zoneId) {
-                    $loanQuery->whereHas('widow.deceased', fn($q) => $q->where('zone_id', $zoneId));
+                if (! $isAdmin) {
+                    if ($zoneId) {
+                        $loanQuery->whereHas('widow.deceased', fn ($q) => $q->where('zone_id', $zoneId));
+                    } else {
+                        $loanQuery->whereRaw('1 = 0');
+                    }
                 }
 
-                return 'Total beneficiaries: ' . $baseQuery->count() .
-                    ' | Total principal: ₦' . number_format((float) $loanQuery->sum('principal_amount'), 2);
+                return 'Total beneficiaries: '.$baseQuery->count().
+                    ' | Total principal: ₦'.number_format((float) $loanQuery->sum('principal_amount'), 2);
             })
             ->columns([
                 TextColumn::make('full_name')
@@ -82,7 +97,7 @@ class LoanBeneficiariesWidget extends BaseWidget
                 TextColumn::make('widowLoans.status')
                     ->label('Latest Status')
                     ->badge()
-                    ->formatStateUsing(fn($state) => is_array($state) ? end($state) : $state)
+                    ->formatStateUsing(fn ($state) => is_array($state) ? end($state) : $state)
                     ->colors([
                         'warning' => 'pending',
                         'success' => 'approved',

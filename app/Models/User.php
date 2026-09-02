@@ -101,6 +101,11 @@ class User extends Authenticatable implements FilamentUser, HasAppAuthentication
         return $this->hasOne(Zone::class, 'coordinator_id');
     }
 
+    public function coordinatorHistories(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(ZoneCoordinatorHistory::class, 'user_id');
+    }
+
     public function hasZone(): bool
     {
         return $this->coordinatedZone()->exists();
