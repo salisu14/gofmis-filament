@@ -183,4 +183,133 @@ class SponsorshipAllocationsRelationManagerTest extends TestCase
         expect($componentNames)->toContain('amount_allocated');
         expect($componentNames)->not->toContain('sponsor_id');
     }
+
+    public function test_4_valid_create_table_action_creates_allocation_linked_to_sponsorship(): void
+    {
+        Livewire::actingAs($this->admin)
+            ->test(\App\Filament\Resources\Sponsorships\RelationManagers\AllocationsRelationManager::class, [
+                'ownerRecord' => $this->sponsorshipA,
+                'pageClass' => \App\Filament\Resources\Sponsorships\Pages\EditSponsorship::class,
+            ])
+            ->callTableAction('create', data: [
+                'orphan_education_id' => $this->education->id,
+                'amount_allocated' => 30000.00,
+            ])
+            ->assertHasNoTableActionErrors();
+
+        expect($this->sponsorshipA->allocations()->count())->toBe(1);
+
+        $allocation = $this->sponsorshipA->allocations()->first();
+        expect($allocation->orphan_education_id)->toBe($this->education->id);
+        expect($allocation->amount_allocated)->toEqual(30000.00);
+        expect($allocation->sponsor_id)->toBe($this->sponsor->id);
+    }
+
+    public function test_5_multiple_allocations_aggregate_correctly_up_to_committed_amount(): void
+    {
+        Livewire::actingAs($this->admin)
+            ->test(\App\Filament\Resources\Sponsorships\RelationManagers\AllocationsRelationManager::class, [
+                'ownerRecord' => $this->sponsorshipA,
+                'pageClass' => \App\Filament\Resources\Sponsorships\Pages\EditSponsorship::class,
+            ])
+            ->callTableAction('create', data: [
+                'orphan_education_id' => $this->education->id,
+                'amount_allocated' => 40000.00,
+            ]);
+
+        Livewire::actingAs($this->admin)
+            ->test(\App\Filament\Resources\Sponsorships\RelationManagers\AllocationsRelationManager::class, [
+                'ownerRecord' => $this->sponsorshipA->fresh(),
+                'pageClass' => \App\Filament\Resources\Sponsorships\Pages\EditSponsorship::class,
+            ])
+            ->callTableAction('create', data: [
+                'orphan_education_id' => $this->education->id,
+                'amount_allocated' => 60000.00,
+            ]);
+
+        expect($this->sponsorshipA->allocations()->sum('amount_allocated'))->toEqual(100000.00);
+    }
+
+    public function test_6_over_allocation_exceeding_committed_amount_is_rejected(): void
+    {
+        $this->expectException(\Illuminate\Validation\ValidationException::class);
+
+        SponsorshipAllocation::create([
+            'sponsorship_id' => $this->sponsorshipA->id,
+            'orphan_education_id' => $this->education->id,
+            'amount_allocated' => 70000.00,
+        ]);
+
+        SponsorshipAllocation::create([
+            'sponsorship_id' => $this->sponsorshipA->id,
+            'orphan_education_id' => $this->education->id,
+            'amount_allocated' => 40000.00, // 70k + 40k = 110k (exceeds 100k committed)
+        ]);
+    }
+
+    public function test_7_zero_or_negative_allocation_amount_is_rejected(): void
+    {
+        Livewire::actingAs($this->admin)
+            ->test(\App\Filament\Resources\Sponsorships\RelationManagers\AllocationsRelationManager::class, [
+                'ownerRecord' => $this->sponsorshipA,
+                'pageClass' => \App\Filament\Resources\Sponsorships\Pages\EditSponsorship::class,
+            ])
+            ->callTableAction('create', data: [
+                'orphan_education_id' => $this->education->id,
+                'amount_allocated' => 0,
+            ])
+            ->assertHasTableActionErrors(['amount_allocated']);
+    }
+
+    public function test_8_edit_table_action_updates_allocation_amount_and_recipient(): void
+    {
+        $allocation = SponsorshipAllocation::create([
+            'sponsorship_id' => $this->sponsorshipA->id,
+            'orphan_education_id' => $this->education->id,
+            'amount_allocated' => 30000.00,
+        ]);
+
+        Livewire::actingAs($this->admin)
+            ->test(\App\Filament\Resources\Sponsorships\RelationManagers\AllocationsRelationManager::class, [
+                'ownerRecord' => $this->sponsorshipA->fresh(),
+                'pageClass' => \App\Filament\Resources\Sponsorships\Pages\EditSponsorship::class,
+            ])
+            ->callTableAction('edit', $allocation, data: [
+                'orphan_education_id' => $this->education->id,
+                'amount_allocated' => 50000.00,
+            ])
+            ->assertHasNoTableActionErrors();
+
+        expect($allocation->fresh()->amount_allocated)->toEqual(50000.00);
+    }
+
+    public function test_9_delete_table_action_removes_allocation(): void
+    {
+        $allocation = SponsorshipAllocation::create([
+            'sponsorship_id' => $this->sponsorshipA->id,
+            'orphan_education_id' => $this->education->id,
+            'amount_allocated' => 30000.00,
+        ]);
+
+        Livewire::actingAs($this->admin)
+            ->test(\App\Filament\Resources\Sponsorships\RelationManagers\AllocationsRelationManager::class, [
+                'ownerRecord' => $this->sponsorshipA->fresh(),
+                'pageClass' => \App\Filament\Resources\Sponsorships\Pages\EditSponsorship::class,
+            ])
+            ->callTableAction('delete', $allocation);
+
+        expect(SponsorshipAllocation::find($allocation->id))->toBeNull();
+    }
+
+    public function test_10_deleting_sponsorship_with_allocations_throws_domain_exception(): void
+    {
+        SponsorshipAllocation::create([
+            'sponsorship_id' => $this->sponsorshipA->id,
+            'orphan_education_id' => $this->education->id,
+            'amount_allocated' => 30000.00,
+        ]);
+
+        $this->expectException(\DomainException::class);
+        $this->sponsorshipA->delete();
+    }
 }

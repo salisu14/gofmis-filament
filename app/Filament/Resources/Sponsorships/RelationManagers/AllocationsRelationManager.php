@@ -45,10 +45,10 @@ class AllocationsRelationManager extends RelationManager
 
                                 return OrphanEducation::query()
                                     ->where('orphan_id', $sponsorship->orphan_id)
-                                    ->with('institution')
+                                    ->with(['institution', 'orphanClass'])
                                     ->get()
                                     ->mapWithKeys(fn ($edu) => [
-                                        $edu->id => "{$edu->institution->name} — {$edu->orphanClass->name}",
+                                        $edu->id => ($edu->institution?->name ?? 'Institution').' — '.($edu->orphanClass?->name ?? $edu->class_level ?? 'N/A'),
                                     ])
                                     ->toArray();
                             }),

@@ -25,8 +25,26 @@ class SponsorshipAllocation extends Model
     protected static function booted(): void
     {
         static::creating(function ($allocation) {
-            if (!$allocation->sponsor_id && $allocation->sponsorship_id) {
+            if (! $allocation->sponsor_id && $allocation->sponsorship_id) {
                 $allocation->sponsor_id = $allocation->sponsorship->sponsor_id;
+            }
+        });
+
+        static::saving(function (SponsorshipAllocation $allocation) {
+            if ($allocation->sponsorship_id && $allocation->amount_allocated > 0) {
+                $sponsorship = $allocation->sponsorship;
+                if ($sponsorship) {
+                    $existingAllocated = (float) $sponsorship->allocations()
+                        ->where('id', '!=', $allocation->id ?? '')
+                        ->sum('amount_allocated');
+                    $remaining = (float) $sponsorship->amount_committed - $existingAllocated;
+
+                    if ((float) $allocation->amount_allocated > $remaining + 0.001) {
+                        throw \Illuminate\Validation\ValidationException::withMessages([
+                            'amount_allocated' => 'Allocation amount (₦'.number_format((float) $allocation->amount_allocated, 2).') exceeds the remaining sponsorship balance (₦'.number_format(max(0, $remaining), 2).').',
+                        ]);
+                    }
+                }
             }
         });
     }
