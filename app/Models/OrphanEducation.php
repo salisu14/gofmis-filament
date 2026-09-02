@@ -21,6 +21,10 @@ class OrphanEducation extends Model
         'institution_id',
         'orphan_class_id',
         'class_level',
+        'academic_session',
+        'progression_decision',
+        'progression_reason',
+        'recorded_by_id',
         'school_fee',
         'fee_frequency',
         'is_fee_supported',
@@ -37,6 +41,7 @@ class OrphanEducation extends Model
         'support_amount' => 'decimal:2',
         'started_at' => 'date',
         'ended_at' => 'date',
+        'progression_decision' => \App\Enums\AcademicProgressionDecision::class,
     ];
 
     public function orphan(): BelongsTo
@@ -52,6 +57,11 @@ class OrphanEducation extends Model
     public function institution(): BelongsTo
     {
         return $this->belongsTo(Institution::class);
+    }
+
+    public function recordedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'recorded_by_id');
     }
 
     public function invoices(): HasMany
@@ -100,12 +110,12 @@ class OrphanEducation extends Model
         });
     }
 
-//    protected static function booted(): void
-//    {
-//        static::creating(function (OrphanEducation $education): void {
-//            $education->reference ??= static::generateReference();
-//        });
-//    }
+    //    protected static function booted(): void
+    //    {
+    //        static::creating(function (OrphanEducation $education): void {
+    //            $education->reference ??= static::generateReference();
+    //        });
+    //    }
 
     public static function generateReference(): string
     {

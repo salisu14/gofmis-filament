@@ -321,9 +321,10 @@
     <table class="data-table">
         <thead>
             <tr>
+                <th>Session</th>
                 <th>Institution / School</th>
                 <th>Class / Level</th>
-                <th>Fee Frequency</th>
+                <th>Outcome / Decision</th>
                 <th class="text-right">School Fee</th>
                 <th class="text-right">Support Amount</th>
                 <th>Status</th>
@@ -331,10 +332,16 @@
         </thead>
         <tbody>
             @foreach($orphan->educations as $edu)
+                @php
+                    $decisionLabel = $edu->progression_decision instanceof \App\Enums\AcademicProgressionDecision
+                        ? $edu->progression_decision->label()
+                        : ($edu->progression_decision ? ucfirst($edu->progression_decision) : 'Ongoing');
+                @endphp
                 <tr>
+                    <td><span class="text-mono">{{ $edu->academic_session ?? 'N/A' }}</span></td>
                     <td><strong>{{ $edu->institution?->name ?? 'N/A' }}</strong></td>
                     <td>{{ $edu->orphanClass?->name ?? $edu->class_level ?? 'N/A' }}</td>
-                    <td>{{ ucfirst($edu->fee_frequency ?? 'N/A') }}</td>
+                    <td>{{ $decisionLabel }}</td>
                     <td class="text-right">₦{{ number_format((float) ($edu->school_fee ?? 0), 2) }}</td>
                     <td class="text-right">₦{{ number_format((float) ($edu->support_amount ?? 0), 2) }}</td>
                     <td>
