@@ -351,4 +351,9 @@ class Widow extends Model
 
         Storage::disk('public')->delete($path);
     }
+
+    public function fingerprints(): \Illuminate\Database\Eloquent\Relations\MorphMany
+    {
+        return $this->morphMany(BeneficiaryFingerprint::class, 'beneficiary');
+    }
 }

@@ -54,6 +54,8 @@ class RolesAndPermissionsSeeder extends Seeder
             // --- Imprest ---
             'imprest_view_transactions', 'imprest_create_transactions', 'imprest_edit_transactions', 'imprest_delete_transactions', 'imprest_approve_transactions', 'imprest_void_transactions',
             'imprest_view_funds', 'imprest_reconcile_funds', 'imprest_replenish_funds',
+            // --- Biometrics ---
+            'biometrics.view', 'biometrics.enroll', 'biometrics.revoke', 'biometrics.verify', 'biometrics.identify',
 
             // --- Reports ---
             'view_reports', 'export_reports',
@@ -104,6 +106,10 @@ class RolesAndPermissionsSeeder extends Seeder
             // Imprest
             'imprest_view_transactions', 'imprest_create_transactions', 'imprest_edit_transactions', 'imprest_delete_transactions', 'imprest_approve_transactions', 'imprest_void_transactions',
             'imprest_view_funds', 'imprest_reconcile_funds', 'imprest_replenish_funds',
+            // Biometrics
+            'biometrics.view', 'biometrics.enroll', 'biometrics.revoke', 'biometrics.verify', 'biometrics.identify',
+            // Biometrics
+            'biometrics.view', 'biometrics.enroll',
 
             // Reports
             'view_reports', 'export_reports',
@@ -130,6 +136,8 @@ class RolesAndPermissionsSeeder extends Seeder
 
             // Loans (Requests)
             'create_loans', 'view_loans',
+            // Biometrics
+            'biometrics.view', 'biometrics.enroll',
 
             // Reports
             'view_reports',
@@ -175,7 +183,7 @@ class RolesAndPermissionsSeeder extends Seeder
         // Demo Observer: Secure System-Wide Read-Only Demonstration Account
         // --------------------------------------------------------------
         $demoObserver = Role::firstOrCreate(['name' => 'demo_observer', 'guard_name' => $guard]);
-        $viewPermissions = array_values(array_filter($permissions, fn ($p) => str_starts_with($p, 'view') || in_array($p, ['admin_dashboard_access', 'imprest_view_transactions', 'imprest_view_funds'], true)));
+        $viewPermissions = array_values(array_filter($permissions, fn ($p) => str_starts_with($p, 'view') || in_array($p, ['admin_dashboard_access', 'imprest_view_transactions', 'imprest_view_funds', 'biometrics.view'], true)));
         $demoObserver->syncPermissions($viewPermissions);
     }
 }

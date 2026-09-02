@@ -459,4 +459,9 @@ class Orphan extends Model
             default => $reason,
         };
     }
+
+    public function fingerprints(): \Illuminate\Database\Eloquent\Relations\MorphMany
+    {
+        return $this->morphMany(BeneficiaryFingerprint::class, 'beneficiary');
+    }
 }

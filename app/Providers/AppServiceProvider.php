@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Contracts\Biometrics\FingerprintDeviceClientInterface;
+use App\Services\Biometrics\MockFingerprintDeviceClient;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 
@@ -12,6 +14,12 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        $this->app->bind(FingerprintDeviceClientInterface::class, function () {
+            return config('biometrics.client') === 'mock'
+                ? new MockFingerprintDeviceClient
+                : new \App\Services\Biometrics\HttpBiometricBridgeClient;
+        });
+
         // In register() method:
         $this->app->bind(
             \App\Repositories\Contracts\Imprest\ImprestTransactionRepositoryInterface::class,

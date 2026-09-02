@@ -64,6 +64,12 @@ class OrphanResource extends Resource
 
     public static function getRelations(): array
     {
+        $relations = [
+            \App\Filament\RelationManagers\FingerprintsRelationManager::class,
+        ];
+
+        return array_merge($relations, parent::getRelations() ?? []);
+
         return [
             RelationManagers\PrescriptionsRelationManager::class,
         ];
