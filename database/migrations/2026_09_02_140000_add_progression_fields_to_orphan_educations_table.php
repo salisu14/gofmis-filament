@@ -26,8 +26,10 @@ return new class extends Migration
             $table->index('progression_decision');
         });
 
-        // Partial unique index enforcing at most ONE active enrollment per orphan per institution
-        DB::statement('CREATE UNIQUE INDEX IF NOT EXISTS idx_oe_unique_current_orphan_inst ON orphan_educations (orphan_id, institution_id) WHERE is_current = true AND deleted_at IS NULL');
+        // Partial unique index enforcing at most ONE active enrollment per orphan per institution (PostgreSQL / MySQL)
+        if (DB::getDriverName() !== 'sqlite') {
+            DB::statement('CREATE UNIQUE INDEX IF NOT EXISTS idx_oe_unique_current_orphan_inst ON orphan_educations (orphan_id, institution_id) WHERE is_current = true AND deleted_at IS NULL');
+        }
     }
 
     /**

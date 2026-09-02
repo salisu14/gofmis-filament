@@ -32,27 +32,27 @@ beforeEach(function () {
         'first_name' => 'Academic',
         'last_name' => 'Student',
         'full_name' => 'Academic Student',
-        'reg_no' => 'ORP-W-100',
-        'nin' => '99999999999',
+        'reg_no' => 'ORP-W-'.\Illuminate\Support\Str::random(6),
+        'nin' => (string) rand(10000000000, 99999999999),
         'gender' => \App\Enums\Gender::MALE,
         'birth_date' => now()->subYears(10)->toDateString(),
         'status' => \App\Enums\OrphanStatus::ACTIVE,
         'is_eligible' => true,
     ]);
 
-    $this->westernSchool = Institution::create(['name' => 'West Academy', 'type' => InstitutionType::WESTERN]);
-    $this->islamiyyaSchool = Institution::create(['name' => 'Nurul Islam', 'type' => InstitutionType::ISLAMIYYA]);
+    $this->westernSchool = Institution::firstOrCreate(['name' => 'West Academy'], ['type' => InstitutionType::WESTERN]);
+    $this->islamiyyaSchool = Institution::firstOrCreate(['name' => 'Nurul Islam'], ['type' => InstitutionType::ISLAMIYYA]);
 
-    $this->p1 = OrphanClass::create(['name' => 'Primary 1', 'user_id' => $this->admin->id]);
-    $this->p2 = OrphanClass::create(['name' => 'Primary 2', 'user_id' => $this->admin->id]);
-    $this->p3 = OrphanClass::create(['name' => 'Primary 3', 'user_id' => $this->admin->id]);
-    $this->p4 = OrphanClass::create(['name' => 'Primary 4', 'user_id' => $this->admin->id]);
-    $this->p5 = OrphanClass::create(['name' => 'Primary 5', 'user_id' => $this->admin->id]);
-    $this->p6 = OrphanClass::create(['name' => 'Primary 6', 'user_id' => $this->admin->id]);
-    $this->jss1 = OrphanClass::create(['name' => 'JSS I', 'user_id' => $this->admin->id]);
-    $this->ss1 = OrphanClass::create(['name' => 'SS I', 'user_id' => $this->admin->id]);
-    $this->ss2 = OrphanClass::create(['name' => 'SS II', 'user_id' => $this->admin->id]);
-    $this->ss3 = OrphanClass::create(['name' => 'SS III', 'user_id' => $this->admin->id]);
+    $this->p1 = OrphanClass::firstOrCreate(['name' => 'Primary 1'], ['user_id' => $this->admin->id]);
+    $this->p2 = OrphanClass::firstOrCreate(['name' => 'Primary 2'], ['user_id' => $this->admin->id]);
+    $this->p3 = OrphanClass::firstOrCreate(['name' => 'Primary 3'], ['user_id' => $this->admin->id]);
+    $this->p4 = OrphanClass::firstOrCreate(['name' => 'Primary 4'], ['user_id' => $this->admin->id]);
+    $this->p5 = OrphanClass::firstOrCreate(['name' => 'Primary 5'], ['user_id' => $this->admin->id]);
+    $this->p6 = OrphanClass::firstOrCreate(['name' => 'Primary 6'], ['user_id' => $this->admin->id]);
+    $this->jss1 = OrphanClass::firstOrCreate(['name' => 'JSS I'], ['user_id' => $this->admin->id]);
+    $this->ss1 = OrphanClass::firstOrCreate(['name' => 'SS I'], ['user_id' => $this->admin->id]);
+    $this->ss2 = OrphanClass::firstOrCreate(['name' => 'SS II'], ['user_id' => $this->admin->id]);
+    $this->ss3 = OrphanClass::firstOrCreate(['name' => 'SS III'], ['user_id' => $this->admin->id]);
 
     $this->service = app(WesternEducationProgressionService::class);
 });

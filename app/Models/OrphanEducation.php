@@ -18,6 +18,7 @@ class OrphanEducation extends Model
     protected $fillable = [
         'reference',
         'orphan_id',
+        'previous_enrollment_id',
         'institution_id',
         'orphan_class_id',
         'class_level',
@@ -47,6 +48,16 @@ class OrphanEducation extends Model
     public function orphan(): BelongsTo
     {
         return $this->belongsTo(Orphan::class);
+    }
+
+    public function previousEnrollment(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'previous_enrollment_id');
+    }
+
+    public function successorEnrollment(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(self::class, 'previous_enrollment_id');
     }
 
     public function orphanClass(): BelongsTo

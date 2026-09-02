@@ -160,36 +160,52 @@ class AdminPanelProvider extends PanelProvider
                 }
 
                 // Education Module (admin + super-admin + verifier)
-                if ($user?->can('view_education_interventions')) {
-                    $builder = $builder->group(
-                        NavigationGroup::make('Education')
-                            ->items([
-                                NavigationItem::make('Institution')
-                                    ->icon('heroicon-o-building-library')
-                                    ->url('/admin/institutions')
-                                    ->isActiveWhen(fn () => request()->is('admin/institutions*')),
+                $hasEducationAccess = $user?->can('view_education_interventions');
+                $hasAnalyticsAccess = $user?->can('orphan_education.analytics.view');
 
-                                NavigationItem::make('Orphan Classes')
-                                    ->icon('heroicon-o-building-office')
-                                    ->url('/admin/orphan-classes')
-                                    ->isActiveWhen(fn () => request()->is('admin/orphan-classes*')),
+                if ($hasEducationAccess || $hasAnalyticsAccess) {
+                    $educationItems = [];
 
-                                NavigationItem::make('Orphan Education')
-                                    ->icon('heroicon-o-academic-cap')
-                                    ->url('/admin/orphan-education')
-                                    ->isActiveWhen(fn () => request()->is('admin/orphan-education*')),
+                    if ($hasEducationAccess) {
+                        $educationItems[] = NavigationItem::make('Institution')
+                            ->icon('heroicon-o-building-library')
+                            ->url('/admin/institutions')
+                            ->isActiveWhen(fn () => request()->is('admin/institutions*'));
 
-                                NavigationItem::make('Vocational Skills')
-                                    ->icon('heroicon-o-presentation-chart-line')
-                                    ->url('/admin/vocational-skills')
-                                    ->isActiveWhen(fn () => request()->is('admin/vocational-skills*')),
+                        $educationItems[] = NavigationItem::make('Orphan Classes')
+                            ->icon('heroicon-o-building-office')
+                            ->url('/admin/orphan-classes')
+                            ->isActiveWhen(fn () => request()->is('admin/orphan-classes*'));
 
-                                NavigationItem::make('Education Fee Invoices')
-                                    ->icon('heroicon-o-banknotes')
-                                    ->url('/admin/education-fee-invoices')
-                                    ->isActiveWhen(fn () => request()->is('admin/education-fee-invoices*')),
-                            ])
-                    );
+                        $educationItems[] = NavigationItem::make('Orphan Education')
+                            ->icon('heroicon-o-academic-cap')
+                            ->url('/admin/orphan-education')
+                            ->isActiveWhen(fn () => request()->is('admin/orphan-education*'));
+
+                        $educationItems[] = NavigationItem::make('Vocational Skills')
+                            ->icon('heroicon-o-presentation-chart-line')
+                            ->url('/admin/vocational-skills')
+                            ->isActiveWhen(fn () => request()->is('admin/vocational-skills*'));
+
+                        $educationItems[] = NavigationItem::make('Education Fee Invoices')
+                            ->icon('heroicon-o-banknotes')
+                            ->url('/admin/education-fee-invoices')
+                            ->isActiveWhen(fn () => request()->is('admin/education-fee-invoices*'));
+                    }
+
+                    if ($hasAnalyticsAccess) {
+                        $educationItems[] = NavigationItem::make('Education Analytics')
+                            ->icon('heroicon-o-chart-bar')
+                            ->url('/admin/education-analytics')
+                            ->isActiveWhen(fn () => request()->is('admin/education-analytics*'));
+                    }
+
+                    if (! empty($educationItems)) {
+                        $builder = $builder->group(
+                            NavigationGroup::make('Education')
+                                ->items($educationItems)
+                        );
+                    }
                 }
 
                 // Interventions (admin + super-admin)

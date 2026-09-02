@@ -172,6 +172,8 @@ class OrphanEducationTable
                                 'demoted' => 'Demote (Lower Class)',
                                 'graduated' => 'Graduate / Complete (Finalize)',
                                 'transferred' => 'Transfer School',
+                                'withdrawn' => 'Withdraw (Administrative Exit)',
+                                'dropped_out' => 'Drop Out (Discontinue)',
                             ])
                             ->default('promoted')
                             ->required()
@@ -197,8 +199,8 @@ class OrphanEducationTable
                             ->label('Target Academic Session')
                             ->placeholder('e.g. 2025/2026')
                             ->default(fn (OrphanEducation $record) => app(WesternEducationProgressionService::class)->getNextSequentialSession($record->academic_session, $record->started_at))
-                            ->required(fn ($get) => $get('decision') !== 'graduated')
-                            ->hidden(fn ($get) => $get('decision') === 'graduated'),
+                            ->required(fn ($get) => ! in_array($get('decision'), ['graduated', 'withdrawn', 'dropped_out'], true))
+                            ->hidden(fn ($get) => in_array($get('decision'), ['graduated', 'withdrawn', 'dropped_out'], true)),
 
                         Select::make('new_class_id')
                             ->label('Target Class / Grade')
@@ -208,7 +210,7 @@ class OrphanEducationTable
                             ->disabled(fn ($get) => in_array($get('decision'), ['promoted', 'repeated', 'demoted'], true))
                             ->dehydrated()
                             ->required(fn ($get) => in_array($get('decision'), ['promoted', 'repeated', 'demoted', 'transferred'], true))
-                            ->hidden(fn ($get) => $get('decision') === 'graduated'),
+                            ->hidden(fn ($get) => in_array($get('decision'), ['graduated', 'withdrawn', 'dropped_out'], true)),
 
                         Select::make('new_institution_id')
                             ->label('Target Institution')
@@ -226,7 +228,7 @@ class OrphanEducationTable
                         Textarea::make('reason')
                             ->label('Progression Justification / Reason')
                             ->placeholder('Enter justification or notes for this academic decision...')
-                            ->required(fn ($get) => in_array($get('decision'), ['demoted', 'transferred', 'graduated'], true)),
+                            ->required(fn ($get) => in_array($get('decision'), ['demoted', 'transferred', 'graduated', 'withdrawn', 'dropped_out'], true)),
                     ])
                     ->action(function (OrphanEducation $record, array $data): void {
                         try {

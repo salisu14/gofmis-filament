@@ -28,9 +28,9 @@ beforeEach(function () {
         'status' => \App\Enums\OrphanStatus::ACTIVE, 'is_eligible' => true,
     ]);
 
-    $this->institution = Institution::create(['name' => 'Unity Academy', 'type' => 'western']);
-    $this->p4 = OrphanClass::create(['name' => 'Primary 4', 'user_id' => $this->admin->id]);
-    $this->p5 = OrphanClass::create(['name' => 'Primary 5', 'user_id' => $this->admin->id]);
+    $this->institution = Institution::firstOrCreate(['name' => 'Unity Academy'], ['type' => 'western']);
+    $this->p4 = OrphanClass::firstOrCreate(['name' => 'Primary 4'], ['user_id' => $this->admin->id]);
+    $this->p5 = OrphanClass::firstOrCreate(['name' => 'Primary 5'], ['user_id' => $this->admin->id]);
 
     $this->education = OrphanEducation::create([
         'orphan_id' => $this->orphan->id,
@@ -51,7 +51,9 @@ function progressTo(OrphanEducation $record, OrphanClass $newClass, string $effe
     ]);
 
     $new = $record->replicate(['id', 'reference', 'is_current', 'started_at', 'ended_at', 'created_at', 'updated_at']);
+    $new->previous_enrollment_id = $record->id;
     $new->orphan_class_id = $newClass->id;
+    $new->class_level = $newClass->name;
     $new->started_at = $effectiveDate;
     $new->is_current = true;
     $new->save();
@@ -63,10 +65,10 @@ test('promotion Primary 4 to Primary 5 preserves the previous class history', fu
     $rows = OrphanEducation::where('orphan_id', $this->orphan->id)->orderBy('started_at')->get();
 
     expect($rows->count())->toBe(2)
-        ->and((int) $rows[0]->orphan_class_id)->toBe((int) $this->p4->id)
+        ->and($rows[0]->orphan_class_id)->toBe($this->p4->id)
         ->and($rows[0]->is_current)->toBeFalse()
         ->and($rows[0]->ended_at)->not->toBeNull()
-        ->and((int) $rows[1]->orphan_class_id)->toBe((int) $this->p5->id)
+        ->and($rows[1]->orphan_class_id)->toBe($this->p5->id)
         ->and($rows[1]->is_current)->toBeTrue()
         ->and($rows[1]->reference)->not->toBeNull();
 });
@@ -79,9 +81,9 @@ test('demotion Primary 5 to Primary 4 also preserves history', function () {
     $rows = OrphanEducation::where('orphan_id', $this->orphan->id)->orderBy('started_at')->get();
 
     expect($rows->count())->toBe(3)
-        ->and((int) $rows[0]->orphan_class_id)->toBe((int) $this->p4->id)
-        ->and((int) $rows[1]->orphan_class_id)->toBe((int) $this->p5->id)
-        ->and((int) $rows[2]->orphan_class_id)->toBe((int) $this->p4->id)
+        ->and($rows[0]->orphan_class_id)->toBe($this->p4->id)
+        ->and($rows[1]->orphan_class_id)->toBe($this->p5->id)
+        ->and($rows[2]->orphan_class_id)->toBe($this->p4->id)
         ->and($rows[2]->is_current)->toBeTrue()
         ->and($rows[1]->is_current)->toBeFalse();
 });

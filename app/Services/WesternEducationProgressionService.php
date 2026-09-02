@@ -234,6 +234,7 @@ class WesternEducationProgressionService
             AcademicProgressionDecision::DEMOTED => $this->resolveDemotedTargetClass($record, $expectedPrevClass, $providedClassId, $data['reason'] ?? null),
             AcademicProgressionDecision::GRADUATED => null,
             AcademicProgressionDecision::TRANSFERRED => $this->resolveTransferredTargetClass($record, $providedClassId, $data['new_institution_id'] ?? null, $data['reason'] ?? null),
+            AcademicProgressionDecision::WITHDRAWN, AcademicProgressionDecision::DROPPED_OUT => $this->resolveTerminalExitClass($decisionEnum, $data['reason'] ?? null),
         };
 
         $targetInstitutionId = $decisionEnum === AcademicProgressionDecision::TRANSFERRED
@@ -241,7 +242,7 @@ class WesternEducationProgressionService
             : $record->institution_id;
 
         // 5. Idempotency Check: If an active record already exists for this orphan & target session, return it safely
-        if ($decisionEnum !== AcademicProgressionDecision::GRADUATED) {
+        if (! in_array($decisionEnum, [AcademicProgressionDecision::GRADUATED, AcademicProgressionDecision::WITHDRAWN, AcademicProgressionDecision::DROPPED_OUT], true)) {
             $existingActive = OrphanEducation::where('orphan_id', $record->orphan_id)
                 ->where('institution_id', $targetInstitutionId)
                 ->where('is_current', true)
@@ -276,27 +277,38 @@ class WesternEducationProgressionService
             $actorId
         ) {
             // Close current enrollment
-            $endedAt = $decisionEnum === AcademicProgressionDecision::GRADUATED
+            $isTerminalExit = in_array($decisionEnum, [
+                AcademicProgressionDecision::GRADUATED,
+                AcademicProgressionDecision::WITHDRAWN,
+                AcademicProgressionDecision::DROPPED_OUT,
+            ], true);
+
+            $endedAt = $isTerminalExit
                 ? $effectiveDate
                 : Carbon::parse($effectiveDate)->subDay()->toDateString();
 
-            $record->update([
-                'is_current' => false,
-                'ended_at' => $endedAt,
-                'progression_decision' => $decisionEnum,
-                'progression_reason' => $reason,
-                'recorded_by_id' => $actorId,
-            ]);
+            DB::table('orphan_educations')
+                ->where('id', $record->id)
+                ->update([
+                    'is_current' => 0,
+                    'ended_at' => $endedAt,
+                    'progression_decision' => $decisionEnum->value,
+                    'progression_reason' => $reason,
+                    'recorded_by_id' => $actorId,
+                    'updated_at' => now(),
+                ]);
 
-            // For Graduation, no new active enrollment is created!
-            if ($decisionEnum === AcademicProgressionDecision::GRADUATED) {
+            $record->refresh();
+
+            // For Graduation, Withdrawal, or Dropout, no new active enrollment is created!
+            if ($isTerminalExit) {
                 return $record;
             }
 
             // Fetch target class model to properly sync class_level string
             $targetClass = $targetClassId ? OrphanClass::find($targetClassId) : null;
 
-            // Create next enrollment
+            // Create next enrollment with lineage reference
             $newRecord = $record->replicate([
                 'id',
                 'reference',
@@ -307,6 +319,7 @@ class WesternEducationProgressionService
                 'updated_at',
             ]);
 
+            $newRecord->previous_enrollment_id = $record->id;
             $newRecord->orphan_class_id = $targetClassId;
             $newRecord->class_level = $targetClass?->name ?? $record->class_level;
             $newRecord->institution_id = $targetInstitutionId;
@@ -321,6 +334,19 @@ class WesternEducationProgressionService
 
             return $newRecord;
         });
+    }
+
+    /**
+     * Resolve and validate terminal exit decisions (WITHDRAWN / DROPPED_OUT).
+     */
+    protected function resolveTerminalExitClass(AcademicProgressionDecision $decision, ?string $reason): null
+    {
+        if (empty($reason)) {
+            $label = $decision->label();
+            throw new \DomainException("A mandatory justification reason is required for recording student {$label}.");
+        }
+
+        return null;
     }
 
     /**

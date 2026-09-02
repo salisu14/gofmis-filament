@@ -41,6 +41,7 @@ class RolesAndPermissionsSeeder extends Seeder
             // --- Interventions (Education) ---
             'view_education_interventions', 'create_education_interventions', 'edit_education_interventions', 'delete_education_interventions', 'verify_education_interventions',
             'orphan_education.override_academic_progression',
+            'orphan_education.analytics.view', 'orphan_education.analytics.export',
 
             // --- Interventions (Healthcare) ---
             'view_healthcare_interventions', 'create_healthcare_interventions', 'edit_healthcare_interventions', 'delete_healthcare_interventions', 'approve_healthcare_interventions',
@@ -98,6 +99,7 @@ class RolesAndPermissionsSeeder extends Seeder
             // Interventions
             'view_education_interventions', 'create_education_interventions', 'edit_education_interventions', 'delete_education_interventions', 'verify_education_interventions',
             'orphan_education.override_academic_progression',
+            'orphan_education.analytics.view', 'orphan_education.analytics.export',
             'view_healthcare_interventions', 'create_healthcare_interventions', 'edit_healthcare_interventions', 'delete_healthcare_interventions', 'approve_healthcare_interventions',
             'view_welfare_interventions', 'create_welfare_interventions', 'edit_welfare_interventions', 'delete_welfare_interventions', 'approve_welfare_interventions',
 
@@ -185,7 +187,7 @@ class RolesAndPermissionsSeeder extends Seeder
         // Demo Observer: Secure System-Wide Read-Only Demonstration Account
         // --------------------------------------------------------------
         $demoObserver = Role::firstOrCreate(['name' => 'demo_observer', 'guard_name' => $guard]);
-        $viewPermissions = array_values(array_filter($permissions, fn ($p) => str_starts_with($p, 'view') || in_array($p, ['admin_dashboard_access', 'imprest_view_transactions', 'imprest_view_funds', 'biometrics.view'], true)));
+        $viewPermissions = array_values(array_filter($permissions, fn ($p) => str_starts_with($p, 'view') || in_array($p, ['admin_dashboard_access', 'imprest_view_transactions', 'imprest_view_funds', 'biometrics.view', 'orphan_education.analytics.view'], true)));
         $demoObserver->syncPermissions($viewPermissions);
     }
 }
