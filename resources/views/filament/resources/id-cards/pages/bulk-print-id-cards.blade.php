@@ -1,12 +1,14 @@
 {{-- resources/views/filament/resources/id-cards/pages/bulk-print-id-cards.blade.php --}}
 <x-filament-panels::page>
-    <form wire:submit="createBatch">
+    <form wire:submit.prevent="createBatch">
         {{ $this->form }}
 
         <div class="mt-6">
-            {{ $this->getFormActions()[0] }}
+            {{ $this->getAction('create_batch') }}
         </div>
     </form>
+
+    <x-filament-actions::modals />
 
     @if($currentBatch)
         <x-filament::section class="mt-8">
