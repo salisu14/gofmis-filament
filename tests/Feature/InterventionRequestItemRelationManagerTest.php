@@ -221,4 +221,70 @@ class InterventionRequestItemRelationManagerTest extends TestCase
         expect($itemRow->fresh()->item_name)->toBe('First Aid Kit');
         expect($itemRow->fresh()->quantity_requested)->toBe(3);
     }
+
+    public function test_8_create_table_action_renders_form_and_creates_requested_item(): void
+    {
+        Livewire::actingAs($this->admin)
+            ->test(\App\Filament\Resources\InterventionRequests\RelationManagers\ItemsRelationManager::class, [
+                'ownerRecord' => $this->requestA,
+                'pageClass' => \App\Filament\Resources\InterventionRequests\Pages\EditInterventionRequest::class,
+            ])
+            ->callTableAction('create', data: [
+                'item_id' => $this->itemA->id,
+                'orphan_class' => 'Grade 5',
+                'specification' => 'Standard Pack',
+                'quantity_requested' => 3,
+            ])
+            ->assertHasNoTableActionErrors();
+
+        $created = InterventionRequestItem::where('intervention_request_id', $this->requestA->id)->first();
+        expect($created)->not->toBeNull();
+        expect($created->item_id)->toBe($this->itemA->id);
+        expect($created->item_name)->toBe('First Aid Kit');
+        expect($created->quantity_requested)->toBe(3);
+    }
+
+    public function test_9_edit_table_action_updates_requested_item(): void
+    {
+        $itemRow = InterventionRequestItem::create([
+            'intervention_request_id' => $this->requestA->id,
+            'item_id' => $this->itemA->id,
+            'quantity_requested' => 1,
+        ]);
+
+        Livewire::actingAs($this->admin)
+            ->test(\App\Filament\Resources\InterventionRequests\RelationManagers\ItemsRelationManager::class, [
+                'ownerRecord' => $this->requestA,
+                'pageClass' => \App\Filament\Resources\InterventionRequests\Pages\EditInterventionRequest::class,
+            ])
+            ->callTableAction('edit', $itemRow, data: [
+                'item_id' => $this->itemB->id,
+                'orphan_class' => 'Size L',
+                'specification' => 'Updated details',
+                'quantity_requested' => 5,
+            ])
+            ->assertHasNoTableActionErrors();
+
+        expect($itemRow->fresh()->item_id)->toBe($this->itemB->id);
+        expect($itemRow->fresh()->item_name)->toBe('Wheelchair');
+        expect($itemRow->fresh()->quantity_requested)->toBe(5);
+    }
+
+    public function test_10_delete_table_action_removes_requested_item(): void
+    {
+        $itemRow = InterventionRequestItem::create([
+            'intervention_request_id' => $this->requestA->id,
+            'item_id' => $this->itemA->id,
+            'quantity_requested' => 1,
+        ]);
+
+        Livewire::actingAs($this->admin)
+            ->test(\App\Filament\Resources\InterventionRequests\RelationManagers\ItemsRelationManager::class, [
+                'ownerRecord' => $this->requestA,
+                'pageClass' => \App\Filament\Resources\InterventionRequests\Pages\EditInterventionRequest::class,
+            ])
+            ->callTableAction('delete', $itemRow);
+
+        expect(InterventionRequestItem::find($itemRow->id))->toBeNull();
+    }
 }
