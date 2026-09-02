@@ -54,6 +54,21 @@ class OrphanHistoryResource extends Resource
         return $user->can('view_orphans');
     }
 
+    public static function canView(Model $record): bool
+    {
+        $user = auth()->user();
+
+        if (! $user) {
+            return false;
+        }
+
+        if ($user->hasAnyRole(['admin', 'super_admin'])) {
+            return true;
+        }
+
+        return $user->can('view_orphans') && $user->managesZone(static::getRecordZoneId($record));
+    }
+
     public static function canCreate(): bool
     {
         return false;
@@ -85,7 +100,7 @@ class OrphanHistoryResource extends Resource
 
     protected static function getRecordZoneId($record): ?string
     {
-        return $record->deceased?->zone_id;
+        return $record->deceased()->withoutGlobalScopes()->value('zone_id');
     }
 
     public static function table(Table $table): Table
