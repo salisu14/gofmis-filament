@@ -14,6 +14,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class WidowHistoryResource extends Resource
 {
+    use \App\Filament\Coordinator\Concerns\ZoneScoped;
+
     protected static ?string $model = Widow::class;
 
     protected static string|null|\BackedEnum $navigationIcon = 'heroicon-o-clock';
@@ -71,6 +73,16 @@ class WidowHistoryResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()->historical();
+    }
+
+    protected static function applyZoneScope(Builder $query, string $zoneId): Builder
+    {
+        return $query->whereHas('deceased', fn (Builder $q) => $q->where('zone_id', $zoneId));
+    }
+
+    protected static function getRecordZoneId($record): ?string
+    {
+        return $record->deceased?->zone_id;
     }
 
     public static function table(Table $table): Table

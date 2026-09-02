@@ -223,10 +223,10 @@ class CoordinatorPanelProvider extends PanelProvider
                 \App\Filament\Coordinator\Resources\DeceasedResource::class,
                 \App\Filament\Coordinator\Resources\WidowResource::class,
                 \App\Filament\Coordinator\Resources\OrphanResource::class,
-                \App\Filament\Coordinator\Resources\LoanRequestResource::class,
+                \App\Filament\Coordinator\Resources\WidowHistoryResource::class,
+                \App\Filament\Coordinator\Resources\OrphanHistoryResource::class,
                 \App\Filament\Coordinator\Resources\EducationRequestResource::class,
-                \App\Filament\Coordinator\Resources\HealthcareRequestResource::class,
-                \App\Filament\Coordinator\Resources\ProjectResource::class,
+                \App\Filament\Coordinator\Resources\WelfareRequestResource::class,
             ])
 
             ->pages([
@@ -235,11 +235,9 @@ class CoordinatorPanelProvider extends PanelProvider
 
             ->widgets([
                 \App\Filament\Coordinator\Widgets\ZoneStatsWidget::class,         // sort 1 - full width
-                \App\Filament\Coordinator\Widgets\ProjectOverviewWidget::class,   // sort 2 - full width
-                \App\Filament\Coordinator\Widgets\QuickActionsWidget::class,      // sort 3 - full width
-                \App\Filament\Coordinator\Widgets\RecentActivityWidget::class,    // sort 4 - 1 col
-                \App\Filament\Coordinator\Widgets\PendingItemsWidget::class,      // sort 5 - 1 col
-                \App\Filament\Coordinator\Widgets\LoanBeneficiariesWidget::class, // sort 6 - full width
+                \App\Filament\Coordinator\Widgets\QuickActionsWidget::class,      // sort 2 - full width
+                \App\Filament\Coordinator\Widgets\RecentActivityWidget::class,    // sort 3 - 1 col
+                \App\Filament\Coordinator\Widgets\PendingItemsWidget::class,      // sort 4 - 1 col
             ])
 
             ->middleware([
@@ -261,9 +259,8 @@ class CoordinatorPanelProvider extends PanelProvider
             ])
 
             ->navigationGroups([
-                'Beneficiary Registration',
-                'Requests & Interventions',
-                'Projects',
+                'Beneficiaries',
+                'Intervention Requests',
             ])
 
             ->sidebarCollapsibleOnDesktop()

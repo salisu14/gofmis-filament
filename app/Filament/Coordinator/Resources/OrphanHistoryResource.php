@@ -13,6 +13,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class OrphanHistoryResource extends Resource
 {
+    use \App\Filament\Coordinator\Concerns\ZoneScoped;
+
     protected static ?string $model = Orphan::class;
 
     protected static string|null|\BackedEnum $navigationIcon = 'heroicon-o-archive-box';
@@ -74,6 +76,16 @@ class OrphanHistoryResource extends Resource
                 \App\Models\Scopes\EligibleOrphanScope::class,
             ])
             ->historical();
+    }
+
+    protected static function applyZoneScope(Builder $query, string $zoneId): Builder
+    {
+        return $query->whereHas('deceased', fn (Builder $q) => $q->where('zone_id', $zoneId));
+    }
+
+    protected static function getRecordZoneId($record): ?string
+    {
+        return $record->deceased?->zone_id;
     }
 
     public static function table(Table $table): Table

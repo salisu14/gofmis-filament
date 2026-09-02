@@ -65,47 +65,29 @@ class LoanRequestResource extends Resource
         ));
     }
 
+    public static function canViewAny(): bool
+    {
+        return auth()->user()?->can('view_loans') ?? false;
+    }
+
     public static function canCreate(): bool
     {
-        $user = auth()->user();
-
-        return $user?->hasAnyRole(['admin', 'super_admin'])
-            || $user?->managesZone();
+        return auth()->user()?->can('create_loans') ?? false;
     }
 
     public static function canView($record): bool
     {
-        $user = auth()->user();
-
-        if (! $user) {
-            return false;
-        }
-
-        if ($user->hasAnyRole(['admin', 'super_admin'])) {
-            return true;
-        }
-
-        return $user->managesZone($record->widow?->deceased?->zone_id);
+        return auth()->user()?->can('view_loans') ?? false;
     }
 
     public static function canEdit($record): bool
     {
-        $user = auth()->user();
-        if ($user?->hasAnyRole(['admin', 'super_admin'])) {
-            return true;
-        }
-
-        // ✅ FIXED: Use coordinatedZone for zone comparison
-        $zoneId = $user?->coordinatedZone?->id;
-
-        // Coordinators can only edit draft/pending loans they created
-        return $record->status === WidowLoanStatus::DRAFT &&
-            $user?->managesZone($record->widow?->deceased?->zone_id);
+        return auth()->user()?->can('edit_loans') ?? false;
     }
 
     public static function canDelete($record): bool
     {
-        return auth()->user()?->hasAnyRole(['admin', 'super_admin']) ?? false;
+        return auth()->user()?->can('delete_loans') ?? false;
     }
 
     public static function form(Schema $schema): Schema

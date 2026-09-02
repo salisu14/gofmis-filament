@@ -71,7 +71,9 @@ class CoordinatorPortalUiTest extends TestCase
             ->assertSee('Register Deceased')
             ->assertSee('Add Orphan')
             ->assertSee('Add Widow')
-            ->assertSee('Loan Request')
+            ->assertSee('Education Request')
+            ->assertSee('Welfare Nomination')
+            ->assertDontSee('Loan Request')
             ->assertSeeHtml('coordinator-quick-action-card')
             ->assertSeeHtml('coordinator-action-icon')
             ->assertSeeHtml('style="width: 1.25rem !important;');
@@ -114,12 +116,16 @@ class CoordinatorPortalUiTest extends TestCase
             '/coordinator/deceaseds',
             '/coordinator/widows',
             '/coordinator/orphans',
-            '/coordinator/loan-requests',
+            '/coordinator/education-requests',
+            '/coordinator/welfare-requests',
         ];
 
         foreach ($routes as $route) {
             $response = $this->actingAs($this->coordinator, 'web')->get($route);
             $response->assertStatus(200);
         }
+
+        // Out-of-scope route must return 403 Forbidden
+        $this->actingAs($this->coordinator, 'web')->get('/coordinator/loan-requests')->assertStatus(403);
     }
 }

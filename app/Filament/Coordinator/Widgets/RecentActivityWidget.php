@@ -7,12 +7,9 @@ namespace App\Filament\Coordinator\Widgets;
 use App\Models\Deceased;
 use App\Models\InterventionRequest;
 use App\Models\Orphan;
-use App\Models\Prescription;
 use App\Models\WelfareBeneficiary;
 use App\Models\Widow;
-use App\Models\WidowLoan;
 use Filament\Widgets\Widget;
-use Illuminate\Database\Eloquent\Builder;
 
 class RecentActivityWidget extends Widget
 {
@@ -95,52 +92,6 @@ class RecentActivityWidget extends Widget
                 'color' => 'warning',
                 'time' => $item->created_at,
                 'url' => \App\Filament\Coordinator\Resources\WidowResource::getUrl('view', ['record' => $item]),
-            ]));
-
-        // Loan requests
-        $loanQuery = WidowLoan::query()->with('widow');
-        if (! $isAdmin && $zoneId) {
-            $loanQuery->whereHas('widow.deceased', fn ($q) => $q->where('zone_id', $zoneId));
-        }
-        $loanQuery->latest()->limit(5)->get()
-            ->each(fn ($item) => $activities->push([
-                'type' => 'loan_requested',
-                'label' => 'Loan Requested',
-                'description' => '₦'.number_format($item->principal_amount, 2).' - '.($item->widow?->display_name ?? 'Unknown'),
-                'icon' => 'heroicon-m-banknotes',
-                'color' => 'success',
-                'time' => $item->created_at,
-                'url' => \App\Filament\Coordinator\Resources\LoanRequestResource::getUrl('view', ['record' => $item]),
-            ]));
-
-        // Healthcare requests
-        $prescriptionQuery = Prescription::query();
-        if (! $isAdmin && $zoneId) {
-            $prescriptionQuery->where(function (Builder $q) use ($zoneId) {
-                $q->whereHas('prescribable', function (Builder $q2) use ($zoneId) {
-                    $q2->where(function (Builder $q3) use ($zoneId) {
-                        $q3->where('prescribable_type', \App\Models\Orphan::class)
-                            ->whereHas('deceased', fn ($q4) => $q4->where('zone_id', $zoneId));
-                    })->orWhere(function (Builder $q3) use ($zoneId) {
-                        $q3->where('prescribable_type', \App\Models\Widow::class)
-                            ->whereHas('deceased', fn ($q4) => $q4->where('zone_id', $zoneId));
-                    });
-                });
-            });
-        }
-        $prescriptionQuery->latest()->limit(5)->get()
-            ->each(fn ($item) => $activities->push([
-                'type' => 'healthcare_requested',
-                'label' => 'Healthcare Request',
-                'description' => $item->illness.' (₦'.number_format($item->total_cost, 2).')',
-                'icon' => 'heroicon-m-heart',
-                'color' => 'danger',
-                'time' => $item->created_at,
-                'url' => rescue(
-                    fn () => \App\Filament\Coordinator\Resources\HealthcareRequestResource::getUrl('view', ['record' => $item]),
-                    fn () => \App\Filament\Coordinator\Resources\HealthcareRequestResource::getUrl('edit', ['record' => $item]), // fallback to edit
-                    false
-                ),
             ]));
 
         // Education requests

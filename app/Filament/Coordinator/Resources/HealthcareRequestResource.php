@@ -77,51 +77,29 @@ class HealthcareRequestResource extends Resource
         });
     }
 
+    public static function canViewAny(): bool
+    {
+        return auth()->user()?->can('view_healthcare_interventions') ?? false;
+    }
+
     public static function canCreate(): bool
     {
-        $user = auth()->user();
-
-        return $user?->hasAnyRole(['admin', 'super_admin'])
-            || $user?->managesZone();
+        return auth()->user()?->can('create_healthcare_interventions') ?? false;
     }
 
     public static function canView($record): bool
     {
-        $user = auth()->user();
-
-        if (! $user) {
-            return false;
-        }
-
-        if ($user->hasAnyRole(['admin', 'super_admin'])) {
-            return true;
-        }
-
-        return $user->managesZone(static::recordZoneId($record));
+        return auth()->user()?->can('view_healthcare_interventions') ?? false;
     }
 
     public static function canEdit($record): bool
     {
-        $user = auth()->user();
-
-        if (! $record || $record->isTreated()) {
-            return false;
-        }
-
-        if ($user?->hasAnyRole(['admin', 'super_admin'])) {
-            return true;
-        }
-
-        return $record->created_at->diffInDays(now()) <= 7 && $user?->managesZone(static::recordZoneId($record));
+        return auth()->user()?->can('edit_healthcare_interventions') ?? false;
     }
 
     public static function canDelete($record): bool
     {
-        if ($record?->isTreated()) {
-            return false;
-        }
-
-        return auth()->user()?->hasAnyRole(['admin', 'super_admin']) ?? false;
+        return auth()->user()?->can('delete_healthcare_interventions') ?? false;
     }
 
     protected static function recordZoneId($record): ?string

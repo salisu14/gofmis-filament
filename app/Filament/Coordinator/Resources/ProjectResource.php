@@ -45,30 +45,29 @@ class ProjectResource extends Resource
         return $record->zone_id;
     }
 
+    public static function canViewAny(): bool
+    {
+        return auth()->user()?->can('view_projects') ?? false;
+    }
+
     public static function canCreate(): bool
     {
-        $user = auth()->user();
+        return auth()->user()?->can('create_projects') ?? false;
+    }
 
-        return $user?->hasAnyRole(['admin', 'super_admin'])
-            || $user?->managesZone();
+    public static function canView($record): bool
+    {
+        return auth()->user()?->can('view_projects') ?? false;
     }
 
     public static function canEdit($record): bool
     {
-        $user = auth()->user();
-        if (! $user) {
-            return false;
-        }
-        if ($user->hasAnyRole(['admin', 'super_admin'])) {
-            return true;
-        }
-
-        return $user->managesZone($record->zone_id);
+        return auth()->user()?->can('edit_projects') ?? false;
     }
 
     public static function canDelete($record): bool
     {
-        return auth()->user()?->hasAnyRole(['admin', 'super_admin']) ?? false;
+        return auth()->user()?->can('delete_projects') ?? false;
     }
 
     public static function form(Schema $schema): Schema

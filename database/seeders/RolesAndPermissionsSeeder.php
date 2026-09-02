@@ -120,7 +120,7 @@ class RolesAndPermissionsSeeder extends Seeder
         ]);
 
         // --------------------------------------------------------------
-        // Coordinator: Field Staff (View/Create only, No Approvals)
+        // Coordinator: Field Staff (View/Create for approved scope only)
         // --------------------------------------------------------------
         $coordinator = Role::firstOrCreate(['name' => 'coordinator', 'guard_name' => $guard]);
         $coordinator->syncPermissions([
@@ -129,22 +129,9 @@ class RolesAndPermissionsSeeder extends Seeder
             'view_orphans', 'create_orphans', 'edit_orphans',
             'view_widows', 'create_widows', 'edit_widows',
 
-            // Zones & Projects
-            'view_zones',
-            'view_projects',
-
-            // Interventions (Requests)
-            'create_education_interventions',
-            'create_healthcare_interventions',
-            'create_welfare_interventions',
-
-            // Loans (Requests)
-            'create_loans', 'view_loans',
-            // Biometrics
-            'biometrics.view', 'biometrics.enroll',
-
-            // Reports
-            'view_reports',
+            // Interventions (Education Requests & Welfare Nominations only)
+            'view_education_interventions', 'create_education_interventions',
+            'view_welfare_interventions', 'create_welfare_interventions',
         ]);
 
         // --------------------------------------------------------------

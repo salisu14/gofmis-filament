@@ -5,14 +5,15 @@
 namespace App\Filament\Coordinator\Widgets;
 
 use App\Filament\Coordinator\Resources\DeceasedResource;
-use App\Filament\Coordinator\Resources\LoanRequestResource;
+use App\Filament\Coordinator\Resources\EducationRequestResource;
 use App\Filament\Coordinator\Resources\OrphanResource;
+use App\Filament\Coordinator\Resources\WelfareRequestResource;
 use App\Filament\Coordinator\Resources\WidowResource;
 use Filament\Widgets\Widget;
 
 class QuickActionsWidget extends Widget
 {
-    protected static ?int $sort = 3;
+    protected static ?int $sort = 2;
 
     protected int|string|array $columnSpan = 'full';
 
@@ -30,13 +31,6 @@ class QuickActionsWidget extends Widget
                     'url' => DeceasedResource::getUrl('create', panel: 'coordinator'),
                 ],
                 [
-                    'label' => 'Add Orphan',
-                    'description' => 'Register new orphan',
-                    'icon' => 'heroicon-m-users',
-                    'color' => 'info',
-                    'url' => OrphanResource::getUrl('create', panel: 'coordinator'),
-                ],
-                [
                     'label' => 'Add Widow',
                     'description' => 'Register new widow',
                     'icon' => 'heroicon-m-heart',
@@ -44,11 +38,25 @@ class QuickActionsWidget extends Widget
                     'url' => WidowResource::getUrl('create', panel: 'coordinator'),
                 ],
                 [
-                    'label' => 'Loan Request',
-                    'description' => 'Submit loan request',
-                    'icon' => 'heroicon-m-banknotes',
+                    'label' => 'Add Orphan',
+                    'description' => 'Register new orphan',
+                    'icon' => 'heroicon-m-users',
+                    'color' => 'info',
+                    'url' => OrphanResource::getUrl('create', panel: 'coordinator'),
+                ],
+                [
+                    'label' => 'Education Request',
+                    'description' => 'Submit education request',
+                    'icon' => 'heroicon-m-academic-cap',
+                    'color' => 'primary',
+                    'url' => EducationRequestResource::getUrl('create', panel: 'coordinator'),
+                ],
+                [
+                    'label' => 'Welfare Nomination',
+                    'description' => 'Submit welfare nomination',
+                    'icon' => 'heroicon-m-gift',
                     'color' => 'success',
-                    'url' => LoanRequestResource::getUrl('create', panel: 'coordinator'),
+                    'url' => WelfareRequestResource::getUrl('create', panel: 'coordinator'),
                 ],
             ],
         ];
