@@ -17,9 +17,11 @@ class WelfareBeneficiaryPolicy
 
     public function view(User $user, WelfareBeneficiary $beneficiary): bool
     {
+        $zoneId = $beneficiary->deceased()->withoutGlobalScopes()->value('zone_id');
+
         return $user->isDemoObserver() ||
             $user->hasAnyRole(['super_admin', 'admin']) ||
-            ($user->managesZone($beneficiary->deceased?->zone_id) && $beneficiary->suggested_by === $user->id);
+            ($zoneId && $user->managesZone($zoneId));
     }
 
     public function create(User $user): bool

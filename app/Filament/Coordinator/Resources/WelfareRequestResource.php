@@ -85,7 +85,7 @@ class WelfareRequestResource extends Resource
             return true;
         }
 
-        $zoneId = $record->deceased?->zone_id;
+        $zoneId = $record->deceased()->withoutGlobalScopes()->value('zone_id');
 
         if (! $zoneId) {
             return false;
@@ -101,7 +101,7 @@ class WelfareRequestResource extends Resource
             return true;
         }
 
-        $zoneId = $record->deceased?->zone_id;
+        $zoneId = $record->deceased()->withoutGlobalScopes()->value('zone_id');
 
         if (! $zoneId) {
             return false;
@@ -132,7 +132,10 @@ class WelfareRequestResource extends Resource
                             ->live()
                             ->rules([
                                 fn (Get $get, ?Model $record) => function (string $attribute, $value, \Closure $fail) use ($get, $record) {
-                                    if (! $value) {
+                                    if (is_array($value)) {
+                                        $value = reset($value);
+                                    }
+                                    if (! $value || ! is_string($value)) {
                                         return;
                                     }
                                     $package = WelfarePackage::find($value);
@@ -232,7 +235,10 @@ class WelfareRequestResource extends Resource
                             })
                             ->rules([
                                 fn (Get $get, ?Model $record) => function (string $attribute, $value, \Closure $fail) use ($get, $record) {
-                                    if (! $value) {
+                                    if (is_array($value)) {
+                                        $value = reset($value);
+                                    }
+                                    if (! $value || ! is_string($value)) {
                                         return;
                                     }
                                     $user = auth()->user();

@@ -65,10 +65,9 @@ class WelfareNominationService
                     continue;
                 }
 
-                // Check active nomination duplicates: (welfare_package_id, deceased_id) where status != REJECTED
+                // Check existing nomination duplicates for this package: (welfare_package_id, deceased_id)
                 $existingActiveNomination = WelfareBeneficiary::where('welfare_package_id', $package->id)
                     ->where('deceased_id', $deceased->id)
-                    ->where('status', '!=', BeneficiaryStatus::REJECTED->value)
                     ->exists();
 
                 if ($existingActiveNomination) {
