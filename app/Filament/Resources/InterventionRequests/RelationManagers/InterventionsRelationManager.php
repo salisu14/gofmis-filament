@@ -53,7 +53,7 @@ class InterventionsRelationManager extends RelationManager
                     ->relationship(
                         name: 'bankAccount',
                         titleAttribute: 'account_name',
-                        modifyQueryUsing: fn ($query) => $query->dedicatedTo(BankAccount::USAGE_INTERVENTION)
+                        modifyQueryUsing: fn ($query) => $query->dedicatedTo([BankAccount::USAGE_INTERVENTION, BankAccount::USAGE_GENERAL, BankAccount::USAGE_EDUCATION])
                     )
                     ->getOptionLabelFromRecordUsing(fn (BankAccount $record) => "{$record->account_name} ({$record->account_number})")
                     ->searchable()
@@ -73,6 +73,7 @@ class InterventionsRelationManager extends RelationManager
                 // ✅ NEW: Link delivery to the specific requested items
                 Repeater::make('delivered_items')
                     ->label('Items Delivered in this Batch')
+                    ->visible(fn (RelationManager $livewire) => $livewire->getOwnerRecord()->items()->count() > 0)
                     ->schema([
                         Select::make('intervention_request_item_id')
                             ->label('Requested Item')
@@ -161,7 +162,7 @@ class InterventionsRelationManager extends RelationManager
                     ->label('Record New Delivery')
                     ->icon('heroicon-m-truck')
                     ->modalWidth('3xl')
-                    ->visible(fn (): bool => $this->getOwnerRecord()->status === 'approved')
+                    ->visible(fn (): bool => in_array($this->getOwnerRecord()->status, ['approved', 'partially_fulfilled'], true))
                     ->mutateDataUsing(function (array $data): array {
                         $data['intervention_type_id'] = $this->getOwnerRecord()->intervention_type_id;
                         $data['status'] = 'completed';
@@ -177,10 +178,39 @@ class InterventionsRelationManager extends RelationManager
                         // ✅ Wrap the entire transaction in a try-catch block
                         try {
                             return DB::transaction(function () use ($data): Intervention {
+                                // 0. Server-side guard: Lock parent request and verify status & remaining limits
+                                $parentRequest = \App\Models\InterventionRequest::lockForUpdate()->findOrFail($this->getOwnerRecord()->id);
+
+                                if ($parentRequest->status === 'fulfilled') {
+                                    throw \Illuminate\Validation\ValidationException::withMessages([
+                                        'amount' => 'This request has already been fully fulfilled and cannot receive further disbursements.',
+                                    ]);
+                                }
+
+                                if (! in_array($parentRequest->status, ['approved', 'partially_fulfilled'], true)) {
+                                    throw \Illuminate\Validation\ValidationException::withMessages([
+                                        'amount' => 'Only approved or partially fulfilled requests can receive disbursements.',
+                                    ]);
+                                }
+
+                                $disbursementAmount = (float) ($data['amount'] ?? 0);
+
+                                if ($parentRequest->items()->count() === 0) {
+                                    $totalDisbursed = (float) $parentRequest->interventions()->sum('amount');
+                                    $requestedAmount = (float) $parentRequest->requested_amount;
+
+                                    if ($requestedAmount > 0 && ($totalDisbursed + $disbursementAmount) > $requestedAmount) {
+                                        $remaining = max(0, $requestedAmount - $totalDisbursed);
+                                        throw \Illuminate\Validation\ValidationException::withMessages([
+                                            'amount' => 'The disbursement amount (₦'.number_format($disbursementAmount, 2).') exceeds the remaining unfulfilled amount (₦'.number_format($remaining, 2).').',
+                                        ]);
+                                    }
+                                }
+
                                 // 1. Debit the Bank Account (This throws InsufficientBankBalanceException if funds are low)
                                 $bankAccount = BankAccount::lockForUpdate()->findOrFail($data['bank_account_id']);
-                                $bankAccount->ensureDedicatedTo(BankAccount::USAGE_INTERVENTION, 'interventions');
-                                $bankAccount->debit((float) $data['amount']);
+                                $bankAccount->ensureDedicatedTo([BankAccount::USAGE_INTERVENTION, BankAccount::USAGE_GENERAL, BankAccount::USAGE_EDUCATION], 'interventions');
+                                $bankAccount->debit($disbursementAmount);
 
                                 // 2. Extract Repeater Data before creating Intervention
                                 $deliveredItems = Arr::pull($data, 'delivered_items', []);

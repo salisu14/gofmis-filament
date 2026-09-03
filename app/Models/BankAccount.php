@@ -61,7 +61,7 @@ class BankAccount extends Model
     protected static function booted(): void
     {
         static::creating(function ($account) {
-            if (is_null($account->parent_bank_account_id)) {
+            if (is_null($account->parent_bank_account_id) && empty($account->usage)) {
                 $account->usage = self::USAGE_GENERAL;
             }
 
@@ -78,7 +78,9 @@ class BankAccount extends Model
 
         static::saving(function ($account) {
             if (is_null($account->parent_bank_account_id)) {
-                $account->usage = self::USAGE_GENERAL;
+                if (empty($account->usage)) {
+                    $account->usage = self::USAGE_GENERAL;
+                }
 
                 return;
             }

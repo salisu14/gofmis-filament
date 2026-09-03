@@ -88,21 +88,27 @@ class EducationRequestResource extends Resource
             return true;
         }
 
-        return $user->managesZone($record->orphan?->deceased?->zone_id);
+        $recordZoneId = $record->orphan()->withoutGlobalScopes()->first()?->deceased()->withoutGlobalScopes()->value('zone_id');
+
+        return $recordZoneId && $user->managesZone($recordZoneId);
     }
 
     public static function canEdit($record): bool
     {
         $user = auth()->user();
-        if ($user?->hasAnyRole(['admin', 'super_admin'])) {
+        if (! $user) {
+            return false;
+        }
+
+        if ($user->hasAnyRole(['admin', 'super_admin'])) {
             return true;
         }
 
-        // ✅ FIXED: Use coordinatedZone for zone comparison
-        $zoneId = $user?->coordinatedZone?->id;
+        $recordZoneId = $record->orphan()->withoutGlobalScopes()->first()?->deceased()->withoutGlobalScopes()->value('zone_id');
 
-        return $record->status === 'pending' &&
-            $user?->managesZone($record->orphan?->deceased?->zone_id);
+        return $record->status === 'pending'
+            && $recordZoneId
+            && $user->managesZone($recordZoneId);
     }
 
     public static function canDelete($record): bool
@@ -113,7 +119,6 @@ class EducationRequestResource extends Resource
     public static function form(Schema $schema): Schema
     {
         $user = auth()->user();
-        // ✅ FIXED: Use coordinatedZone instead of zone_id
         $zoneId = $user?->coordinatedZone?->id;
 
         return $schema
@@ -148,6 +153,58 @@ class EducationRequestResource extends Resource
                             )
                             ->searchable()
                             ->required()
+                            ->rules([
+                                fn (\Filament\Schemas\Components\Utilities\Get $get, ?\Illuminate\Database\Eloquent\Model $record) => function (string $attribute, $value, \Closure $fail) use ($get, $record) {
+                                    if (is_array($value)) {
+                                        $value = reset($value);
+                                    }
+                                    if (! $value || ! is_string($value)) {
+                                        return;
+                                    }
+
+                                    $user = auth()->user();
+                                    $isAdmin = $user?->hasAnyRole(['admin', 'super_admin']);
+                                    $userZoneId = $user?->coordinatedZone?->id;
+
+                                    $orphan = Orphan::with(['deceased' => fn ($q) => $q->withoutGlobalScopes()])->find($value);
+                                    if (! $orphan) {
+                                        $fail('The selected orphan is invalid.');
+
+                                        return;
+                                    }
+
+                                    if (! $orphan->is_eligible || ! $orphan->isOperationalBeneficiary()) {
+                                        $fail('The selected orphan is archived or ineligible for education support.');
+
+                                        return;
+                                    }
+
+                                    if (! $isAdmin) {
+                                        if (! $userZoneId || $orphan->deceased?->zone_id !== $userZoneId) {
+                                            $fail('The selected orphan belongs to a different zone.');
+
+                                            return;
+                                        }
+                                    }
+
+                                    $typeId = $get('intervention_type_id');
+                                    if (is_array($typeId)) {
+                                        $typeId = reset($typeId);
+                                    }
+
+                                    if ($typeId && is_string($typeId)) {
+                                        $existingActive = InterventionRequest::where('orphan_id', $value)
+                                            ->where('intervention_type_id', $typeId)
+                                            ->whereIn('status', ['pending', 'under_review'])
+                                            ->when($record, fn ($q) => $q->where('id', '!=', $record->id))
+                                            ->exists();
+
+                                        if ($existingActive) {
+                                            $fail('An active education request for this support type already exists for this orphan.');
+                                        }
+                                    }
+                                },
+                            ])
                             ->helperText('Search and select an eligible orphan in your zone.'),
 
                         Placeholder::make('current_education_summary')
@@ -259,6 +316,7 @@ class EducationRequestResource extends Resource
                         TextInput::make('requested_amount')
                             ->label('Requested Amount (₦)')
                             ->numeric()
+                            ->minValue(0.01)
                             ->prefix('₦')
                             ->placeholder('If fee support requested'),
                     ]),
