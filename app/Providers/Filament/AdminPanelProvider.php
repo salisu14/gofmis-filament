@@ -55,6 +55,7 @@ class AdminPanelProvider extends PanelProvider
                 Dashboard::class,
                 \App\Filament\Pages\Reports\PrescriptionReport::class,
                 \App\Filament\Pages\StockAvailability::class,
+                \App\Filament\Pages\ConsolidatedFinancialReport::class,
             ])
             ->authGuard('web')
             ->resources([
@@ -81,22 +82,41 @@ class AdminPanelProvider extends PanelProvider
                             ->isActiveWhen(fn () => request()->is('admin')),
                     ]);
 
-                // Finance (admin + super-admin)
-                if ($user?->can('view_finances')) {
-                    $builder = $builder->group(
-                        NavigationGroup::make('Finance')
-                            ->items([
-                                NavigationItem::make('Bank Accounts')
-                                    ->icon('heroicon-o-document-currency-dollar')
-                                    ->url('/admin/bank-accounts')
-                                    ->isActiveWhen(fn () => request()->is('admin/bank-accounts*')),
+                // Finance (admin + super-admin + report access)
+                $hasFinanceGroupAccess = $user?->can('view_finances')
+                    || $user?->can('finance.consolidated_report.view')
+                    || $user?->isAdmin()
+                    || $user?->isSuperAdmin()
+                    || $user?->isDemoObserver();
 
-                                NavigationItem::make('Transactions')
-                                    ->icon('heroicon-o-document-text')
-                                    ->url('/admin/transactions')
-                                    ->isActiveWhen(fn () => request()->is('admin/transactions*')),
-                            ])
-                    );
+                if ($hasFinanceGroupAccess) {
+                    $financeItems = [];
+
+                    if ($user?->can('view_finances') || $user?->isAdmin() || $user?->isSuperAdmin()) {
+                        $financeItems[] = NavigationItem::make('Bank Accounts')
+                            ->icon('heroicon-o-document-currency-dollar')
+                            ->url('/admin/bank-accounts')
+                            ->isActiveWhen(fn () => request()->is('admin/bank-accounts*'));
+
+                        $financeItems[] = NavigationItem::make('Transactions')
+                            ->icon('heroicon-o-document-text')
+                            ->url('/admin/transactions')
+                            ->isActiveWhen(fn () => request()->is('admin/transactions*'));
+                    }
+
+                    if (\App\Filament\Pages\ConsolidatedFinancialReport::canAccess()) {
+                        $financeItems[] = NavigationItem::make('Consolidated Financial Report')
+                            ->icon('heroicon-o-document-chart-bar')
+                            ->url('/admin/consolidated-financial-report')
+                            ->isActiveWhen(fn () => request()->is('admin/consolidated-financial-report*'));
+                    }
+
+                    if (! empty($financeItems)) {
+                        $builder = $builder->group(
+                            NavigationGroup::make('Finance')
+                                ->items($financeItems)
+                        );
+                    }
                 }
 
                 // Beneficiary Registration Module (admin + super-admin)

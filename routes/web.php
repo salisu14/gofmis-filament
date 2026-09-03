@@ -132,6 +132,11 @@ Route::get('/admin/reports/prescription-report/pdf', [\App\Http\Controllers\Pres
     ->name('reports.prescription-report.pdf')
     ->middleware('auth');
 
+// Consolidated Financial Report PDF Export Route
+Route::get('/admin/consolidated-financial-report/pdf', [\App\Http\Controllers\ConsolidatedFinancialReportController::class, 'exportPdf'])
+    ->name('reports.consolidated-financial-report.pdf')
+    ->middleware('auth');
+
 Route::middleware(['auth'])->group(function () {
     Route::get('/mfa/challenge', \App\Livewire\Mfa\MfaChallenge::class)->name('mfa.challenge');
     Route::get('/mfa/enroll', \App\Livewire\Mfa\MfaEnroll::class)->name('mfa.enroll');

@@ -61,6 +61,7 @@ class RolesAndPermissionsSeeder extends Seeder
 
             // --- Reports ---
             'view_reports', 'export_reports',
+            'finance.consolidated_report.view', 'finance.consolidated_report.export',
         ];
 
         // Create permissions
@@ -117,6 +118,7 @@ class RolesAndPermissionsSeeder extends Seeder
 
             // Reports
             'view_reports', 'export_reports',
+            'finance.consolidated_report.view', 'finance.consolidated_report.export',
         ]);
 
         // --------------------------------------------------------------
