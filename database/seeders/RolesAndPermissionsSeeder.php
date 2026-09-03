@@ -150,8 +150,8 @@ class RolesAndPermissionsSeeder extends Seeder
         // --------------------------------------------------------------
         $financeCustodian = Role::firstOrCreate(['name' => 'finance-custodian', 'guard_name' => $guard]);
         $financeCustodian->syncPermissions([
-            // Imprest
-            'imprest_view_transactions', 'imprest_create_transactions', 'imprest_edit_transactions',
+            // Imprest (Read-only for historical reference)
+            'imprest_view_transactions',
             'imprest_view_funds',
 
             // Loans
@@ -165,7 +165,7 @@ class RolesAndPermissionsSeeder extends Seeder
         $auditor = Role::firstOrCreate(['name' => 'auditor', 'guard_name' => $guard]);
         $auditor->syncPermissions([
             'view_projects',
-            'imprest_view_transactions', 'imprest_view_funds', 'imprest_reconcile_funds',
+            'imprest_view_transactions', 'imprest_view_funds',
             'view_loans', 'view_repayments',
             'view_reports', 'export_reports',
         ]);
