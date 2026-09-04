@@ -137,6 +137,11 @@ Route::get('/admin/consolidated-financial-report/pdf', [\App\Http\Controllers\Co
     ->name('reports.consolidated-financial-report.pdf')
     ->middleware('auth');
 
+// Out of Pocket Expenditure Receipt Download Route
+Route::get('/admin/out-of-pocket-expenditures/{record}/receipt', \App\Http\Controllers\OutOfPocketReceiptDownloadController::class)
+    ->name('out-of-pocket.receipt.download')
+    ->middleware('auth');
+
 Route::middleware(['auth'])->group(function () {
     Route::get('/mfa/challenge', \App\Livewire\Mfa\MfaChallenge::class)->name('mfa.challenge');
     Route::get('/mfa/enroll', \App\Livewire\Mfa\MfaEnroll::class)->name('mfa.enroll');

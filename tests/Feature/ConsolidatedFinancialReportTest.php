@@ -82,11 +82,11 @@ class ConsolidatedFinancialReportTest extends TestCase
             'account_number' => '5006007008',
             'bank_name' => 'Zenith Bank',
             'currency' => 'NGN',
-            'opening_balance' => 500000,
-            'ledger_balance' => 500000,
-            'usage' => 'general',
+            'parent_bank_account_id' => $this->bankAccount->id,
+            'usage' => BankAccount::USAGE_OTHER,
             'status' => 'active',
         ]);
+        $this->destBankAccount->update(['ledger_balance' => 500000]);
     }
 
     public function test_1_admin_can_access_consolidated_financial_report_page(): void

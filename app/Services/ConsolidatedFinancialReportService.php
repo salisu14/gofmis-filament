@@ -22,17 +22,20 @@ class ConsolidatedFinancialReportService
 
     public const CLASSIFICATION_HISTORICAL_DEPRECATED = 'F. HISTORICAL / DEPRECATED';
 
+    public const CLASSIFICATION_OUT_OF_POCKET = 'G. OUT OF POCKET EXPENDITURE';
+
     /**
      * Map transaction type to classification
      */
     public static function classifyType(string $type, bool $isInternalTransfer = false): string
     {
-        if ($isInternalTransfer || $type === 'transfer') {
+        if ($isInternalTransfer || $type === 'transfer' || $type === 'out_of_pocket_reimbursement') {
             return self::CLASSIFICATION_FUNDING_TRANSFER;
         }
 
         return match ($type) {
             'intervention', 'education_fee_payment', 'withdrawal', 'debit', 'project_expense' => self::CLASSIFICATION_EXPENDITURE,
+            'out_of_pocket_expenditure' => self::CLASSIFICATION_OUT_OF_POCKET,
             'deposit', 'credit', 'loan_repayment' => self::CLASSIFICATION_INCOME_RECEIPT,
             'loan_disbursement' => self::CLASSIFICATION_LOAN_MOVEMENT,
             'imprest_funding', 'imprest_replenishment' => self::CLASSIFICATION_FUNDING_TRANSFER,
@@ -108,6 +111,7 @@ class ConsolidatedFinancialReportService
                 'education_fee_payment',
                 'withdrawal',
                 'debit',
+                'out_of_pocket_reimbursement',
             ]);
         }
 
@@ -123,6 +127,9 @@ class ConsolidatedFinancialReportService
             case self::CLASSIFICATION_EXPENDITURE:
                 $query->whereIn('type', ['intervention', 'education_fee_payment', 'withdrawal', 'debit']);
                 break;
+            case self::CLASSIFICATION_OUT_OF_POCKET:
+                $query->whereIn('type', ['out_of_pocket_reimbursement']);
+                break;
             case self::CLASSIFICATION_INCOME_RECEIPT:
                 $query->whereIn('type', ['deposit', 'credit', 'loan_repayment']);
                 break;
@@ -130,7 +137,7 @@ class ConsolidatedFinancialReportService
                 $query->whereIn('type', ['loan_disbursement']);
                 break;
             case self::CLASSIFICATION_FUNDING_TRANSFER:
-                $query->whereIn('type', ['transfer', 'imprest_funding', 'imprest_replenishment']);
+                $query->whereIn('type', ['transfer', 'imprest_funding', 'imprest_replenishment', 'out_of_pocket_reimbursement']);
                 break;
             case self::CLASSIFICATION_HISTORICAL_DEPRECATED:
                 $query->whereIn('type', [
@@ -162,6 +169,22 @@ class ConsolidatedFinancialReportService
         $educationExp = (float) ($typeTotals['education_fee_payment'] ?? 0);
         $withdrawalExp = (float) ($typeTotals['withdrawal'] ?? 0) + (float) ($typeTotals['debit'] ?? 0);
 
+        // Out of Pocket Expenditures (from out_of_pocket_expenditures table where approved)
+        $oopQuery = \App\Models\OutOfPocketExpenditure::query()->where('approval_status', 'approved');
+        if (! empty($filters['date_from'])) {
+            $oopQuery->whereDate('expenditure_date', '>=', $filters['date_from']);
+        }
+        if (! empty($filters['date_to'])) {
+            $oopQuery->whereDate('expenditure_date', '<=', $filters['date_to']);
+        }
+        if (isset($filters['amount_min']) && $filters['amount_min'] !== '') {
+            $oopQuery->where('amount', '>=', (float) $filters['amount_min']);
+        }
+        if (isset($filters['amount_max']) && $filters['amount_max'] !== '') {
+            $oopQuery->where('amount', '<=', (float) $filters['amount_max']);
+        }
+        $outOfPocketExp = (float) $oopQuery->sum('amount');
+
         // Project Expenses (from project_expenses table)
         $projectExpQuery = ProjectExpense::query();
         if (! empty($filters['date_from'])) {
@@ -178,7 +201,7 @@ class ConsolidatedFinancialReportService
         }
         $projectExp = (float) $projectExpQuery->sum('amount');
 
-        $totalExpenditure = $interventionExp + $educationExp + $withdrawalExp + $projectExp;
+        $totalExpenditure = $interventionExp + $educationExp + $withdrawalExp + $projectExp + $outOfPocketExp;
 
         $incomeReceipts = (float) ($typeTotals['deposit'] ?? 0)
             + (float) ($typeTotals['credit'] ?? 0)
@@ -204,6 +227,7 @@ class ConsolidatedFinancialReportService
             'project_expenditure' => $projectExp,
             'education_expenditure' => $educationExp,
             'intervention_expenditure' => $interventionExp,
+            'out_of_pocket_expenditure' => $outOfPocketExp,
             'historical_imprest_expenditure' => $historicalImprestExp,
             'non_cash_welfare_count' => $welfareCount,
             'net_cash_movement' => $netCashMovement,

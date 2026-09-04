@@ -84,6 +84,10 @@
         </tr>
         <tr>
             <td>
+                <div class="lbl">Out of Pocket Exp.</div>
+                <div class="num" style="color: #D97706;">NGN {{ number_format($kpis['out_of_pocket_expenditure'] ?? 0, 2) }}</div>
+            </td>
+            <td>
                 <div class="lbl">Historical Imprest (Legacy)</div>
                 <div class="num" style="color: #6B7280;">NGN {{ number_format($kpis['historical_imprest_expenditure'], 2) }}</div>
             </td>

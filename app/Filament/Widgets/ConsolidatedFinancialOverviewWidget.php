@@ -62,6 +62,11 @@ class ConsolidatedFinancialOverviewWidget extends BaseWidget
                 ->descriptionIcon('heroicon-m-heart')
                 ->color('teal'),
 
+            Stat::make('Out of Pocket Exp.', 'NGN '.number_format((float) ($kpis['out_of_pocket_expenditure'] ?? 0), 2))
+                ->description('Approved out-of-pocket spending')
+                ->descriptionIcon('heroicon-m-receipt-percent')
+                ->color('amber'),
+
             Stat::make('Historical Imprest', 'NGN '.number_format((float) ($kpis['historical_imprest_expenditure'] ?? 0), 2))
                 ->description('Legacy/deprecated imprest expenditure')
                 ->descriptionIcon('heroicon-m-archive-box')

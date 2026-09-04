@@ -279,7 +279,7 @@ class User extends Authenticatable implements FilamentUser, HasAppAuthentication
             return false;
         }
         $panelRoles = [
-            'admin' => ['super_admin', 'admin', 'demo_observer'],
+            'admin' => ['super_admin', 'admin', 'auditor', 'demo_observer'],
             'coordinator' => ['super_admin', 'admin', 'coordinator'],
         ];
         $allowedRoles = $panelRoles[$panel->getId()] ?? ['super_admin', 'admin', 'demo_observer'];

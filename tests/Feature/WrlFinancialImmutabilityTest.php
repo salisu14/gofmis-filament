@@ -50,10 +50,11 @@ beforeEach(function () {
     $repaymentBank = BankAccount::create([
         'account_name' => 'Repay Account',
         'account_number' => '1234567891',
-        'opening_balance' => 500000.00,
-        'ledger_balance' => 500000.00,
+        'parent_bank_account_id' => $disbursementBank->id,
+        'usage' => BankAccount::USAGE_WIDOW_LOAN_REPAYMENT,
         'user_id' => $this->superAdmin->id,
     ]);
+    $repaymentBank->update(['ledger_balance' => 500000.00]);
 
     $this->loan = WidowLoan::create([
         'widow_id' => $this->widow->id,

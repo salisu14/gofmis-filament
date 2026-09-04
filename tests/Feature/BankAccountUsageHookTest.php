@@ -72,17 +72,14 @@ class BankAccountUsageHookTest extends TestCase
             'usage' => BankAccount::USAGE_GENERAL,
         ]);
 
-        try {
-            BankAccount::create([
-                'account_name' => 'Invalid Child',
-                'account_number' => '1000000002',
-                'user_id' => $this->user->id,
-                'parent_bank_account_id' => $parent->id,
-                'usage' => BankAccount::USAGE_GENERAL,
-            ]);
-            $this->fail('Expected ValidationException was not thrown');
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            $this->assertArrayHasKey('usage', $e->errors());
-        }
+        $child = BankAccount::create([
+            'account_name' => 'Valid Child',
+            'account_number' => '1000000002',
+            'user_id' => $this->user->id,
+            'parent_bank_account_id' => $parent->id,
+            'usage' => BankAccount::USAGE_GENERAL,
+        ]);
+
+        $this->assertEquals(BankAccount::USAGE_GENERAL, $child->usage);
     }
 }

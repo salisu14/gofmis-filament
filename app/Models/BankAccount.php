@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Exceptions\InsufficientBankBalanceException;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -27,6 +28,8 @@ class BankAccount extends Model
     public const USAGE_EDUCATION = 'education';
 
     public const USAGE_EDUCATION_BENEVOLENT = 'education_benevolent';
+
+    public const USAGE_OUT_OF_POCKET_EXPENSE = 'out_of_pocket_expense';
 
     public const USAGE_OTHER = 'other';
 
@@ -61,6 +64,7 @@ class BankAccount extends Model
     protected static function booted(): void
     {
         static::creating(function ($account) {
+
             if (is_null($account->parent_bank_account_id) && empty($account->usage)) {
                 $account->usage = self::USAGE_GENERAL;
             }
@@ -77,18 +81,39 @@ class BankAccount extends Model
         });
 
         static::saving(function ($account) {
-            if (is_null($account->parent_bank_account_id)) {
-                if (empty($account->usage)) {
-                    $account->usage = self::USAGE_GENERAL;
-                }
-
-                return;
+            if (empty($account->usage)) {
+                $account->usage = self::USAGE_GENERAL;
             }
 
-            if (($account->usage ?: self::USAGE_GENERAL) === self::USAGE_GENERAL) {
-                throw ValidationException::withMessages([
-                    'usage' => 'Child accounts must be assigned a dedicated usage.',
-                ]);
+            // Block dedicated (non-general) accounts from being root-level, but only once a
+            // canonical Main Account exists. This allows legacy/migration setups to still work
+            // on a fresh database while enforcing the invariant on an operational system.
+            if (is_null($account->parent_bank_account_id) && $account->usage !== self::USAGE_GENERAL) {
+                $mainExists = self::whereNull('parent_bank_account_id')
+                    ->where('usage', self::USAGE_GENERAL)
+                    ->exists();
+
+                if ($mainExists) {
+                    throw ValidationException::withMessages([
+                        'parent_bank_account_id' => 'Dedicated accounts must be sub-accounts of the Main Treasury Account.',
+                    ]);
+                }
+            }
+
+            // Check for Main Account invariant
+            if (is_null($account->parent_bank_account_id) && $account->usage === self::USAGE_GENERAL) {
+                $existingMainQuery = self::whereNull('parent_bank_account_id')
+                    ->where('usage', self::USAGE_GENERAL);
+
+                if ($account->exists) {
+                    $existingMainQuery->where('id', '!=', $account->id);
+                }
+
+                if ($existingMainQuery->exists()) {
+                    throw ValidationException::withMessages([
+                        'parent_bank_account_id' => 'Only one central Main Account is permitted.',
+                    ]);
+                }
             }
         });
     }
@@ -103,6 +128,7 @@ class BankAccount extends Model
             self::USAGE_IMPREST => 'Imprest',
             self::USAGE_EDUCATION => 'Education Fees',
             self::USAGE_EDUCATION_BENEVOLENT => 'Education / Benevolent Sponsors',
+            self::USAGE_OUT_OF_POCKET_EXPENSE => 'Out of Pocket Expense',
             self::USAGE_OTHER => 'Other Dedicated Use',
         ];
     }
@@ -131,6 +157,11 @@ class BankAccount extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function hasTransactions(): bool
+    {
+        return $this->transactions()->exists();
     }
 
     public function transactions(): HasMany
@@ -241,6 +272,25 @@ class BankAccount extends Model
         return $this->belongsTo(BankAccount::class, 'parent_bank_account_id');
     }
 
+    public function isMainAccount(): bool
+    {
+        return is_null($this->parent_bank_account_id) && $this->usage === self::USAGE_GENERAL;
+    }
+
+    public static function getEligibleForOutOfPocketReimbursement(float $amount = 0): Collection
+    {
+        return self::where('usage', self::USAGE_OUT_OF_POCKET_EXPENSE)
+            ->get()
+            ->filter(fn (self $account) => $account->canFundOutOfPocketReimbursement($amount))
+            ->values();
+    }
+
+    public function canFundOutOfPocketReimbursement(float $amount): bool
+    {
+        return $this->usage === self::USAGE_OUT_OF_POCKET_EXPENSE
+            && $this->hasSufficientFunds($amount);
+    }
+
     public function children(): HasMany
     {
         return $this->hasMany(BankAccount::class, 'parent_bank_account_id');
@@ -251,14 +301,9 @@ class BankAccount extends Model
         return ! is_null($this->parent_bank_account_id);
     }
 
-    public function isMainAccount(): bool
-    {
-        return is_null($this->parent_bank_account_id) && $this->children()->exists();
-    }
-
     public function canPerformManualBankMovement(): bool
     {
-        return ! $this->isSubAccount();
+        return $this->isMainAccount();
     }
 
     public function isDedicatedTo(string|array $usage): bool

@@ -62,6 +62,11 @@ class RolesAndPermissionsSeeder extends Seeder
             // --- Reports ---
             'view_reports', 'export_reports',
             'finance.consolidated_report.view', 'finance.consolidated_report.export',
+
+            // --- Out of Pocket Expenditure ---
+            'out_of_pocket_expenditure.view', 'out_of_pocket_expenditure.create', 'out_of_pocket_expenditure.edit',
+            'out_of_pocket_expenditure.submit', 'out_of_pocket_expenditure.approve', 'out_of_pocket_expenditure.reject',
+            'out_of_pocket_expenditure.reimburse', 'out_of_pocket_expenditure.export',
         ];
 
         // Create permissions
@@ -119,6 +124,11 @@ class RolesAndPermissionsSeeder extends Seeder
             // Reports
             'view_reports', 'export_reports',
             'finance.consolidated_report.view', 'finance.consolidated_report.export',
+
+            // Out of Pocket Expenditure
+            'out_of_pocket_expenditure.view', 'out_of_pocket_expenditure.create', 'out_of_pocket_expenditure.edit',
+            'out_of_pocket_expenditure.submit', 'out_of_pocket_expenditure.approve', 'out_of_pocket_expenditure.reject',
+            'out_of_pocket_expenditure.reimburse', 'out_of_pocket_expenditure.export',
         ]);
 
         // --------------------------------------------------------------
@@ -170,6 +180,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'imprest_view_transactions', 'imprest_view_funds',
             'view_loans', 'view_repayments',
             'view_reports', 'export_reports',
+            'out_of_pocket_expenditure.view', 'out_of_pocket_expenditure.export',
         ]);
 
         // --------------------------------------------------------------

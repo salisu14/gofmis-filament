@@ -104,6 +104,13 @@ class AdminPanelProvider extends PanelProvider
                             ->isActiveWhen(fn () => request()->is('admin/transactions*'));
                     }
 
+                    if (\App\Filament\Resources\OutOfPocketExpenditures\OutOfPocketExpenditureResource::canAccess()) {
+                        $financeItems[] = NavigationItem::make('Out of Pocket Expenditures')
+                            ->icon('heroicon-o-receipt-percent')
+                            ->url('/admin/out-of-pocket-expenditures')
+                            ->isActiveWhen(fn () => request()->is('admin/out-of-pocket-expenditures*'));
+                    }
+
                     if (\App\Filament\Pages\ConsolidatedFinancialReport::canAccess()) {
                         $financeItems[] = NavigationItem::make('Consolidated Financial Report')
                             ->icon('heroicon-o-document-chart-bar')
