@@ -287,6 +287,28 @@ class User extends Authenticatable implements FilamentUser, HasAppAuthentication
         return $this->hasAnyRole($allowedRoles);
     }
 
+    public function getDashboardUrl(): string
+    {
+        $panels = \Filament\Facades\Filament::getPanels();
+
+        $panelRoles = [
+            'admin' => ['super_admin', 'admin', 'auditor', 'demo_observer'],
+            'coordinator' => ['super_admin', 'admin', 'coordinator'],
+        ];
+
+        // Prefer admin if accessible
+        if (isset($panels['admin']) && $this->hasAnyRole($panelRoles['admin'])) {
+            return $panels['admin']->getUrl();
+        }
+
+        // Prefer coordinator if accessible
+        if (isset($panels['coordinator']) && $this->hasAnyRole($panelRoles['coordinator'])) {
+            return $panels['coordinator']->getUrl();
+        }
+
+        return url('/');
+    }
+
     public function twoFactorAuthEnabled(): bool
     {
         return ! empty($this->app_authentication_secret) && ! empty($this->mfa_confirmed_at);
