@@ -23,6 +23,13 @@ class ListWidowLoans extends ListRecords
         ];
     }
 
+    protected function getHeaderWidgets(): array
+    {
+        return [
+            \App\Filament\Widgets\WidowLoanPortfolioOverviewWidget::class,
+        ];
+    }
+
     public function getTabs(): array
     {
         return [
