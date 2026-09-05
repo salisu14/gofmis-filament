@@ -17,8 +17,8 @@ class ImprestReconciliationService implements ImprestReconciliationServiceInterf
 {
     public function __construct(
         private ImprestReconciliationRepositoryInterface $reconciliationRepo,
-        private ImprestTransactionRepositoryInterface    $transactionRepo,
-        private ImprestFundRepositoryInterface           $fundRepo,
+        private ImprestTransactionRepositoryInterface $transactionRepo,
+        private ImprestFundRepositoryInterface $fundRepo,
     ) {}
 
     public function reconcile(ReconcileFundDto $dto): ImprestReconciliation
@@ -26,7 +26,7 @@ class ImprestReconciliationService implements ImprestReconciliationServiceInterf
         return DB::transaction(function () use ($dto) {
             $fund = $this->fundRepo->findById($dto->fundId);
 
-            if (!$fund) {
+            if (! $fund) {
                 throw new \RuntimeException('Fund not found');
             }
 
@@ -69,7 +69,7 @@ class ImprestReconciliationService implements ImprestReconciliationServiceInterf
     {
         $reconciliation = $this->reconciliationRepo->findById($reconciliationId);
 
-        if (!$reconciliation) {
+        if (! $reconciliation) {
             throw new \RuntimeException('Reconciliation not found');
         }
 

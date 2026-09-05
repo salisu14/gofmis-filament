@@ -1,4 +1,5 @@
 <?php
+
 // app/Models/Activity.php
 
 namespace App\Models;
@@ -13,8 +14,11 @@ class Activity extends Model implements ActivityContract
     use HasUuids;
 
     protected $table = 'activities';
+
     protected $primaryKey = 'id';
+
     protected $keyType = 'string';
+
     public $incrementing = false;
 
     protected $fillable = [
@@ -50,7 +54,7 @@ class Activity extends Model implements ActivityContract
 
     public function changes(): \Illuminate\Support\Collection
     {
-        if (!$this->properties instanceof \Illuminate\Support\Collection) {
+        if (! $this->properties instanceof \Illuminate\Support\Collection) {
             return collect();
         }
 

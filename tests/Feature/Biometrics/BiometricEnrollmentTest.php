@@ -7,7 +7,6 @@ use App\Models\Orphan;
 use App\Models\User;
 use App\Models\Widow;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
@@ -177,8 +176,8 @@ class BiometricEnrollmentTest extends TestCase
         $raw = DB::table('beneficiary_fingerprints')->where('id', $print->id)->first();
 
         $this->assertNotEquals('my_secret_template_data', $raw->encrypted_template);
-        $this->assertStringContainsString('eyJ', $raw->encrypted_template);
-        $this->assertEquals('my_secret_template_data', Crypt::decryptString($raw->encrypted_template));
+        $this->assertStringStartsWith('biometric:v', $raw->encrypted_template);
+        $this->assertEquals('my_secret_template_data', app(\App\Services\Biometrics\BiometricTemplateCipher::class)->decrypt($raw->encrypted_template));
     }
 
     public function test_template_is_not_exposed_through_model_serialization()

@@ -18,9 +18,9 @@ class RegisterUserData extends Data
     public static function rules(): array
     {
         return [
-            'name' => ['required','string'],
-            'email' => ['required','email','unique:users,email'],
-            'password' => ['required','confirmed',Password::defaults()],
+            'name' => ['required', 'string'],
+            'email' => ['required', 'email', 'unique:users,email'],
+            'password' => ['required', 'confirmed', Password::defaults()],
         ];
     }
 }

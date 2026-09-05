@@ -2,9 +2,9 @@
 
 namespace App\Data\Medicals;
 
-use Spatie\LaravelData\Attributes\Validation\Required;
 use Spatie\LaravelData\Attributes\Validation\Date;
 use Spatie\LaravelData\Attributes\Validation\Numeric;
+use Spatie\LaravelData\Attributes\Validation\Required;
 use Spatie\LaravelData\Attributes\Validation\StringType;
 use Spatie\LaravelData\Data;
 
@@ -24,10 +24,10 @@ class PrescriptionData extends Data
         public string $prescription_date,
 
         #[Numeric]
-        public float $lab_test_cost = 0,
+        public float $lab_test_cost,
 
         #[Numeric]
-        public float $drug_cost = 0,
+        public float $drug_cost,
 
         public ?string $doctor_name,
         public ?string $note,

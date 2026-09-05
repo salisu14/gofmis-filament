@@ -3,28 +3,28 @@
 namespace App\Data\Orphan;
 
 use App\Enums\Gender;
-use Illuminate\Http\UploadedFile;
 use Spatie\LaravelData\Data;
 
 class OrphanData extends Data
 {
     public function __construct(
         // Core
-        public string       $deceasedId,
-        public string       $firstName,
-        public string       $lastName,
-        public ?string      $middleName,
-        public  Gender|string $gender,
-        public string       $birthDate,
+        public string $deceasedId,
+        public string $firstName,
+        public string $lastName,
+        public ?string $middleName,
+        public Gender|string $gender,
+        public string $birthDate,
         public ?string $picture = null,
 
         // Optional
-        public ?string      $nin = null,
-        public ?string      $guardianName = null,
-        public ?string      $guardianPhone = null,
-        public ?string      $address = null,
-        public bool         $hasBirthCert = false,
-        public ?string      $birthCertificatePath = null,
+        public ?string $nin = null,
+        public ?bool $hasNin = false,
+        public ?string $guardianName = null,
+        public ?string $guardianPhone = null,
+        public ?string $address = null,
+        public bool $hasBirthCert = false,
+        public ?string $birthCertificatePath = null,
 
         /*
         |--------------------------------------------------------------------------
@@ -44,7 +44,7 @@ class OrphanData extends Data
         |   }
         | ]
         */
-        public ?array       $educations = [],
+        public ?array $educations = [],
 
         /*
         |--------------------------------------------------------------------------
@@ -56,8 +56,6 @@ class OrphanData extends Data
         |   { "id": "uuid", "specify": null }
         | ]
         */
-        public ?array       $vocationalSkills = [],
-    )
-    {
-    }
+        public ?array $vocationalSkills = [],
+    ) {}
 }

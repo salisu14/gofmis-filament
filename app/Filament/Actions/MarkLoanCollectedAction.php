@@ -18,9 +18,8 @@ class MarkLoanCollectedAction
             ->color('success')
             ->requiresConfirmation()
             ->modalHeading('Confirm Collection')
-            ->modalDescription(fn (WidowLoan $record) =>
-                "Confirm that {$record->widow->full_name} has physically received and collected " .
-                "the disbursed funds of ₦" . number_format($record->principal_amount, 2) . "."
+            ->modalDescription(fn (WidowLoan $record) => "Confirm that {$record->widow->full_name} has physically received and collected ".
+                'the disbursed funds of ₦'.number_format($record->principal_amount, 2).'.'
             )
             ->schema([
                 TextInput::make('collector_name')
@@ -51,8 +50,7 @@ class MarkLoanCollectedAction
                         ->send();
                 }
             })
-            ->visible(fn (WidowLoan $record) =>
-                $record->canCollect() &&
+            ->visible(fn (WidowLoan $record) => $record->canCollect() &&
                 auth()->user()?->can('collect_widow_loans') &&
                 (auth()->user()?->hasAnyRole(['admin', 'super_admin']) || auth()->user()?->managesZone($record->widow?->deceased?->zone_id))
             );

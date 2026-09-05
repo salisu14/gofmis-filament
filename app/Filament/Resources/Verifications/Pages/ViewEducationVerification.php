@@ -2,7 +2,6 @@
 
 namespace App\Filament\Resources\Verifications\Pages;
 
-
 use App\Filament\Resources\Verifications\EducationVerificationResource;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
@@ -20,7 +19,7 @@ class ViewEducationVerification extends ViewRecord
         return [
             EditAction::make()
                 ->label('Edit Verification')
-                ->visible(fn($record) => in_array($record->status, ['pending', 'under_review']))
+                ->visible(fn ($record) => in_array($record->status, ['pending', 'under_review']))
                 ->icon('heroicon-m-pencil-square'),
 
             Action::make('approve')
@@ -30,7 +29,7 @@ class ViewEducationVerification extends ViewRecord
                 ->requiresConfirmation()
                 ->modalHeading('Approve Request')
                 ->modalDescription('Confirm approval of this education request.')
-                ->visible(fn($record) => in_array($record->status, ['pending', 'under_review']))
+                ->visible(fn ($record) => in_array($record->status, ['pending', 'under_review']))
                 ->action(function ($record) {
                     $record->markVerified(auth()->id());
                     $record->approveRequest(auth()->id());
@@ -56,7 +55,7 @@ class ViewEducationVerification extends ViewRecord
                         ->required()
                         ->rows(3),
                 ])
-                ->visible(fn($record) => in_array($record->status, ['pending', 'under_review']))
+                ->visible(fn ($record) => in_array($record->status, ['pending', 'under_review']))
                 ->action(function ($record, array $data) {
                     $record->rejectRequest($data['rejection_reason'], auth()->id());
 
@@ -69,7 +68,7 @@ class ViewEducationVerification extends ViewRecord
                 }),
 
             DeleteAction::make()
-                ->visible(fn() => auth()->user()?->hasRole(['admin', 'super_admin'])),
+                ->visible(fn () => auth()->user()?->hasRole(['admin', 'super_admin'])),
         ];
     }
 }

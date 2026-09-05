@@ -34,8 +34,7 @@ class ProjectExpenseForm
                                     ->relationship('milestone', 'title')
                                     ->searchable()
                                     ->preload()
-                                    ->options(fn (Get $get): \Illuminate\Support\Collection =>
-                                    ProjectMilestone::query()
+                                    ->options(fn (Get $get): \Illuminate\Support\Collection => ProjectMilestone::query()
                                         ->where('project_id', $get('project_id'))
                                         ->pluck('title', 'id')
                                     )

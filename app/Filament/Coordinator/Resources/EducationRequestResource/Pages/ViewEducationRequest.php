@@ -1,4 +1,5 @@
 <?php
+
 // app/Filament\Coordinator\Resources\EducationRequestResource/Pages/ViewEducationRequest.php
 
 namespace App\Filament\Coordinator\Resources\EducationRequestResource\Pages;
@@ -15,7 +16,7 @@ class ViewEducationRequest extends ViewRecord
     {
         return [
             Actions\EditAction::make()
-                ->visible(fn($record) => $record->status === 'pending'),
+                ->visible(fn ($record) => $record->status === 'pending'),
         ];
     }
 }

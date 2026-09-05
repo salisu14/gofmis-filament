@@ -27,9 +27,9 @@ class RolesAndPermissionsSeeder extends Seeder
             'admin_dashboard_access',
 
             // --- Beneficiaries ---
-            'view_deceased', 'create_deceased', 'edit_deceased', 'delete_deceased',
-            'view_orphans', 'create_orphans', 'edit_orphans', 'delete_orphans',
-            'view_widows', 'create_widows', 'edit_widows', 'delete_widows',
+            'view_deceased', 'create_deceased', 'edit_deceased', 'delete_deceased', 'import_deceased', 'export_deceased',
+            'view_orphans', 'create_orphans', 'edit_orphans', 'delete_orphans', 'import_orphans', 'export_orphans',
+            'view_widows', 'create_widows', 'edit_widows', 'delete_widows', 'import_widows', 'export_widows',
             'mark_orphan_married', 'mark_orphan_unmarried',
 
             // --- Zones & Locations ---
@@ -58,6 +58,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'imprest_view_funds', 'imprest_reconcile_funds', 'imprest_replenish_funds',
             // --- Biometrics ---
             'biometrics.view', 'biometrics.enroll', 'biometrics.revoke', 'biometrics.verify', 'biometrics.identify',
+            'biometrics.audit.view',
 
             // --- Reports ---
             'view_reports', 'export_reports',
@@ -93,9 +94,9 @@ class RolesAndPermissionsSeeder extends Seeder
         $admin = Role::firstOrCreate(['name' => 'admin', 'guard_name' => $guard]);
         $admin->syncPermissions([
             // Beneficiaries
-            'view_deceased', 'create_deceased', 'edit_deceased', 'delete_deceased',
-            'view_orphans', 'create_orphans', 'edit_orphans', 'delete_orphans',
-            'view_widows', 'create_widows', 'edit_widows', 'delete_widows',
+            'view_deceased', 'create_deceased', 'edit_deceased', 'delete_deceased', 'import_deceased', 'export_deceased',
+            'view_orphans', 'create_orphans', 'edit_orphans', 'delete_orphans', 'import_orphans', 'export_orphans',
+            'view_widows', 'create_widows', 'edit_widows', 'delete_widows', 'import_widows', 'export_widows',
             'mark_orphan_married', 'mark_orphan_unmarried',
 
             // Zones & Projects
@@ -118,6 +119,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'imprest_view_funds', 'imprest_reconcile_funds', 'imprest_replenish_funds',
             // Biometrics
             'biometrics.view', 'biometrics.enroll', 'biometrics.revoke', 'biometrics.verify', 'biometrics.identify',
+            'biometrics.audit.view',
             // Biometrics
             'biometrics.view', 'biometrics.enroll',
 
@@ -137,9 +139,15 @@ class RolesAndPermissionsSeeder extends Seeder
         $coordinator = Role::firstOrCreate(['name' => 'coordinator', 'guard_name' => $guard]);
         $coordinator->syncPermissions([
             // Beneficiaries
-            'view_deceased', 'create_deceased', 'edit_deceased',
-            'view_orphans', 'create_orphans', 'edit_orphans',
-            'view_widows', 'create_widows', 'edit_widows',
+            'view_deceased', 'create_deceased', 'edit_deceased', 'export_deceased',
+            'view_orphans', 'create_orphans', 'edit_orphans', 'export_orphans',
+            'view_widows', 'create_widows', 'edit_widows', 'export_widows',
+
+            // Projects (view/create/edit within own zone; lifecycle is admin-managed)
+            'view_projects', 'create_projects', 'edit_projects',
+
+            // Biometrics (own-zone beneficiaries only; no revoke/verify/identify)
+            'biometrics.view', 'biometrics.enroll',
 
             // Interventions (Education Requests & Welfare Nominations only)
             'view_education_interventions', 'create_education_interventions',

@@ -7,7 +7,6 @@ use App\Models\WelfarePackage;
 use Filament\Actions\DeleteAction;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
-use Illuminate\Database\Eloquent\Model;
 
 class EditWelfarePackage extends EditRecord
 {

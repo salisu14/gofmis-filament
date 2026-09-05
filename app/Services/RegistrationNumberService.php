@@ -18,11 +18,12 @@ class RegistrationNumberService
             ->whereYear('created_at', $year)
             ->count();
 
-        return 'GOF/' . $year . '/' . str_pad($count + 1, 4, '0', STR_PAD_LEFT);
+        return 'GOF/'.$year.'/'.str_pad($count + 1, 4, '0', STR_PAD_LEFT);
     }
 
     /**
      * Generate Widow sequence + reg_no safely
+     *
      * @throws \Throwable
      */
     public function generateWidowData(Deceased $deceased): array
@@ -39,13 +40,14 @@ class RegistrationNumberService
 
             return [
                 'child_sequence' => $next,
-                'reg_no' => $deceased->reg_no . '/W/' . str_pad($next, 2, '0', STR_PAD_LEFT),
+                'reg_no' => $deceased->reg_no.'/W/'.str_pad($next, 2, '0', STR_PAD_LEFT),
             ];
         });
     }
 
     /**
      * Generate Orphan sequence + reg_no safely
+     *
      * @throws \Throwable
      */
     public function generateOrphanData(Deceased $deceased): array
@@ -61,7 +63,7 @@ class RegistrationNumberService
 
             return [
                 'child_sequence' => $next,
-                'reg_no' => $deceased->reg_no . '/' . str_pad($next, 2, '0', STR_PAD_LEFT),
+                'reg_no' => $deceased->reg_no.'/'.str_pad($next, 2, '0', STR_PAD_LEFT),
             ];
         });
     }

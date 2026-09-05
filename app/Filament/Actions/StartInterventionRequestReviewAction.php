@@ -15,8 +15,7 @@ class StartInterventionRequestReviewAction
             ->icon('heroicon-m-eye')
             ->color('info')
             ->requiresConfirmation()
-            ->visible(fn (InterventionRequest $record): bool =>
-                $record->canStartReview()
+            ->visible(fn (InterventionRequest $record): bool => $record->canStartReview()
                 && (auth()->user()?->hasAnyRole(['admin', 'super_admin'])
                     || auth()->user()?->can('verify_education_interventions')
                     || auth()->user()?->can('approve_healthcare_interventions')

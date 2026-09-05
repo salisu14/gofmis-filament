@@ -69,7 +69,7 @@ class StockAvailability extends Page implements HasForms, HasTable
                     </head>
                     <body>
                     <h2>GOF MIS &mdash; Stock Availability Report</h2>
-                    <p class="subtitle">Generated on: ' . now()->format('F d, Y H:i:s') . '</p>
+                    <p class="subtitle">Generated on: '.now()->format('F d, Y H:i:s').'</p>
                     <table>
                         <thead>
                             <tr>
@@ -102,9 +102,9 @@ class StockAvailability extends Page implements HasForms, HasTable
                                 <td>{$row['name']}</td>
                                 <td>{$row['category_name']}</td>
                                 <td>{$unit}</td>
-                                <td class='text-right'>" . number_format($row['on_hand']) . "</td>
-                                <td class='text-right'>" . number_format($row['reserved']) . "</td>
-                                <td class='text-right'>" . number_format($row['available']) . "</td>
+                                <td class='text-right'>".number_format($row['on_hand'])."</td>
+                                <td class='text-right'>".number_format($row['reserved'])."</td>
+                                <td class='text-right'>".number_format($row['available'])."</td>
                                 <td><span class='badge {$badgeClass}'>{$statusLabel}</span></td>
                             </tr>";
                     }
@@ -114,9 +114,9 @@ class StockAvailability extends Page implements HasForms, HasTable
                         <tfoot>
                             <tr>
                                 <td colspan='4'>Totals</td>
-                                <td class='text-right'>" . number_format($totalOnHand) . "</td>
-                                <td class='text-right'>" . number_format($totalReserved) . "</td>
-                                <td class='text-right'>" . number_format($totalAvailable) . "</td>
+                                <td class='text-right'>".number_format($totalOnHand)."</td>
+                                <td class='text-right'>".number_format($totalReserved)."</td>
+                                <td class='text-right'>".number_format($totalAvailable)."</td>
                                 <td></td>
                             </tr>
                         </tfoot>
@@ -125,10 +125,10 @@ class StockAvailability extends Page implements HasForms, HasTable
                     </body></html>";
 
                     $pdf = Pdf::loadHTML($pdfHtml)->setPaper('a4', 'landscape');
-                    $filename = 'stock-availability-report-' . now()->format('Y-m-d') . '.pdf';
+                    $filename = 'stock-availability-report-'.now()->format('Y-m-d').'.pdf';
 
                     return response()->streamDownload(
-                        fn () => print($pdf->output()),
+                        fn () => print ($pdf->output()),
                         $filename,
                         ['Content-Type' => 'application/pdf']
                     );

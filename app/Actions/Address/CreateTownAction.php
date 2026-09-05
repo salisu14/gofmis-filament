@@ -12,13 +12,13 @@ class CreateTownAction
     public function execute(TownData $data): Town
     {
         // Optional: Verify City exists
-        if (!City::where('id', $data->city_id)->exists()) {
+        if (! City::where('id', $data->city_id)->exists()) {
             throw new ModelNotFoundException('The specified City does not exist.');
         }
 
         return Town::create([
             'name' => $data->name,
-            'city_id' => $data->city_id
+            'city_id' => $data->city_id,
         ]);
     }
 }

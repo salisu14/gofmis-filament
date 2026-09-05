@@ -3,7 +3,6 @@
 namespace App\Traits;
 
 use App\Enums\LoanStatus;
-use Carbon\Carbon;
 
 trait HasLoanStatusTransitions
 {

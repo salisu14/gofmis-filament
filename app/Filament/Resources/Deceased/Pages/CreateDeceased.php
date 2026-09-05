@@ -20,8 +20,7 @@ class CreateDeceased extends CreateRecord
         // Resolve the vulnerability status to a string if it's an enum instance
         $vulnerabilityStatus = $data['vulnerability_status'] instanceof VulnerabilityStatus
             ? $data['vulnerability_status']->value
-            : (string)$data['vulnerability_status'];
-
+            : (string) $data['vulnerability_status'];
 
         // 1. Map Filament data array to your Data Object
         $deceasedData = new DeceasedData(
@@ -29,6 +28,7 @@ class CreateDeceased extends CreateRecord
             lastName: $data['last_name'],
             middleName: $data['middle_name'] ?? null,
             nin: $data['nin'] ?? null,
+            hasNin: $data['has_nin'] ?? false,
             address: $data['address'] ?? null,
             vulnerabilityStatus: $vulnerabilityStatus,
             deathCause: $data['death_cause'] ?? null,

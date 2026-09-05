@@ -37,7 +37,7 @@ class BankTransferUxHardeningTest extends TestCase
             'account_number' => '1000000001',
             'bank_name' => 'WRL Bank',
             'user_id' => $this->admin->id,
-            'usage' => BankAccount::USAGE_OTHER,
+            'usage' => BankAccount::USAGE_GENERAL,
         ]);
         $this->sourceAccount->updateQuietly(['ledger_balance' => 0.00, 'reserved_balance' => 0.00]);
 

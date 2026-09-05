@@ -12,30 +12,30 @@ enum PaymentStatus: string
     public function getLabel(): string
     {
         return match ($this) {
-            self::PENDING   => 'Pending',
+            self::PENDING => 'Pending',
             self::COMPLETED => 'Completed',
-            self::FAILED    => 'Failed',
-            self::REFUNDED  => 'Refunded',
+            self::FAILED => 'Failed',
+            self::REFUNDED => 'Refunded',
         };
     }
 
     public function getColor(): string
     {
         return match ($this) {
-            self::PENDING   => 'warning',  // Orange
+            self::PENDING => 'warning',  // Orange
             self::COMPLETED => 'success',  // Green
-            self::FAILED    => 'danger',   // Red
-            self::REFUNDED  => 'gray',     // Gray
+            self::FAILED => 'danger',   // Red
+            self::REFUNDED => 'gray',     // Gray
         };
     }
 
     public function getIcon(): ?string
     {
         return match ($this) {
-            self::PENDING   => 'heroicon-o-clock',
+            self::PENDING => 'heroicon-o-clock',
             self::COMPLETED => 'heroicon-o-check-badge',
-            self::FAILED    => 'heroicon-o-x-circle',
-            self::REFUNDED  => 'heroicon-o-queue-list',
+            self::FAILED => 'heroicon-o-x-circle',
+            self::REFUNDED => 'heroicon-o-queue-list',
         };
     }
 }

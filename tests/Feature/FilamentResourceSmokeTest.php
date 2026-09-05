@@ -168,11 +168,6 @@ test('coordinator panel resources render without errors', function () {
     Livewire::test(\App\Filament\Coordinator\Resources\ProjectResource\Pages\ListProjects::class)->assertSuccessful();
 });
 
-test('imprest panel resources render without errors', function () {
-    Filament::setCurrentPanel(Filament::getPanel('imprest'));
-
-    Livewire::test(\App\Filament\Imprest\Resources\ImprestFundResource\Pages\ListImprestFunds::class)->assertSuccessful();
-    Livewire::test(\App\Filament\Imprest\Resources\ImprestReconciliationResource\Pages\ListImprestReconciliations::class)->assertSuccessful();
-    Livewire::test(\App\Filament\Imprest\Resources\ImprestReplenishmentResource\Pages\ListImprestReplenishments::class)->assertSuccessful();
-    Livewire::test(\App\Filament\Imprest\Resources\ImprestTransactionResource\Pages\ListImprestTransactions::class)->assertSuccessful();
+test('imprest module is intentionally deactivated', function () {
+    expect(Filament::getPanel('imprest'))->toBeNull();
 });

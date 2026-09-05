@@ -3,10 +3,9 @@
 namespace App\Actions\Loan;
 
 use App\Data\Loan\RecordRepaymentData;
-use App\Events\LoanFullyRepaid;
 use App\Models\BankAccount;
-use App\Models\Repayment;
 use App\Models\Loan;
+use App\Models\Repayment;
 use App\Models\Transaction;
 use Exception;
 use Illuminate\Support\Facades\DB;
@@ -27,7 +26,7 @@ class RecordLoanRepaymentAction
                 throw new Exception('Loan must be approved and collected before repayment.');
             }
 
-            if (!is_null($loan->paid_at)) {
+            if (! is_null($loan->paid_at)) {
                 throw new Exception('This loan has already been fully paid.');
             }
 

@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Filament\Coordinator\Resources\ProjectResource\Pages;
+
 use App\Filament\Coordinator\Resources\ProjectResource;
 use Filament\Actions\EditAction;
 use Filament\Infolists\Components\TextEntry;
@@ -16,7 +17,7 @@ class ViewProject extends ViewRecord
     {
         return [
             EditAction::make()
-                ->visible(fn($record) => in_array($record->status->value, ['planning', 'approved'])),
+                ->visible(fn ($record) => in_array($record->status->value, ['planning', 'approved'])),
         ];
     }
 
@@ -30,10 +31,10 @@ class ViewProject extends ViewRecord
                         TextEntry::make('name'),
                         TextEntry::make('type')
                             ->badge()
-                            ->formatStateUsing(fn($state) => $state->label()),
+                            ->formatStateUsing(fn ($state) => $state->label()),
                         TextEntry::make('status')
                             ->badge()
-                            ->color(fn($state) => $state->color()),
+                            ->color(fn ($state) => $state->color()),
                         TextEntry::make('budget_allocated')
                             ->money('NGN'),
                         TextEntry::make('progress_percentage')

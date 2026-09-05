@@ -1,4 +1,5 @@
 <?php
+
 // app/Filament/Widgets/AgeDistributionChartWidget.php
 
 namespace App\Filament\Widgets;
@@ -9,7 +10,9 @@ use Filament\Widgets\ChartWidget;
 class AgeDistributionChartWidget extends ChartWidget
 {
     protected ?string $heading = 'Orphan Age Distribution';
+
     protected static ?int $sort = 10;
+
     protected int|string|array $columnSpan = ['lg' => 2];
 
     protected function getData(): array

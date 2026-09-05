@@ -2,7 +2,6 @@
 
 namespace App\Filament\Resources\BankAccounts\RelationManagers;
 
-use App\Filament\Resources\BankAccounts\BankAccountResource;
 use App\Models\BankAccount;
 use Filament\Actions\CreateAction;
 use Filament\Actions\ViewAction;
@@ -51,7 +50,8 @@ class TransactionsRelationManager extends RelationManager
                         }
                         $account = $livewire->getOwnerRecord();
                         $available = (float) $account->ledger_balance - (float) ($account->reserved_balance ?? 0);
-                        return "Available balance: ₦" . number_format($available, 2);
+
+                        return 'Available balance: ₦'.number_format($available, 2);
                     }),
 
                 Select::make('destination_bank_account_id')
@@ -122,6 +122,7 @@ class TransactionsRelationManager extends RelationManager
                     ->formatStateUsing(function ($record) {
                         $prefix = $record->isCreditType() ? '+' : '-';
                         $amount = number_format((float) $record->amount, 2);
+
                         return "{$prefix} ₦{$amount}";
                     })
                     ->color(fn ($record) => $record->isCreditType() ? 'success' : 'danger')
@@ -147,12 +148,12 @@ class TransactionsRelationManager extends RelationManager
             ])
             ->headerActions([
                 // Only allow manual creation on parent accounts (per model validation rules)
-//                CreateAction::make()
-//                    ->modalWidth('2xl')
-//                    ->visible(fn (RelationManager $livewire) => $livewire->getOwnerRecord()->canPerformManualBankMovement()),
+                //                CreateAction::make()
+                //                    ->modalWidth('2xl')
+                //                    ->visible(fn (RelationManager $livewire) => $livewire->getOwnerRecord()->canPerformManualBankMovement()),
             ])
             ->recordActions([
-//                ViewAction::make(),
+                //                ViewAction::make(),
             ]);
     }
 }

@@ -19,6 +19,7 @@ class RegisterDeceasedAction
             'last_name' => $data->lastName,
             'middle_name' => $data->middleName, // ✅ FIXED
             'nin' => $data->nin,
+            'has_nin' => $data->hasNin,
             'reg_no' => $this->regNoService->generateDeceasedRegNo(),
             'address' => $data->address,
             'vulnerability_status' => $data->vulnerabilityStatus,

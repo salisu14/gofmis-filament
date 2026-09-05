@@ -1,4 +1,5 @@
 <?php
+
 // database/seeders/IllnessSeeder.php
 
 namespace Database\Seeders;

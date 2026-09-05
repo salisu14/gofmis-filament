@@ -18,7 +18,12 @@ class OrphanForm
 {
     public static function configure(Schema $schema, bool $includeDeceased = true): Schema
     {
-        $isArchivedOrIneligible = fn ($record) => $record?->status === \App\Enums\OrphanStatus::ARCHIVED || $record?->is_eligible === false;
+        // Only archived (terminal) orphan records are treated as immutable.
+        // A non-archived record - even one that is temporarily ineligible or
+        // pending review - must remain editable so staff can correct data or
+        // re-enable eligibility. The model's saving hook still enforces the
+        // hard disqualifiers (over-age male, married female) on save.
+        $isArchived = fn ($record) => $record?->status === \App\Enums\OrphanStatus::ARCHIVED;
 
         $personalSchema = [
             Grid::make(3)->schema([
@@ -38,14 +43,31 @@ class OrphanForm
                     ->options(\App\Enums\Gender::class)
                     ->required()
                     ->native(false)
-                    ->disabled($isArchivedOrIneligible),
+                    ->disabled($isArchived),
+
+                Toggle::make('has_nin')
+                    ->label('Has NIN?')
+                    ->helperText('Enable if this beneficiary has a valid 11-digit National Identification Number.')
+                    ->live()
+                    ->default(false)
+                    ->inline(false)
+                    ->disabled($isArchived)
+                    ->columnSpanFull()
+                    ->afterStateUpdated(function ($state, $set) {
+                        if (! $state) {
+                            $set('nin', null);
+                        }
+                    }),
 
                 TextInput::make('nin')
                     ->label('NIN')
+                    ->string()
+                    ->regex('/^[0-9]{11}$/')
                     ->unique(ignoreRecord: true)
-                    ->placeholder('11-digit NIN')
-                    ->maxLength(11)
-                    ->required(),
+                    ->disabled($isArchived)
+                    ->required(fn ($get) => $get('has_nin'))
+                    ->visible(fn ($get) => $get('has_nin'))
+                    ->placeholder('11-digit NIN'),
 
                 TextInput::make('reg_no')
                     ->label('Registration Number')
@@ -60,7 +82,7 @@ class OrphanForm
                     ->required()
                     ->native(false)
                     ->displayFormat('d/m/Y')
-                    ->disabled($isArchivedOrIneligible)
+                    ->disabled($isArchived)
                     ->live()
                     ->afterStateUpdated(function ($state, $set) {
                         if ($state) {
@@ -104,7 +126,7 @@ class OrphanForm
                     'last_name',
                 ])
                 ->preload()
-                ->disabled($isArchivedOrIneligible)
+                ->disabled($isArchived)
                 ->required();
         } else {
             $personalSchema[] = TextInput::make('deceased_family_display')
@@ -128,13 +150,13 @@ class OrphanForm
                             Toggle::make('is_eligible')
                                 ->label('Eligible for Support')
                                 ->default(true)
-                                ->disabled($isArchivedOrIneligible)
+                                ->disabled($isArchived)
                                 ->inline(false),
 
                             Toggle::make('is_married')
                                 ->label('Remarried')
                                 ->default(false)
-                                ->disabled($isArchivedOrIneligible)
+                                ->disabled($isArchived)
                                 ->live()
                                 ->inline(false),
 
@@ -150,7 +172,7 @@ class OrphanForm
                             ->label('Date of New Marriage')
                             ->visible(fn ($get) => $get('is_married'))
                             ->required(fn ($get) => $get('is_married'))
-                            ->disabled($isArchivedOrIneligible)
+                            ->disabled($isArchived)
                             ->native(false),
 
                         TagsInput::make('skills')

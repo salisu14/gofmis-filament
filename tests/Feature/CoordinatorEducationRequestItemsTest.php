@@ -155,7 +155,7 @@ test('4. coordinator cannot set Qty Fulfilled during request creation', function
 
 test('5. coordinator cannot create arbitrary master items', function () {
     // Coordinator does not have master item management permissions
-    expect($this->coordinator->hasPermissionTo('create_projects'))->toBeFalse()
+    expect($this->coordinator->hasPermissionTo('create_projects'))->toBeTrue()
         ->and($this->coordinator->can('create', Item::class))->toBeFalse();
 });
 

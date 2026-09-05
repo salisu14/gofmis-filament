@@ -17,7 +17,9 @@ class ListDeceaseds extends ListRecords
         return [
             CreateAction::make(),
 
-            ExportAction::make()->visible(fn () => ! auth()->user()?->isDemoObserver())
+            \Filament\Actions\ImportAction::make()->visible(fn () => auth()->user()?->can('import_deceased'))
+                ->importer(\App\Filament\Imports\DeceasedImporter::class),
+            ExportAction::make()->visible(fn () => auth()->user()?->can('export_deceased'))
                 ->exporter(DeceasedExporter::class)
                 ->enableVisibleTableColumnsByDefault(),
         ];

@@ -7,7 +7,6 @@ use App\Filament\Resources\Zones\Pages\EditZone;
 use App\Filament\Resources\Zones\Pages\ListZones;
 use App\Filament\Resources\Zones\Schemas\ZoneForm;
 use App\Filament\Resources\Zones\Tables\ZonesTable;
-use App\Models\User;
 use App\Models\Zone;
 use BackedEnum;
 use Filament\Resources\Resource;

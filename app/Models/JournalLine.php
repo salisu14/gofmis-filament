@@ -11,7 +11,7 @@ class JournalLine extends Model
     use HasUuids;
 
     protected $fillable = [
-        'journal_entry_id', 'ledger_id', 'debit', 'credit'
+        'journal_entry_id', 'ledger_id', 'debit', 'credit',
     ];
 
     protected $casts = [

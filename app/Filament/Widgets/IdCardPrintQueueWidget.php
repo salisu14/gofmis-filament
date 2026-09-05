@@ -1,4 +1,5 @@
 <?php
+
 // app/Filament/Widgets/IdCardPrintQueueWidget.php
 
 namespace App\Filament\Widgets;
@@ -15,6 +16,7 @@ use Illuminate\Support\Facades\Storage;
 class IdCardPrintQueueWidget extends BaseWidget
 {
     protected static ?int $sort = 2;
+
     protected int|string|array $columnSpan = 'full';
 
     public function table(Table $table): Table
@@ -39,14 +41,14 @@ class IdCardPrintQueueWidget extends BaseWidget
                     ]),
 
                 TextColumn::make('progress')
-                    ->formatStateUsing(fn($record) => "{$record->processed_count} / {$record->total_count}"
+                    ->formatStateUsing(fn ($record) => "{$record->processed_count} / {$record->total_count}"
                     ),
 
                 TextColumn::make('progress_percentage')
                     ->label('Progress %')
                     ->state(fn (IdCardPrintBatch $record): int => $record->progressPercentage())
                     ->badge()
-                    ->color(fn($state) => match (true) {
+                    ->color(fn ($state) => match (true) {
                         $state < 30 => 'danger',
                         $state < 70 => 'warning',
                         default => 'success',
@@ -72,7 +74,7 @@ class IdCardPrintQueueWidget extends BaseWidget
                             ->disabled(),
                         TextInput::make('progress_percentage')
                             ->label('Progress %')
-                            ->formatStateUsing(fn($record) => $record->progressPercentage() . '%')
+                            ->formatStateUsing(fn ($record) => $record->progressPercentage().'%')
                             ->disabled(),
                     ]),
 
@@ -81,9 +83,9 @@ class IdCardPrintQueueWidget extends BaseWidget
                     ->label('Download PDF')
                     ->icon('heroicon-o-arrow-down-tray')
                     ->color('success')
-                    ->visible(fn(IdCardPrintBatch $record): bool => $record->status === 'completed' && $record->pdf_path !== null
+                    ->visible(fn (IdCardPrintBatch $record): bool => $record->status === 'completed' && $record->pdf_path !== null
                     )
-                    ->url(fn(IdCardPrintBatch $record): string => Storage::disk('public')->url($record->pdf_path)
+                    ->url(fn (IdCardPrintBatch $record): string => Storage::disk('public')->url($record->pdf_path)
                     )
                     ->openUrlInNewTab(),
             ])

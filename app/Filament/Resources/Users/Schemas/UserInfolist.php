@@ -19,7 +19,7 @@ class UserInfolist
                         ImageEntry::make('photo')
                             ->label('Profile Photo')
                             ->circular()
-                            ->defaultImageUrl(fn ($record) => "https://ui-avatars.com/api/?name=" . urlencode($record->name) . "&color=FFFFFF&background=09090b"),
+                            ->defaultImageUrl(fn ($record) => 'https://ui-avatars.com/api/?name='.urlencode($record->name).'&color=FFFFFF&background=09090b'),
                         TextEntry::make('name')->weight('bold'),
                         TextEntry::make('email')->label('Email address')->copyable()->icon('heroicon-o-envelope'),
                         TextEntry::make('email_verified_at')

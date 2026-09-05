@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Data\Permission;
 
 class PermissionData

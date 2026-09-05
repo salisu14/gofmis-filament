@@ -153,11 +153,5 @@ test('1. end-to-end loan approval -> disbursement -> collection -> repayment -> 
     expect((float) $loan->outstanding_balance)->toEqual(0.00);
     expect($loan->status)->toBe(WidowLoanStatus::COMPLETED);
 
-    // 8. Coordinator visibility on View Loan Request page
-    Filament::setCurrentPanel(Filament::getPanel('coordinator'));
-    $this->actingAs($this->coordinator);
-
-    Livewire::test(ViewLoanRequest::class, ['record' => $loan->getRouteKey()])
-        ->assertSuccessful()
-        ->assertSee('Khadijah');
+    // Coordinator visibility check removed (PB-NEXT-01 restricts Loan management to Admins)
 });

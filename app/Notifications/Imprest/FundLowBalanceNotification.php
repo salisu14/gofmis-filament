@@ -25,7 +25,7 @@ class FundLowBalanceNotification extends Notification
             ->line("Fund at {$this->fund->location} is running low.")
             ->line("Current balance: {$this->fund->current_balance}")
             ->line("Authorized amount: {$this->fund->authorized_amount}")
-            ->action('View Fund', url('/imprest/funds/' . $this->fund->id));
+            ->action('View Fund', url('/imprest/funds/'.$this->fund->id));
     }
 
     public function toArray(object $notifiable): array

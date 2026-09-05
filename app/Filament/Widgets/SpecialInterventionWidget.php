@@ -1,4 +1,5 @@
 <?php
+
 // app/Filament/Widgets/SpecialInterventionWidget.php
 
 namespace App\Filament\Widgets;
@@ -12,7 +13,9 @@ use Filament\Widgets\TableWidget as BaseWidget;
 class SpecialInterventionWidget extends BaseWidget
 {
     protected static ?string $heading = 'Special Interventions';
+
     protected static ?int $sort = 7;
+
     protected int|string|array $columnSpan = 'full';
 
     public function table(Table $table): Table
@@ -26,10 +29,9 @@ class SpecialInterventionWidget extends BaseWidget
 
             ->heading('Welfare Distribution Summary (By Package)')
 
-            ->description(fn() =>
-                'Total welfare packages: ' . WelfarePackage::count() .
-                ' | Total beneficiaries: ' . WelfareBeneficiary::count() .
-                ' | Collected: ' . WelfareBeneficiary::collected()->count()
+            ->description(fn () => 'Total welfare packages: '.WelfarePackage::count().
+                ' | Total beneficiaries: '.WelfareBeneficiary::count().
+                ' | Collected: '.WelfareBeneficiary::collected()->count()
             )
 
             ->columns([
@@ -62,7 +64,7 @@ class SpecialInterventionWidget extends BaseWidget
                     ->label('Orphans Reached')
                     ->getStateUsing(function ($record) {
                         return $record->beneficiaries
-                            ->sum(fn($b) => $b->deceased->orphans_count ?? 0);
+                            ->sum(fn ($b) => $b->deceased->orphans_count ?? 0);
                     }),
 
                 // Widows count (derived correctly)
@@ -70,7 +72,7 @@ class SpecialInterventionWidget extends BaseWidget
                     ->label('Widows Reached')
                     ->getStateUsing(function ($record) {
                         return $record->beneficiaries
-                            ->sum(fn($b) => $b->deceased->widows_count ?? 0);
+                            ->sum(fn ($b) => $b->deceased->widows_count ?? 0);
                     }),
 
                 TextColumn::make('created_at')

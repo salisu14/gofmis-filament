@@ -4,8 +4,8 @@ namespace App\Filament\Resources\Transactions\Schemas;
 
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
@@ -87,8 +87,7 @@ class TransactionForm
                             ->prefix('₦')
                             ->step(0.01)
                             // 🔒 LOCKED: Amount changes must be entered as a new transaction or adjustment.
-                            ->disabled(fn (string $operation, ?Model $record): bool =>
-                                $isSystem($record)
+                            ->disabled(fn (string $operation, ?Model $record): bool => $isSystem($record)
                                 || $operation === 'edit'
                                 || $record?->transactionable_type !== null
                                 || $record?->transactionLines()->exists()

@@ -22,7 +22,9 @@ class GenerateMonthlyReportJob implements ShouldQueue
     public function handle(ImprestReconciliationServiceInterface $service): void
     {
         $fund = ImprestFund::find($this->fundId);
-        if (!$fund) return;
+        if (! $fund) {
+            return;
+        }
 
         $start = now()->parse($this->month)->startOfMonth()->toDateString();
         $end = now()->parse($this->month)->endOfMonth()->toDateString();

@@ -19,14 +19,14 @@ class ViewImprestReplenishment extends ViewRecord
 
         return [
             Actions\EditAction::make()
-                ->visible(fn(): bool => $record->status === 'draft'),
+                ->visible(fn (): bool => $record->status === 'draft'),
 
             Action::make('approve')
                 ->label('Approve')
                 ->icon('heroicon-m-check')
                 ->color('success')
                 ->requiresConfirmation()
-                ->visible(fn(): bool => $record->status === 'submitted' && auth()->user()->can('approve', $record->fund)
+                ->visible(fn (): bool => $record->status === 'submitted' && auth()->user()->can('approve', $record->fund)
                 )
                 ->action(function () use ($record) {
                     try {
@@ -57,7 +57,7 @@ class ViewImprestReplenishment extends ViewRecord
                 ->modalDescription(fn (): string => $record->fund?->bank_account_id
                     ? 'Restore fund to authorized amount?'
                     : 'This fund is not linked to a bank account yet, so payment cannot be processed.')
-                ->visible(fn(): bool => $record->status === 'approved' && auth()->user()->can('replenish', $record->fund)
+                ->visible(fn (): bool => $record->status === 'approved' && auth()->user()->can('replenish', $record->fund)
                 )
                 ->disabled(fn (): bool => blank($record->fund?->bank_account_id))
                 ->action(function () use ($record) {
@@ -91,7 +91,7 @@ class ViewImprestReplenishment extends ViewRecord
                         ->label('Rejection Reason'),
                 ])
                 ->requiresConfirmation()
-                ->visible(fn(): bool => in_array($record->status, ['submitted', 'approved']) &&
+                ->visible(fn (): bool => in_array($record->status, ['submitted', 'approved']) &&
                     auth()->user()->can('approve', $record->fund)
                 )
                 ->action(function (array $data) use ($record) {

@@ -294,7 +294,6 @@ test('thermal report contains widow loan repayment values', function () {
         'company' => app(\App\Services\Company\CompanyInformationService::class)->reportHeader(),
     ])->render();
 
-    dump($view);
     expect($view)->toContain('Hauwa Ibrahim')
         ->toContain('WRL REPAYMENT RECEIPT')
         ->toContain('WID-KCZ-001')

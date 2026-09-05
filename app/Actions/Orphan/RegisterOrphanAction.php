@@ -54,6 +54,7 @@ class RegisterOrphanAction
                 'middle_name' => $data->middleName,
                 'gender' => $data->gender,
                 'nin' => $data->nin,
+                'has_nin' => $data->hasNin,
                 'reg_no' => $registrationData['reg_no'],
                 'birth_date' => $data->birthDate,
                 'age' => $age,

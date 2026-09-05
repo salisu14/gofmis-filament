@@ -19,7 +19,7 @@ class EditEducationVerification extends EditRecord
         return [
             ViewAction::make(),
             DeleteAction::make()
-                ->visible(fn() => auth()->user()?->hasRole(['admin', 'super_admin'])),
+                ->visible(fn () => auth()->user()?->hasRole(['admin', 'super_admin'])),
         ];
     }
 

@@ -433,6 +433,13 @@ class WidowResource extends Resource
             ]);
     }
 
+    public static function getRelations(): array
+    {
+        return [
+            \App\Filament\RelationManagers\FingerprintsRelationManager::class,
+        ];
+    }
+
     public static function getPages(): array
     {
         return [

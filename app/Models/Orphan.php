@@ -28,6 +28,7 @@ class Orphan extends Model
         'full_name',
         'gender',
         'nin',
+        'has_nin',
         'reg_no',
         'birth_date',
         'address',
@@ -50,6 +51,7 @@ class Orphan extends Model
         'birth_date' => 'date',
         'is_eligible' => 'boolean',
         'is_married' => 'boolean',
+        'has_nin' => 'boolean',
         'has_birth_cert' => 'boolean',
         'married_at' => 'datetime',
     ];
@@ -357,6 +359,14 @@ class Orphan extends Model
         static::deleting($preventDelete);
 
         static::saving(function ($model) {
+            if ($model->has_nin === null) {
+                $model->has_nin = filled($model->nin);
+            }
+
+            if (! $model->has_nin) {
+                $model->nin = null;
+            }
+
             if ($model->birth_date) {
                 $model->age = \Carbon\Carbon::parse($model->birth_date)->age;
             }

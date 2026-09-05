@@ -19,8 +19,8 @@ return new class extends Migration
             $table->foreign('transaction_id')->references('id')->on('transactions')->cascadeOnDelete();
 
             // Foreign key to the chart_of_accounts table
-//            $table->uuid('account_id');
-//            $table->foreign('account_id')->references('id')->on('chart_of_accounts')->restrictOnDelete();
+            //            $table->uuid('account_id');
+            //            $table->foreign('account_id')->references('id')->on('chart_of_accounts')->restrictOnDelete();
 
             $table->decimal('debit', 15, 2)->default(0);
             $table->decimal('credit', 15, 2)->default(0);

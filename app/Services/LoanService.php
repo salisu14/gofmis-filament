@@ -2,8 +2,8 @@
 
 namespace App\Services;
 
-use App\Models\Widow;
 use App\Models\Loan;
+use App\Models\Widow;
 
 class LoanService
 {
@@ -18,7 +18,7 @@ class LoanService
             ->where('fully_repaid', false)
             ->exists();
 
-        return !$hasUnpaidLoan;
+        return ! $hasUnpaidLoan;
     }
 
     /**

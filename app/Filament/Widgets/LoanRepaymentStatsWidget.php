@@ -1,4 +1,5 @@
 <?php
+
 // app/Filament/Widgets/LoanRepaymentStatsWidget.php
 
 namespace App\Filament\Widgets;
@@ -11,6 +12,7 @@ use Filament\Widgets\StatsOverviewWidget\Stat;
 class LoanRepaymentStatsWidget extends BaseWidget
 {
     protected static ?int $sort = 2;
+
     protected int|string|array $columnSpan = 'full';
 
     protected function getStats(): array
@@ -31,7 +33,7 @@ class LoanRepaymentStatsWidget extends BaseWidget
         $repaymentRate = $totalPrincipal > 0 ? ($totalPaidViaLoan / $totalPrincipal) * 100 : 0;
 
         return [
-            Stat::make('Total Repaid', '₦' . number_format((float) $totalRepaid, 2))
+            Stat::make('Total Repaid', '₦'.number_format((float) $totalRepaid, 2))
                 ->description('All time repayments')
                 ->descriptionIcon('heroicon-m-banknotes')
                 ->color('success')
@@ -41,23 +43,23 @@ class LoanRepaymentStatsWidget extends BaseWidget
                     (float) $totalRepaidThisMonth,
                 ]),
 
-            Stat::make('This Month', '₦' . number_format((float) $totalRepaidThisMonth, 2))
+            Stat::make('This Month', '₦'.number_format((float) $totalRepaidThisMonth, 2))
                 ->description(
                     $totalRepaidLastMonth > 0
-                        ? (($totalRepaidThisMonth > $totalRepaidLastMonth ? '+' : '') .
-                        number_format((($totalRepaidThisMonth - $totalRepaidLastMonth) / $totalRepaidLastMonth) * 100, 1) . '% vs last month')
+                        ? (($totalRepaidThisMonth > $totalRepaidLastMonth ? '+' : '').
+                        number_format((($totalRepaidThisMonth - $totalRepaidLastMonth) / $totalRepaidLastMonth) * 100, 1).'% vs last month')
                         : 'No data last month'
                 )
                 ->descriptionIcon('heroicon-m-calendar')
                 ->color($totalRepaidThisMonth >= $totalRepaidLastMonth ? 'success' : 'warning'),
 
-            Stat::make('Repayment Rate', number_format($repaymentRate, 1) . '%')
-                ->description('₦' . number_format((float) $totalPaidViaLoan, 2) . ' of ₦' . number_format((float) $totalPrincipal, 2))
+            Stat::make('Repayment Rate', number_format($repaymentRate, 1).'%')
+                ->description('₦'.number_format((float) $totalPaidViaLoan, 2).' of ₦'.number_format((float) $totalPrincipal, 2))
                 ->descriptionIcon('heroicon-m-chart-pie')
                 ->color($repaymentRate >= 75 ? 'success' : ($repaymentRate >= 50 ? 'warning' : 'danger')),
 
-            Stat::make('Avg. Repayment', '₦' . number_format((float) $avgRepayment, 2))
-                ->description($repaymentCount . ' total repayments')
+            Stat::make('Avg. Repayment', '₦'.number_format((float) $avgRepayment, 2))
+                ->description($repaymentCount.' total repayments')
                 ->descriptionIcon('heroicon-m-calculator')
                 ->color('info'),
 

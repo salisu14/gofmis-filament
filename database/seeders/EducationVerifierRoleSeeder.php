@@ -1,12 +1,13 @@
 <?php
+
 // database/seeders/EducationVerifierRoleSeeder.php
 
 namespace Database\Seeders;
 
+use App\Models\Permission;
+use App\Models\Role;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
-use App\Models\Role;
-use App\Models\Permission;
 
 class EducationVerifierRoleSeeder extends Seeder
 {

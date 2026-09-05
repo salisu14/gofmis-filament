@@ -1,10 +1,11 @@
 <?php
+
 // app/Filament/Coordinator/Resources/LoanRequestResource/Pages/EditLoanRequest.php
 
 namespace App\Filament\Coordinator\Resources\LoanRequestResource\Pages;
 
-use App\Filament\Coordinator\Resources\LoanRequestResource;
 use App\Enums\WidowLoanStatus;
+use App\Filament\Coordinator\Resources\LoanRequestResource;
 use Filament\Actions;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
@@ -18,7 +19,7 @@ class EditLoanRequest extends EditRecord
         return [
             Actions\ViewAction::make(),
             Actions\DeleteAction::make()
-                ->visible(fn() => auth()->user()?->hasAnyRole(['admin', 'super_admin'])),
+                ->visible(fn () => auth()->user()?->hasAnyRole(['admin', 'super_admin'])),
         ];
     }
 

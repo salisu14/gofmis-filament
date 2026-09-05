@@ -44,7 +44,7 @@ class ApprovalService
         DB::transaction(function () use ($flow, $user, $comments) {
             $step = $flow->currentStep();
 
-            if (!$step || $step->status !== 'pending') {
+            if (! $step || $step->status !== 'pending') {
                 throw new \Exception('Invalid approval step.');
             }
 
@@ -87,7 +87,7 @@ class ApprovalService
         DB::transaction(function () use ($flow, $user, $reason, $comments) {
             $step = $flow->currentStep();
 
-            if (!$step || $step->status !== 'pending') {
+            if (! $step || $step->status !== 'pending') {
                 throw new \Exception('Invalid rejection step.');
             }
 

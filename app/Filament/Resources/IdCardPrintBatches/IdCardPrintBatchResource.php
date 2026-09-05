@@ -25,7 +25,9 @@ class IdCardPrintBatchResource extends Resource
     protected static string|null|\UnitEnum $navigationGroup = 'ID Card Management';
 
     protected static ?string $label = 'Print Batch';
+
     protected static ?string $pluralLabel = 'Print Batches';
+
     protected static ?int $navigationSort = 3;
 
     protected static ?string $recordTitleAttribute = 'batch_name';

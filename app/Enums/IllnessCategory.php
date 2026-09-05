@@ -1,4 +1,5 @@
 <?php
+
 // app/Enums/IllnessCategory.php
 
 namespace App\Enums;

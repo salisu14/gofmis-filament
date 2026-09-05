@@ -10,7 +10,7 @@ class CreateStateAction
     public function execute(StateData $data): State
     {
         return State::create([
-            'name' => $data->name
+            'name' => $data->name,
         ]);
     }
 }

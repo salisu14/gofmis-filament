@@ -2,9 +2,6 @@
 
 namespace App\Listeners\Imprest;
 
-use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Queue\InteractsWithQueue;
-
 class NotifyLowBalance
 {
     /**

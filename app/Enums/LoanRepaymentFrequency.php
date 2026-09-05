@@ -6,7 +6,7 @@ use Filament\Support\Contracts\HasColor;
 use Filament\Support\Contracts\HasIcon;
 use Filament\Support\Contracts\HasLabel;
 
-enum LoanRepaymentFrequency: string implements HasLabel, HasColor, HasIcon
+enum LoanRepaymentFrequency: string implements HasColor, HasIcon, HasLabel
 {
     case WEEKLY = 'weekly';
     case MONTHLY = 'monthly';

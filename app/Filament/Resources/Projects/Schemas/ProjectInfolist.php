@@ -30,7 +30,7 @@ class ProjectInfolist
                             }),
                         TextEntry::make('status')
                             ->badge()
-                            ->color(fn($state) => $state->color()),
+                            ->color(fn ($state) => $state->color()),
                         TextEntry::make('zone.name'),
                         TextEntry::make('coordinator.name')
                             ->placeholder('Unassigned'),
@@ -51,7 +51,7 @@ class ProjectInfolist
                         TextEntry::make('budget_remaining')
                             ->label('Remaining')
                             ->money('NGN')
-                            ->color(fn($state) => $state < 0 ? 'danger' : 'success'),
+                            ->color(fn ($state) => $state < 0 ? 'danger' : 'success'),
                     ]),
 
                 Section::make('Timeline')
@@ -71,7 +71,7 @@ class ProjectInfolist
                         TextEntry::make('progress_percentage')
                             ->label('Completion')
                             ->suffix('%')
-                            ->formatStateUsing(fn($state) => "{$state}%"),
+                            ->formatStateUsing(fn ($state) => "{$state}%"),
                     ]),
 
                 Section::make('Description')

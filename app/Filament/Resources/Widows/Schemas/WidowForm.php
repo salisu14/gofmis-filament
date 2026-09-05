@@ -92,14 +92,38 @@ class WidowForm
                         ]),
 
                         Grid::make(2)->schema([
+                            Toggle::make('has_nin')
+                                ->label('Has NIN?')
+                                ->helperText('Enable if this beneficiary has a valid 11-digit National Identification Number.')
+                                ->live()
+                                ->default(false)
+                                ->inline(false)
+                                ->columnSpanFull()
+                                ->afterStateUpdated(function ($state, $set) {
+                                    if (! $state) {
+                                        $set('nin', null);
+                                    }
+                                }),
+
                             TextInput::make('nin')
                                 ->label('NIN')
+                                ->string()
                                 ->live(onBlur: true)
-                                ->unique(table: 'widows', column: 'nin', ignoreRecord: true, modifyRuleUsing: fn ($rule, $get) => $rule->where('deceased_id', $get('deceased_id')))
+                                ->regex('/^[0-9]{11}$/')
+                                ->unique(
+                                    table: 'widows',
+                                    column: 'nin',
+                                    ignoreRecord: true,
+                                    modifyRuleUsing: fn ($rule, $get) => $get('has_nin') ? $rule->where('deceased_id', $get('deceased_id')) : $rule,
+                                )
                                 ->validationMessages([
                                     'unique' => 'This widow (NIN) is already registered under the selected deceased household.',
                                 ])
                                 ->helperText(function ($get, $state) {
+                                    if (! $get('has_nin')) {
+                                        return '11-digit National Identity Number';
+                                    }
+
                                     if (! $state || strlen($state) < 5) {
                                         return '11-digit National Identity Number';
                                     }
@@ -125,11 +149,11 @@ class WidowForm
 
                                     $info = $existing->map(fn ($w) => "{$w->reg_no} (".($w->deceased?->full_name ?: 'Deceased #'.$w->deceased_id).')')->implode(', ');
 
-                                    return "⚠️ Notice: This woman already has a widow record under another deceased household [{$info}]. Creating this record will establish a separate widow history for the selected deceased.";
+                                    return "⚠️ Notice: This woman already has a widow record under another deceased household [{$info}].";
                                 })
                                 ->placeholder('11-digit National Identity Number')
-                                ->maxLength(11)
-                                ->required(),
+                                ->required(fn ($get) => $get('has_nin'))
+                                ->visible(fn ($get) => $get('has_nin')),
 
                             TextInput::make('reg_no')
                                 ->label('Registration Number')

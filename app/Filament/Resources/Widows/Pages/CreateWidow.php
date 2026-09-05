@@ -32,6 +32,7 @@ class CreateWidow extends CreateRecord
             lastName: $data['last_name'],
             middleName: $data['middle_name'] ?? null,
             nin: $data['nin'] ?? null,
+            hasNin: $data['has_nin'] ?? false,
             address: $data['address'] ?? null,
             picture: $data['picture_url'] ?? null,
             skills: $skills, // Pass the normalized array

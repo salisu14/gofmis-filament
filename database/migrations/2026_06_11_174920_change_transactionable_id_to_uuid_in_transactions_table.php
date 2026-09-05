@@ -24,7 +24,7 @@ return new class extends Migration
 
         // 3. Add the morph columns back as UUIDs
         Schema::table('transactions', function (Blueprint $table) {
-            if (!Schema::hasColumn('transactions', 'transactionable_type')) {
+            if (! Schema::hasColumn('transactions', 'transactionable_type')) {
                 $table->nullableUuidMorphs('transactionable');
             }
         });
@@ -44,7 +44,7 @@ return new class extends Migration
         });
 
         Schema::table('transactions', function (Blueprint $table) {
-            if (!Schema::hasColumn('transactions', 'transactionable_type')) {
+            if (! Schema::hasColumn('transactions', 'transactionable_type')) {
                 $table->nullableMorphs('transactionable');
             }
         });

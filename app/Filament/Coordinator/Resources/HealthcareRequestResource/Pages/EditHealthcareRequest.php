@@ -1,4 +1,5 @@
 <?php
+
 // app/Filament/Coordinator/Resources/HealthcareRequestResource/Pages/EditHealthcareRequest.php
 
 namespace App\Filament\Coordinator\Resources\HealthcareRequestResource\Pages;
@@ -16,7 +17,7 @@ class EditHealthcareRequest extends EditRecord
         return [
             Actions\ViewAction::make(),
             Actions\DeleteAction::make()
-                ->visible(fn() => auth()->user()?->hasAnyRole(['admin', 'super_admin'])),
+                ->visible(fn () => auth()->user()?->hasAnyRole(['admin', 'super_admin'])),
         ];
     }
 }

@@ -75,7 +75,7 @@ class ImprestTransactionRepository implements ImprestTransactionRepositoryInterf
         return DB::transaction(function () use ($transactionId, $approvedBy) {
             $transaction = ImprestTransaction::lockForUpdate()->findOrFail($transactionId);
 
-            if (!$transaction->isVoidable()) {
+            if (! $transaction->isVoidable()) {
                 throw new \RuntimeException('Transaction cannot be approved');
             }
 
@@ -118,10 +118,10 @@ class ImprestTransactionRepository implements ImprestTransactionRepositoryInterf
 
     public function void(string $transactionId, string $voidedBy, string $reason): ImprestTransaction
     {
-        return DB::transaction(function () use ($transactionId, $voidedBy, $reason) {
+        return DB::transaction(function () use ($transactionId, $reason) {
             $transaction = ImprestTransaction::lockForUpdate()->findOrFail($transactionId);
 
-            if (!$transaction->isVoidable()) {
+            if (! $transaction->isVoidable()) {
                 throw new \RuntimeException('Transaction cannot be voided');
             }
 

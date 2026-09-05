@@ -3,6 +3,8 @@
 namespace App\Filament\RelationManagers;
 
 use App\Contracts\Biometrics\FingerprintDeviceClientInterface;
+use App\Enums\BiometricOperation;
+use App\Services\Biometrics\BiometricAuditService;
 use Filament\Actions\Action;
 use Filament\Forms;
 use Filament\Notifications\Notification;
@@ -20,6 +22,41 @@ class FingerprintsRelationManager extends RelationManager
     protected static ?string $recordTitleAttribute = 'finger_position';
 
     protected static ?string $title = 'Biometric Fingerprints';
+
+    /**
+     * Whether the given owner beneficiary's biometric surface may be accessed
+     * by the current user. Admins/super admins pass; a coordinator must manage
+     * the beneficiary's zone (beneficiary -> deceased -> zone).
+     */
+    protected function biometricAccessAllowed(Model $owner): bool
+    {
+        $user = auth()->user();
+
+        if ($user?->hasAnyRole(['admin', 'super_admin'])) {
+            return true;
+        }
+
+        if (! $user) {
+            return false;
+        }
+
+        // Canonical zone ownership path: beneficiary -> deceased_household -> zone.
+        // Resolve the zone without global scopes so out-of-zone beneficiaries
+        // are not mis-characterised as "no zone" by the coordinated-zone scope.
+        $zoneId = null;
+
+        if ($owner instanceof \App\Models\Widow || $owner instanceof \App\Models\Orphan) {
+            $zoneId = $owner->deceased()->withoutGlobalScopes()->value('zone_id');
+        }
+
+        if ($zoneId === null) {
+            // No resolvable zone (or the beneficiary does not carry one) must not
+            // grant a coordinator broad access.
+            return false;
+        }
+
+        return $user->managesZone($zoneId);
+    }
 
     public function form(Schema $schema): Schema
     {
@@ -85,7 +122,12 @@ class FingerprintsRelationManager extends RelationManager
                 Action::make('enroll')
                     ->label('Enroll Fingerprint')
                     ->icon('heroicon-o-finger-print')
-                    ->visible(fn () => auth()->user()->can('biometrics.enroll'))
+                    ->visible(function () {
+                        $user = auth()->user();
+
+                        return $user?->can('biometrics.enroll')
+                            && $this->biometricAccessAllowed($this->getOwnerRecord());
+                    })
                     ->form([
                         Forms\Components\Select::make('finger_position')
                             ->label('Finger Position')
@@ -118,6 +160,7 @@ class FingerprintsRelationManager extends RelationManager
                     ])
                     ->action(function (array $data, RelationManager $livewire) {
                         abort_unless(auth()->user()->can('biometrics.enroll'), 403);
+                        abort_unless($livewire->biometricAccessAllowed($livewire->getOwnerRecord()), 403);
 
                         try {
                             $client = app(FingerprintDeviceClientInterface::class);
@@ -156,7 +199,7 @@ class FingerprintsRelationManager extends RelationManager
                             }
 
                             $owner = $livewire->getOwnerRecord();
-                            $owner->fingerprints()->create([
+                            $print = $owner->fingerprints()->create([
                                 'finger_position' => $data['finger_position'],
                                 'encrypted_template' => $result['template'],
                                 'template_format' => $result['format'] ?? null,
@@ -169,6 +212,18 @@ class FingerprintsRelationManager extends RelationManager
                                 'enrolled_by' => auth()->id(),
                                 'is_active' => true,
                             ]);
+
+                            // Governance/audit: structured, append-only event.
+                            app(BiometricAuditService::class)->record(
+                                BiometricOperation::ENROLLMENT,
+                                $owner,
+                                $print,
+                                result: 'success',
+                                extra: [
+                                    'source_client' => $result['source'] ?? 'hardware',
+                                    'request_id' => $result['request_id'] ?? null,
+                                ],
+                            );
 
                             Notification::make()
                                 ->title('Fingerprint Enrolled Successfully')
@@ -183,8 +238,101 @@ class FingerprintsRelationManager extends RelationManager
                                 ->send();
                         }
                     }),
+                Action::make('identifyBeneficiary')
+                    ->label('Identify Beneficiary')
+                    ->icon('heroicon-o-user-plus')
+                    ->color('info')
+                    ->visible(function () {
+                        $user = auth()->user();
+
+                        return $user?->can('biometrics.identify')
+                            && $this->biometricAccessAllowed($this->getOwnerRecord());
+                    })
+                    ->requiresConfirmation()
+                    ->action(function () {
+                        $user = auth()->user();
+
+                        try {
+                            $outcome = app(\App\Services\Biometrics\BiometricIdentificationService::class)
+                                ->identify($user);
+
+                            match ($outcome['status']) {
+                                'match' => Notification::make()
+                                    ->title('Beneficiary Identified')
+                                    ->body(($outcome['beneficiary']?->display_name ?? 'Beneficiary').' matched on fingerprint.')
+                                    ->success()
+                                    ->send(),
+                                'no_match' => Notification::make()
+                                    ->title('No Match')
+                                    ->body('No matching beneficiary was found.')
+                                    ->warning()
+                                    ->send(),
+                                default => Notification::make()
+                                    ->title('Identification Failed')
+                                    ->body($outcome['message'] ?? 'Identification could not be completed.')
+                                    ->danger()
+                                    ->send(),
+                            };
+                        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+                            Notification::make()->title('Not Authorised')->danger()->send();
+                        } catch (\Exception $e) {
+                            Notification::make()
+                                ->title('Identification Error')
+                                ->body('Fingerprint identification could not be completed.')
+                                ->danger()
+                                ->send();
+                        }
+                    }),
             ])
             ->actions([
+                Action::make('verifyIdentity')
+                    ->label('Verify Identity')
+                    ->icon('heroicon-o-bolt')
+                    ->visible(function (?Model $record) {
+                        $user = auth()->user();
+                        if (! $user?->can('biometrics.verify')) {
+                            return false;
+                        }
+
+                        return $record && $record->is_active && $this->biometricAccessAllowed($this->getOwnerRecord());
+                    })
+                    ->requiresConfirmation()
+                    ->action(function (Model $record) {
+                        $beneficiary = $this->getOwnerRecord();
+                        $user = auth()->user();
+
+                        try {
+                            $outcome = app(\App\Services\Biometrics\BiometricVerificationService::class)
+                                ->verify($beneficiary, $record, $user);
+
+                            match ($outcome['status']) {
+                                'match' => Notification::make()
+                                    ->title('Identity Verified')
+                                    ->body('Fingerprint match confirmed.')
+                                    ->success()
+                                    ->send(),
+                                'no_match' => Notification::make()
+                                    ->title('No Match')
+                                    ->body('This fingerprint does not match the enrolled template.')
+                                    ->warning()
+                                    ->send(),
+                                default => Notification::make()
+                                    ->title('Verification Failed')
+                                    ->body($outcome['message'] ?? 'Verification could not be completed.')
+                                    ->danger()
+                                    ->send(),
+                            };
+                        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+                            Notification::make()->title('Not Authorised')->danger()->send();
+                        } catch (\Exception $e) {
+                            Notification::make()
+                                ->title('Verification Error')
+                                ->body('Fingerprint verification could not be completed.')
+                                ->danger()
+                                ->send();
+                        }
+                    }),
+
                 Action::make('revoke')
                     ->label('Revoke')
                     ->color('danger')
@@ -204,6 +352,18 @@ class FingerprintsRelationManager extends RelationManager
                             'revoked_at' => now(),
                             'revocation_reason' => $data['revocation_reason'],
                         ]);
+
+                        // Governance/audit: structured, append-only event.
+                        $beneficiary = $record->beneficiary;
+                        if ($beneficiary) {
+                            app(BiometricAuditService::class)->record(
+                                BiometricOperation::REVOCATION,
+                                $beneficiary,
+                                $record,
+                                result: 'revoked',
+                                reason: $data['revocation_reason'],
+                            );
+                        }
 
                         Notification::make()
                             ->title('Fingerprint Revoked')

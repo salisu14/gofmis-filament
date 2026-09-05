@@ -56,12 +56,12 @@ class EducationFeeInvoicesTable
                 TextColumn::make('balance')
                     ->label('Balance')
                     ->money('NGN')
-                    ->color(fn($state) => $state > 0 ? 'danger' : 'success')
+                    ->color(fn ($state) => $state > 0 ? 'danger' : 'success')
                     ->weight('bold'),
 
                 TextColumn::make('status')
                     ->badge()
-                    ->color(fn(string $state): string => match ($state) {
+                    ->color(fn (string $state): string => match ($state) {
                         'paid' => 'success',
                         'partial' => 'warning',
                         'pending' => 'danger',
@@ -101,13 +101,13 @@ class EducationFeeInvoicesTable
                         ->label('Pay Balance')
                         ->icon('heroicon-m-banknotes')
                         ->color('success')
-                        ->modalHeading(fn(EducationFeeInvoice $record): string => 'Pay outstanding balance for ' . $record->reference)
-                        ->modalDescription(fn(EducationFeeInvoice $record): string => 'Outstanding balance: ₦' . number_format($record->balance, 2))
-                        ->visible(fn(EducationFeeInvoice $record): bool => !$record->isFinalized() && $record->balance > 0)
-                        ->schema(fn(EducationFeeInvoice $record): array => [
+                        ->modalHeading(fn (EducationFeeInvoice $record): string => 'Pay outstanding balance for '.$record->reference)
+                        ->modalDescription(fn (EducationFeeInvoice $record): string => 'Outstanding balance: ₦'.number_format($record->balance, 2))
+                        ->visible(fn (EducationFeeInvoice $record): bool => ! $record->isFinalized() && $record->balance > 0)
+                        ->schema(fn (EducationFeeInvoice $record): array => [
                             Select::make('bank_account_id')
                                 ->label('Paying Account')
-                                ->options(fn(): array => self::bankAccountOptions($record))
+                                ->options(fn (): array => self::bankAccountOptions($record))
                                 ->searchable()
                                 ->preload()
                                 ->required()
@@ -150,7 +150,7 @@ class EducationFeeInvoicesTable
                         ->label('Refresh Status')
                         ->icon('heroicon-m-arrow-path')
                         ->color('gray')
-                        ->visible(fn(EducationFeeInvoice $record): bool => !$record->isVoided())
+                        ->visible(fn (EducationFeeInvoice $record): bool => ! $record->isVoided())
                         ->action(function (EducationFeeInvoice $record): void {
                             app(EducationFeeInvoiceService::class)->refreshStatus($record);
 
@@ -165,9 +165,9 @@ class EducationFeeInvoicesTable
                         ->icon('heroicon-m-no-symbol')
                         ->color('danger')
                         ->requiresConfirmation()
-                        ->modalHeading(fn(EducationFeeInvoice $record): string => 'Void invoice ' . $record->reference)
+                        ->modalHeading(fn (EducationFeeInvoice $record): string => 'Void invoice '.$record->reference)
                         ->modalDescription('Voiding reverses recorded education fee payments back to their paying accounts and locks the invoice.')
-                        ->visible(fn(EducationFeeInvoice $record): bool => !$record->isVoided())
+                        ->visible(fn (EducationFeeInvoice $record): bool => ! $record->isVoided())
                         ->schema([
                             Textarea::make('reason')
                                 ->label('Void reason')
@@ -193,7 +193,7 @@ class EducationFeeInvoicesTable
                         }),
 
                     EditAction::make(),
-                ])
+                ]),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
@@ -206,7 +206,7 @@ class EducationFeeInvoicesTable
 
     private static function bankAccountOptions(EducationFeeInvoice $invoice): array
     {
-        $sponsored = (bool)$invoice->education?->orphan?->hasActiveSponsorship();
+        $sponsored = (bool) $invoice->education?->orphan?->hasActiveSponsorship();
 
         return BankAccount::query()
             ->dedicatedTo(EducationFeeInvoiceService::PAYING_ACCOUNT_USAGES)
@@ -215,8 +215,8 @@ class EducationFeeInvoicesTable
             ])
             ->orderBy('account_name')
             ->get()
-            ->mapWithKeys(fn(BankAccount $account): array => [
-                $account->id => "{$account->account_name} ({$account->usage_label}) - ₦" . number_format((float)$account->ledger_balance, 2),
+            ->mapWithKeys(fn (BankAccount $account): array => [
+                $account->id => "{$account->account_name} ({$account->usage_label}) - ₦".number_format((float) $account->ledger_balance, 2),
             ])
             ->all();
     }

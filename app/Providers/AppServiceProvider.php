@@ -15,10 +15,18 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->bind(FingerprintDeviceClientInterface::class, function () {
-            return config('biometrics.client') === 'mock'
-                ? new MockFingerprintDeviceClient
-                : new \App\Services\Biometrics\HttpBiometricBridgeClient;
+            $client = (string) config('biometrics.client', 'http');
+
+            return match ($client) {
+                'mock' => new MockFingerprintDeviceClient,
+                'http' => new \App\Services\Biometrics\HttpBiometricBridgeClient,
+                default => throw new \RuntimeException(
+                    "Unsupported BIOMETRICS_CLIENT [{$client}]. Expected 'mock' or 'http'."
+                ),
+            };
         });
+
+        $this->app->singleton(\App\Services\Biometrics\BiometricTemplateCipher::class);
 
         // In register() method:
         $this->app->bind(

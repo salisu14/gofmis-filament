@@ -12,7 +12,7 @@ class EnsureCoordinator
     {
         $user = auth()->user();
 
-        if (!$user) {
+        if (! $user) {
             abort(401, 'Authentication required.');
         }
 
@@ -34,11 +34,10 @@ class EnsureCoordinator
 
         // Bind zone safely
         $request->attributes->set('coordinator_zone_id', $user->zoneId());
-//        $request->attributes->set(
-//            'coordinator_zone_id',
-//            $user->coordinatedZone?->id // ✅ correct
-//        );
-
+        //        $request->attributes->set(
+        //            'coordinator_zone_id',
+        //            $user->coordinatedZone?->id // ✅ correct
+        //        );
 
         $request->attributes->set(
             'user_is_admin',

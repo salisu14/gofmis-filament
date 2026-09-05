@@ -24,7 +24,7 @@ class TransactionInfolist
                                 TextEntry::make('destinationBankAccount.account_name')
                                     ->label('Destination Bank Account')
                                     ->icon('heroicon-o-building-library')
-                                    ->visible(fn($record) => $record->type === 'transfer'),
+                                    ->visible(fn ($record) => $record->type === 'transfer'),
 
                                 TextEntry::make('reference')
                                     ->label('Reference No.')
@@ -36,13 +36,13 @@ class TransactionInfolist
                                 TextEntry::make('type')
                                     ->label('Type')
                                     ->badge()
-                                    ->color(fn(string $state): string => match ($state) {
+                                    ->color(fn (string $state): string => match ($state) {
                                         'deposit', 'loan_repayment', 'imprest_expense_void' => 'success',
                                         'withdrawal', 'loan_disbursement', 'imprest_expense' => 'danger',
                                         'transfer' => 'info',
                                         default => 'gray',
                                     })
-                                    ->formatStateUsing(fn(string $state): string => ucwords(str_replace('_', ' ', $state))),
+                                    ->formatStateUsing(fn (string $state): string => ucwords(str_replace('_', ' ', $state))),
                             ]),
                         Grid::make(3)
                             ->schema([
@@ -72,7 +72,7 @@ class TransactionInfolist
                                 TextEntry::make('id')
                                     ->label('Transaction ID')
                                     ->limit(8)
-                                    ->tooltip(fn($state) => $state)
+                                    ->tooltip(fn ($state) => $state)
                                     ->copyable()
                                     ->icon('heroicon-o-finger-print'),
 

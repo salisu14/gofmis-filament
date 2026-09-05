@@ -14,9 +14,13 @@ class EducationFeeInvoice extends Model
     use HasUuids, SoftDeletes;
 
     public const STATUS_PENDING = 'pending';
+
     public const STATUS_PARTIAL = 'partial';
+
     public const STATUS_PAID = 'paid';
+
     public const STATUS_CANCELLED = 'cancelled';
+
     public const STATUS_VOID = 'void';
 
     public const FINAL_STATUSES = [
@@ -145,7 +149,7 @@ class EducationFeeInvoice extends Model
         });
 
         static::saved(function (EducationFeeInvoice $invoice): void {
-            if (!$invoice->wasChanged('status')) {
+            if (! $invoice->wasChanged('status')) {
                 $invoice->refreshPaymentStatus();
             }
         });
@@ -154,7 +158,7 @@ class EducationFeeInvoice extends Model
     public static function generateReference(): string
     {
         do {
-            $reference = 'EDU-INV-' . now()->format('Ymd') . '-' . Str::upper(Str::random(6));
+            $reference = 'EDU-INV-'.now()->format('Ymd').'-'.Str::upper(Str::random(6));
         } while (static::where('reference', $reference)->exists());
 
         return $reference;

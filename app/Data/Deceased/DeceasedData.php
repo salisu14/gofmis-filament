@@ -11,6 +11,7 @@ class DeceasedData extends Data
         public string $lastName,
         public ?string $middleName,
         public ?string $nin,
+        public ?bool $hasNin,
         public ?string $address,
         public string $vulnerabilityStatus,
         public ?string $deathCause,

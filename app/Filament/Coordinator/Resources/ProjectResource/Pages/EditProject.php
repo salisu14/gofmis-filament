@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Filament\Coordinator\Resources\ProjectResource\Pages;
+
 use App\Enums\ProjectStatus;
 use App\Filament\Coordinator\Resources\ProjectResource;
 use Filament\Actions\DeleteAction;
@@ -18,7 +19,7 @@ class EditProject extends EditRecord
         return [
             ViewAction::make(),
             DeleteAction::make()
-                ->visible(fn($record) => $record->status === ProjectStatus::PLANNING),
+                ->visible(fn ($record) => $record->status === ProjectStatus::PLANNING),
             ForceDeleteAction::make(),
             RestoreAction::make(),
         ];

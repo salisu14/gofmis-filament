@@ -164,7 +164,7 @@ class WelfarePackagesTable
                         ->schema([
                             TextInput::make('new_name')
                                 ->required()
-                                ->default(fn (WelfarePackage $record) => $record->name . ' (Copy)'),
+                                ->default(fn (WelfarePackage $record) => $record->name.' (Copy)'),
                             DatePicker::make('new_start_date')
                                 ->required()
                                 ->default(now()),
@@ -187,8 +187,7 @@ class WelfarePackagesTable
 
                     // DRAFT only — safe to delete only when no nominations exist
                     DeleteAction::make()
-                        ->visible(fn (WelfarePackage $record): bool =>
-                            $record->isDraft() && ! $record->hasNominations()
+                        ->visible(fn (WelfarePackage $record): bool => $record->isDraft() && ! $record->hasNominations()
                         ),
                 ]),
             ])

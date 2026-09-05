@@ -4,7 +4,8 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
     /**
      * Run the migrations.
      */
@@ -39,7 +40,6 @@ return new class extends Migration {
             // Tracking Columns (Synchronized with Ledger logic)
             $table->decimal('total_paid', 15, 2)->default(0);
             $table->decimal('outstanding_balance', 15, 2)->nullable();
-
 
             $table->timestamp('collected_at')
                 ->nullable()

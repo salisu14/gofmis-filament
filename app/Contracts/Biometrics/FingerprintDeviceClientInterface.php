@@ -38,15 +38,20 @@ interface FingerprintDeviceClientInterface
     /**
      * Verify a freshly captured fingerprint against a stored template.
      *
-     * @param  string  $template  The enrolled template to verify against.
+     * Returns an explicit FingerprintVerificationResult so callers can
+     * distinguish MATCH / NO_MATCH / ERROR instead of collapsing scanner
+     * failures or low-quality captures into a boolean "false".
+     *
+     * @param  string  $template  The enrolled reference template (plaintext, server-side only).
+     * @param  string|null  $templateFormat  Template format for compatibility.
      */
-    public function verify(string $template): bool;
+    public function verify(string $template, ?string $templateFormat = null): \App\Services\Biometrics\FingerprintVerificationResult;
 
     /**
-     * Identify a freshly captured fingerprint against a list of stored templates.
+     * Identify a freshly captured fingerprint against an authorised candidate
+     * list. Candidates use opaque correlation ids; beneficiary PII is never sent.
      *
-     * @param  array  $templates  Array of [id => template]
-     * @return string|null The ID of the matched template, or null if no match.
+     * @param  array  $candidates  Array of ['candidate_id' => string, 'template' => string, 'format' => string|null]
      */
-    public function identify(array $templates): ?string;
+    public function identify(array $candidates): \App\Services\Biometrics\FingerprintIdentificationResult;
 }

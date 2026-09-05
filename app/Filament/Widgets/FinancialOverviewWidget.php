@@ -1,4 +1,5 @@
 <?php
+
 // app/Filament/Widgets/FinancialOverviewWidget.php
 
 namespace App\Filament\Widgets;
@@ -16,6 +17,7 @@ use Illuminate\Support\Facades\DB;
 class FinancialOverviewWidget extends BaseWidget
 {
     protected static ?int $sort = 2;
+
     protected int|string|array $columnSpan = 'full';
 
     protected function getStats(): array
@@ -27,24 +29,24 @@ class FinancialOverviewWidget extends BaseWidget
         $totalEducationSupport = OrphanEducation::where('is_fee_supported', true)->sum('support_amount');
 
         // Healthcare costs (prescriptions)
-//        $totalHealthcareCost = Prescription::sum('total_cost');
+        //        $totalHealthcareCost = Prescription::sum('total_cost');
         $totalHealthcareCost = Prescription::sum(
             DB::raw('COALESCE(lab_test_cost, 0) + COALESCE(drug_cost, 0)')
         );
 
         return [
-            Stat::make('Education Support', '₦' . number_format($totalEducationSupport, 2))
+            Stat::make('Education Support', '₦'.number_format($totalEducationSupport, 2))
                 ->description('Total fee support disbursed')
                 ->descriptionIcon('heroicon-m-academic-cap')
                 ->color('info'),
 
-            Stat::make('Healthcare Costs', '₦' . number_format($totalHealthcareCost, 2))
+            Stat::make('Healthcare Costs', '₦'.number_format($totalHealthcareCost, 2))
                 ->description('Total prescription & medical costs')
                 ->descriptionIcon('heroicon-m-heart')
                 ->color('danger'),
 
-            Stat::make('Total Loans Collected', '₦' . number_format($totalLoanCollected, 2))
-                ->description('Repaid: ₦' . number_format($totalLoanRepaid, 2))
+            Stat::make('Total Loans Collected', '₦'.number_format($totalLoanCollected, 2))
+                ->description('Repaid: ₦'.number_format($totalLoanRepaid, 2))
                 ->descriptionIcon('heroicon-m-banknotes')
                 ->color('warning'),
 

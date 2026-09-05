@@ -9,12 +9,12 @@ class CreateProject extends CreateRecord
 {
     protected static string $resource = ProjectResource::class;
 
-//    protected function afterCreate(): void
-//    {
-//        // Log activity
-//        activity()
-//            ->performedOn($this->record)
-//            ->causedBy(auth()->user())
-//            ->log('project_created');
-//    }
+    //    protected function afterCreate(): void
+    //    {
+    //        // Log activity
+    //        activity()
+    //            ->performedOn($this->record)
+    //            ->causedBy(auth()->user())
+    //            ->log('project_created');
+    //    }
 }

@@ -12,13 +12,13 @@ class CreateCityAction
     public function execute(CityData $data): City
     {
         // Optional: Verify State exists before creating City
-        if (!State::where('id', $data->state_id)->exists()) {
+        if (! State::where('id', $data->state_id)->exists()) {
             throw new ModelNotFoundException('The specified State does not exist.');
         }
 
         return City::create([
             'name' => $data->name,
-            'state_id' => $data->state_id
+            'state_id' => $data->state_id,
         ]);
     }
 }

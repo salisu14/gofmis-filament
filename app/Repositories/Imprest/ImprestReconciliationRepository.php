@@ -55,6 +55,7 @@ class ImprestReconciliationRepository implements ImprestReconciliationRepository
     {
         $reconciliation = ImprestReconciliation::findOrFail($reconciliationId);
         $reconciliation->update(['status' => 'completed']);
+
         return $reconciliation->fresh();
     }
 
@@ -65,6 +66,7 @@ class ImprestReconciliationRepository implements ImprestReconciliationRepository
             'status' => 'flagged',
             'variance_explanation' => $reason,
         ]);
+
         return $reconciliation->fresh();
     }
 

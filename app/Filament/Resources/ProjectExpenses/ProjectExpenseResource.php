@@ -21,7 +21,9 @@ class ProjectExpenseResource extends Resource
     protected static string|BackedEnum|null $navigationIcon = Heroicon::ReceiptPercent;
 
     protected static string|null|\UnitEnum $navigationGroup = 'Projects & Interventions';
+
     protected static ?string $navigationLabel = 'Project Expenses';
+
     protected static ?int $navigationSort = 2;
 
     public static function form(Schema $schema): Schema

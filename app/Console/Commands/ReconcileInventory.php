@@ -5,7 +5,6 @@ namespace App\Console\Commands;
 use App\Models\Item;
 use App\Models\StockMovement;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\DB;
 
 class ReconcileInventory extends Command
 {
@@ -87,7 +86,7 @@ class ReconcileInventory extends Command
         if (empty($discrepancies)) {
             $this->info('✅ No discrepancies found. Stock ledger is consistent.');
         } else {
-            $this->warn('⚠️  Found ' . count($discrepancies) . ' discrepancy(ies):');
+            $this->warn('⚠️  Found '.count($discrepancies).' discrepancy(ies):');
             $this->info('');
 
             foreach ($discrepancies as $d) {

@@ -47,5 +47,12 @@
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
+        <!--
+            Dedicated biometric encryption key for the test suite. This is a
+            fixed neutral test fixture (32 zero bytes), NOT a production secret.
+            Production deployments set their own BIOMETRICS_ENCRYPTION_KEY.
+        -->
+        <env name="BIOMETRICS_ENCRYPTION_KEY" value="AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=" force="true"/>
+        <server name="BIOMETRICS_ENCRYPTION_KEY" value="AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=" force="true"/>
     </php>
 </phpunit>

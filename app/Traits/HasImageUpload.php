@@ -13,7 +13,7 @@ trait HasImageUpload
     public function uploadImage(UploadedFile $image, string $folder = 'profiles'): string
     {
         // Generate a unique filename: timestamp + random string + extension
-        $filename = time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
+        $filename = time().'_'.uniqid().'.'.$image->getClientOriginalExtension();
 
         // Store in the specified folder (e.g., storage/app/public/orphans)
         $path = $image->storeAs($folder, $filename, 'public');

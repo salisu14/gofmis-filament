@@ -20,7 +20,7 @@ class ListIdCards extends ListRecords
                 ->label('Bulk Generate')
                 ->icon('heroicon-o-plus-circle')
                 ->color('primary')
-                ->url(fn(): string => IdCardResource::getUrl('bulk-print')),
+                ->url(fn (): string => IdCardResource::getUrl('bulk-print')),
         ];
     }
 }

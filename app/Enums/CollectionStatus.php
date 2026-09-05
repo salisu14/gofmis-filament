@@ -9,7 +9,7 @@ enum CollectionStatus: string
 
     public function label(): string
     {
-        return match($this) {
+        return match ($this) {
             self::NOT_COLLECTED => 'Not Collected',
             self::COLLECTED => 'Collected',
         };
@@ -17,7 +17,7 @@ enum CollectionStatus: string
 
     public function color(): string
     {
-        return match($this) {
+        return match ($this) {
             self::NOT_COLLECTED => 'warning',
             self::COLLECTED => 'success',
         };
@@ -25,7 +25,7 @@ enum CollectionStatus: string
 
     public function icon(): string
     {
-        return match($this) {
+        return match ($this) {
             self::NOT_COLLECTED => 'heroicon-o-inbox',
             self::COLLECTED => 'heroicon-o-check-badge',
         };

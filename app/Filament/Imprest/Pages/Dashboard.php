@@ -11,7 +11,9 @@ use Illuminate\Support\Facades\Auth;
 class Dashboard extends BaseDashboard
 {
     protected static string|null|\BackedEnum $navigationIcon = 'heroicon-o-home';
+
     protected static ?string $navigationLabel = 'Dashboard';
+
     protected static ?int $navigationSort = -2;
 
     public function getHeaderActions(): array

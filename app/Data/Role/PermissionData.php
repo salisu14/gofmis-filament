@@ -6,7 +6,6 @@ use Spatie\LaravelData\Data;
 
 class PermissionData extends Data
 {
-
     public string $name;
 
     public static function rules(): array
@@ -15,5 +14,4 @@ class PermissionData extends Data
             'name' => ['required', 'string', 'max:255', 'unique:permissions,name'],
         ];
     }
-
 }

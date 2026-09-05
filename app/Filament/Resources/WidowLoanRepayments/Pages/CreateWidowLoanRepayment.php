@@ -16,12 +16,12 @@ class CreateWidowLoanRepayment extends CreateRecord
         // Pass the form data directly into the service instead of default Eloquent creation
         return app(WidowLoanService::class)->recordRepayment(
             new RecordWidowLoanRepaymentData(
-                widowLoanId:   $data['widow_loan_id'],
-                amount:        (float) $data['amount'],
-                paidAt:        $data['paid_at'],
+                widowLoanId: $data['widow_loan_id'],
+                amount: (float) $data['amount'],
+                paidAt: $data['paid_at'],
                 bankAccountId: $data['bank_account_id'] ?? null,
                 paymentMethod: $data['payment_method'] ?? null,
-                notes:         $data['notes'] ?? null,
+                notes: $data['notes'] ?? null,
             )
         );
     }

@@ -27,7 +27,9 @@ use Filament\Tables\Table;
 class RepaymentsRelationManager extends RelationManager
 {
     protected static ?string $model = WidowLoan::class;
+
     protected static string $relationship = 'repayments';
+
     protected static ?string $title = 'Actual Repayments';
 
     public function form(Schema $schema): Schema
@@ -61,12 +63,12 @@ class RepaymentsRelationManager extends RelationManager
                             ->dedicatedTo(BankAccount::USAGE_WIDOW_LOAN_REPAYMENT)
                             ->orderBy('account_name')
                             ->get()
-                            ->mapWithKeys(fn(BankAccount $bank) => [
+                            ->mapWithKeys(fn (BankAccount $bank) => [
                                 $bank->id => "{$bank->account_name} ({$bank->account_number})",
                             ])
                             ->toArray()
                     )
-                    ->default(fn() => $this->ownerRecord?->repayment_bank_id ?? $this->ownerRecord?->bank_account_id)
+                    ->default(fn () => $this->ownerRecord?->repayment_bank_id ?? $this->ownerRecord?->bank_account_id)
                     ->searchable()
                     ->required(),
                 Select::make('payment_method')
@@ -107,6 +109,7 @@ class RepaymentsRelationManager extends RelationManager
                                 if ($row->paid_at->eq($record->paid_at) && $row->created_at <= $record->created_at) {
                                     return true;
                                 }
+
                                 return false;
                             })
                             ->sum('amount');
@@ -128,13 +131,13 @@ class RepaymentsRelationManager extends RelationManager
                     ->icon('heroicon-m-banknotes')
                     ->modalWidth('xl')
                     // Guard: only allow repayments on disbursed loans
-                    ->visible(fn() => $this->ownerRecord->canRecordRepayment())
+                    ->visible(fn () => $this->ownerRecord->canRecordRepayment())
                     ->failureNotificationTitle('Failed to record repayment')
                     ->using(function (array $data): WidowLoanRepayment {
                         return app(WidowLoanService::class)->recordRepayment(
                             new RecordWidowLoanRepaymentData(
                                 widowLoanId: $this->ownerRecord->id,
-                                amount: (float)$data['amount'],
+                                amount: (float) $data['amount'],
                                 paidAt: $data['paid_at'],
                                 bankAccountId: $data['bank_account_id'] ?? null,
                                 paymentMethod: $data['payment_method'] ?? null,
@@ -155,16 +158,15 @@ class RepaymentsRelationManager extends RelationManager
                     ->label('Download PDF')
                     ->icon('heroicon-m-document-arrow-down')
                     ->color('success')
-                    ->url(fn(WidowLoanRepayment $record) => route('repayments.receipt.download', $record))
+                    ->url(fn (WidowLoanRepayment $record) => route('repayments.receipt.download', $record))
                     ->openUrlInNewTab(),
 
                 Action::make('thermalReceipt')
                     ->label('Thermal 58mm Receipt')
                     ->icon('heroicon-m-printer')
                     ->color('warning')
-                    ->url(fn(WidowLoanRepayment $record) => route('repayments.thermal-receipt.download', $record))
+                    ->url(fn (WidowLoanRepayment $record) => route('repayments.thermal-receipt.download', $record))
                     ->openUrlInNewTab(),
-
 
             ]);
     }

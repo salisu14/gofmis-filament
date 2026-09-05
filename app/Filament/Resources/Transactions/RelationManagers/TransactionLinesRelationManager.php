@@ -16,6 +16,7 @@ use Filament\Tables\Table;
 class TransactionLinesRelationManager extends RelationManager
 {
     protected static string $relationship = 'transactionLines';
+
     protected static ?string $title = 'Journal Lines (Debits & Credits)';
 
     public function form(Schema $schema): Schema
@@ -72,13 +73,13 @@ class TransactionLinesRelationManager extends RelationManager
             ->headerActions([
                 CreateAction::make()
                     ->label('Add Line Item')
-                    ->visible(fn () => !$this->ownerRecord->is_system), // ✅ Check the flag
+                    ->visible(fn () => ! $this->ownerRecord->is_system), // ✅ Check the flag
             ])
             ->recordActions([
                 EditAction::make()
-                    ->visible(fn () => !$this->ownerRecord->is_system), // ✅ Check the flag
+                    ->visible(fn () => ! $this->ownerRecord->is_system), // ✅ Check the flag
                 DeleteAction::make()
-                    ->visible(fn () => !$this->ownerRecord->is_system), // ✅ Check the flag
+                    ->visible(fn () => ! $this->ownerRecord->is_system), // ✅ Check the flag
             ]);
     }
 }

@@ -33,12 +33,12 @@ class MedicationsTableSeeder extends Seeder
         ];
 
         $data = array_map(fn ($med) => [
-            'id'          => Str::uuid(),
-            'name'        => $med['name'],
+            'id' => Str::uuid(),
+            'name' => $med['name'],
             'description' => $med['description'],
-            'user_id'     => $userId,
-            'created_at'  => $now,
-            'updated_at'  => $now,
+            'user_id' => $userId,
+            'created_at' => $now,
+            'updated_at' => $now,
         ], $medications);
 
         Medication::insert($data);

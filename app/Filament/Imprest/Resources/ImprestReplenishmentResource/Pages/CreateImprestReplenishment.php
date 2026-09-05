@@ -32,7 +32,7 @@ class CreateImprestReplenishment extends CreateRecord
             Notification::make()
                 ->title('Replenishment Requested')
                 ->success()
-                ->body("Request submitted for approval.")
+                ->body('Request submitted for approval.')
                 ->send();
 
             $this->redirect($this->getResource()::getUrl('view', ['record' => $replenishment]));

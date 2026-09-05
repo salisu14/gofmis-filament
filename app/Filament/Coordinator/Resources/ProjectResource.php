@@ -45,29 +45,39 @@ class ProjectResource extends Resource
         return $record->zone_id;
     }
 
-    public static function canViewAny(): bool
-    {
-        return auth()->user()?->can('view_projects') ?? false;
-    }
-
     public static function canCreate(): bool
     {
-        return auth()->user()?->can('create_projects') ?? false;
-    }
+        $user = auth()->user();
 
-    public static function canView($record): bool
-    {
-        return auth()->user()?->can('view_projects') ?? false;
+        if ($user?->hasAnyRole(['admin', 'super_admin'])) {
+            return true;
+        }
+
+        // Coordinator: capability = create_projects permission AND own-zone scope.
+        return $user?->isCoordinator()
+            && $user->can('create_projects')
+            && $user->managesZone();
     }
 
     public static function canEdit($record): bool
     {
-        return auth()->user()?->can('edit_projects') ?? false;
+        $user = auth()->user();
+        if (! $user) {
+            return false;
+        }
+        if ($user->hasAnyRole(['admin', 'super_admin'])) {
+            return true;
+        }
+
+        // Record's own zone_id is a direct column (no global-scope ambiguity).
+        return $user->isCoordinator()
+            && $user->can('edit_projects')
+            && $user->managesZone($record->zone_id);
     }
 
     public static function canDelete($record): bool
     {
-        return auth()->user()?->can('delete_projects') ?? false;
+        return auth()->user()?->hasAnyRole(['admin', 'super_admin']) ?? false;
     }
 
     public static function form(Schema $schema): Schema

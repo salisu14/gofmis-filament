@@ -16,6 +16,7 @@ class ImprestTransaction extends Model
     use HasFactory, HasUuids, SoftDeletes;
 
     public $incrementing = false;
+
     protected $keyType = 'string';
 
     protected $fillable = [
@@ -75,14 +76,15 @@ class ImprestTransaction extends Model
 
     public static function generateVoucherNo(): string
     {
-        $prefix = 'VCH-' . now()->format('Ymd');
+        $prefix = 'VCH-'.now()->format('Ymd');
         $last = self::withTrashed()
-            ->where('voucher_no', 'like', $prefix . '%')
+            ->where('voucher_no', 'like', $prefix.'%')
             ->orderBy('id', 'desc')
             ->first();
 
         $sequence = $last ? (int) substr($last->voucher_no, -4) + 1 : 1;
-        return $prefix . '-' . str_pad($sequence, 4, '0', STR_PAD_LEFT);
+
+        return $prefix.'-'.str_pad($sequence, 4, '0', STR_PAD_LEFT);
     }
 
     public function fund(): BelongsTo
@@ -167,7 +169,7 @@ class ImprestTransaction extends Model
 
     public function isApproved(): bool
     {
-        return $this->status === 'active' && !is_null($this->approved_at);
+        return $this->status === 'active' && ! is_null($this->approved_at);
     }
 
     public function isVoidable(): bool

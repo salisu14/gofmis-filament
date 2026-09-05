@@ -47,7 +47,7 @@ class MediaRelationManager extends RelationManager
                     ->maxSize(10240)
                     ->required()
                     ->imagePreviewHeight('250')
-                    ->panelAspectRatio('2:1')
+                    ->panelAspectRatio('2:1'),
             ]);
     }
 
@@ -59,7 +59,7 @@ class MediaRelationManager extends RelationManager
                     ->label('Preview')
                     ->square()
                     ->imageSize(80)
-                    ->defaultImageUrl(fn($record) => $record->type === 'video'
+                    ->defaultImageUrl(fn ($record) => $record->type === 'video'
                         ? asset('images/video-icon.png')
                         : asset('images/document-icon.png')
                     ),
@@ -82,13 +82,14 @@ class MediaRelationManager extends RelationManager
                     ->label('New Media')
                     ->mutateDataUsing(function (array $data): array {
                         $data['uploaded_by'] = auth()->id(); // ✅ FIX
+
                         return $data;
                     }),
             ])
             ->recordActions([
                 Action::make('download')
                     ->icon('heroicon-m-arrow-down-tray')
-                    ->url(fn($record) => Storage::url($record->file_path))
+                    ->url(fn ($record) => Storage::url($record->file_path))
                     ->openUrlInNewTab(),
                 DeleteAction::make(),
             ]);

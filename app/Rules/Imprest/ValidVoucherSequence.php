@@ -20,7 +20,7 @@ class ValidVoucherSequence implements ValidationRule
             ->value('voucher_no');
 
         if ($lastVoucher && $this->extractSequence($value) !== $this->extractSequence($lastVoucher) + 1) {
-            $fail('Voucher sequence gap detected. Expected next voucher after ' . $lastVoucher);
+            $fail('Voucher sequence gap detected. Expected next voucher after '.$lastVoucher);
         }
     }
 

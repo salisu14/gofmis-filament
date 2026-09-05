@@ -69,16 +69,13 @@ class BiometricMockTest extends TestCase
 
     public function test_mock_client_cannot_silently_become_production_fallback()
     {
-        // Force the app to act like production without mock explicitly set
+        // Force the app to act like production without an explicit mock value.
+        // The container must FAIL CLOSED (throw) rather than silently resolving
+        // to the mock client or an unconfigured fallback.
         config(['biometrics.client' => null]);
 
-        $client = app(FingerprintDeviceClientInterface::class);
-
-        $this->assertInstanceOf(\App\Services\Biometrics\HttpBiometricBridgeClient::class, $client);
-
-        $health = $client->health();
-        $this->assertEquals('error', $health['status']);
-        $this->assertEquals('Fingerprint scanner unavailable', $health['message']);
+        $this->expectException(\RuntimeException::class);
+        app(FingerprintDeviceClientInterface::class);
     }
 
     public function test_service_container_resolves_mock_client_when_configured()
@@ -99,18 +96,17 @@ class BiometricMockTest extends TestCase
         $this->assertInstanceOf(\App\Services\Biometrics\HttpBiometricBridgeClient::class, $client);
     }
 
-    public function test_service_container_fails_closed_to_http_client_on_invalid_or_missing_configuration()
+    public function test_service_container_fails_closed_on_invalid_or_missing_configuration()
     {
         foreach ([null, '', 'invalid_driver', 'production', 'something_else'] as $invalidConfig) {
             config(['biometrics.client' => $invalidConfig]);
 
-            $client = app(FingerprintDeviceClientInterface::class);
-
-            $this->assertInstanceOf(
-                \App\Services\Biometrics\HttpBiometricBridgeClient::class,
-                $client,
-                "Failed asserting that invalid config '$invalidConfig' resolved to HttpBiometricBridgeClient."
-            );
+            try {
+                app(FingerprintDeviceClientInterface::class);
+                $this->fail("Expected RuntimeException for invalid config '{$invalidConfig}'.");
+            } catch (\RuntimeException $e) {
+                $this->assertStringContainsString('BIOMETRICS_CLIENT', $e->getMessage());
+            }
         }
     }
 
@@ -128,12 +124,17 @@ class BiometricMockTest extends TestCase
 
     public function test_scanner_unavailable_is_handled_gracefully()
     {
-        config(['biometrics.client' => null]);
+        // Use the HTTP client with a valid config but an unreachable bridge.
+        config(['biometrics.client' => 'http']);
+        config(['biometrics.bridge.base_url' => 'http://127.0.0.1:1']);
+        \Illuminate\Support\Facades\Http::fake([
+            '*' => fn () => throw new \Illuminate\Http\Client\ConnectionException('Connection refused'),
+        ]);
 
         $client = app(FingerprintDeviceClientInterface::class);
-        $result = $client->enroll();
 
-        $this->assertEquals('error', $result['status']);
+        $this->expectException(\App\Exceptions\Biometrics\BridgeUnavailableException::class);
+        $client->enroll();
     }
 
     public function test_low_quality_capture_is_handled_gracefully()

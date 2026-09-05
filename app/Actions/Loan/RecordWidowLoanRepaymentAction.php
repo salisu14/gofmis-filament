@@ -10,7 +10,8 @@ class RecordWidowLoanRepaymentAction
 {
     public function execute(RecordWidowLoanRepaymentData $data): WidowLoanRepayment
     {
-        $service = new WidowLoanService();
+        $service = new WidowLoanService;
+
         return $service->recordRepayment($data);
     }
 }

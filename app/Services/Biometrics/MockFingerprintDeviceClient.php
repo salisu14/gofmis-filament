@@ -44,17 +44,52 @@ class MockFingerprintDeviceClient implements FingerprintDeviceClientInterface
         ];
     }
 
-    public function verify(string $template): bool
+    public function verify(string $template, ?string $templateFormat = null): FingerprintVerificationResult
     {
-        return true;
+        // Deterministic, controllable test mode: force a specific outcome via
+        // config so automated tests are stable and never depend on randomness.
+        $forced = config('biometrics.mock.verify_outcome');
+
+        return match ($forced) {
+            'no_match' => FingerprintVerificationResult::noMatch(),
+            'scanner_unavailable' => FingerprintVerificationResult::error(FingerprintVerificationResult::ERROR_SCANNER_UNAVAILABLE),
+            'timeout' => FingerprintVerificationResult::error(FingerprintVerificationResult::ERROR_TIMEOUT),
+            'low_quality' => FingerprintVerificationResult::error(FingerprintVerificationResult::ERROR_LOW_QUALITY),
+            'malformed' => FingerprintVerificationResult::error(FingerprintVerificationResult::ERROR_MALFORMED_RESPONSE),
+            default => FingerprintVerificationResult::match(confidence: 0.99),
+        };
     }
 
-    public function identify(array $templates): ?string
+    public function identify(array $candidates): FingerprintIdentificationResult
     {
-        if (empty($templates)) {
-            return null;
+        $forced = config('biometrics.mock.identify_outcome');
+
+        if ($forced === 'no_match') {
+            return FingerprintIdentificationResult::noMatch();
         }
 
-        return array_key_first($templates);
+        if ($forced === 'scanner_unavailable') {
+            return FingerprintIdentificationResult::error(FingerprintIdentificationResult::ERROR_SCANNER_UNAVAILABLE);
+        }
+
+        if ($forced === 'timeout') {
+            return FingerprintIdentificationResult::error(FingerprintIdentificationResult::ERROR_TIMEOUT);
+        }
+
+        if ($forced === 'malformed') {
+            return FingerprintIdentificationResult::error(FingerprintIdentificationResult::ERROR_MALFORMED_RESPONSE);
+        }
+
+        if ($forced === 'ambiguous') {
+            return FingerprintIdentificationResult::error(FingerprintIdentificationResult::ERROR_AMBIGUOUS);
+        }
+
+        if (empty($candidates)) {
+            return FingerprintIdentificationResult::noMatch();
+        }
+
+        $first = $candidates[0] ?? [];
+
+        return FingerprintIdentificationResult::match($first['candidate_id'] ?? array_key_first($candidates), confidence: 0.98);
     }
 }

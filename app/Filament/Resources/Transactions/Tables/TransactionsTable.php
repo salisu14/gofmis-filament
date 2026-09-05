@@ -2,9 +2,7 @@
 
 namespace App\Filament\Resources\Transactions\Tables;
 
-use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
-use Filament\Actions\DeleteAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;

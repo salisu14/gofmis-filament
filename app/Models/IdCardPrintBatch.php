@@ -1,4 +1,5 @@
 <?php
+
 // app/Models/IdCardPrintBatch.php
 
 namespace App\Models;
@@ -22,7 +23,7 @@ class IdCardPrintBatch extends Model
         'status',
         'started_at',
         'completed_at',
-        'created_by'
+        'created_by',
     ];
 
     protected $casts = [
@@ -39,7 +40,10 @@ class IdCardPrintBatch extends Model
 
     public function progressPercentage(): int
     {
-        if ($this->total_count === 0) return 0;
+        if ($this->total_count === 0) {
+            return 0;
+        }
+
         return (int) round(($this->processed_count / $this->total_count) * 100);
     }
 }

@@ -44,7 +44,7 @@ class IdCardPrintBatchesTable
 
                 TextColumn::make('progress')
                     ->label('Progress')
-                    ->state(fn (IdCardPrintBatch $record): string => $record->progressPercentage() . '%')
+                    ->state(fn (IdCardPrintBatch $record): string => $record->progressPercentage().'%')
                     ->icon('heroicon-o-chart-bar'),
 
                 TextColumn::make('status')
@@ -81,7 +81,7 @@ class IdCardPrintBatchesTable
                     ]),
                 Filter::make('created_today')
                     ->label('Created Today')
-                    ->query(fn($query) => $query->whereDate('created_at', today())),
+                    ->query(fn ($query) => $query->whereDate('created_at', today())),
             ])
             ->recordActions([
                 ViewAction::make(),
@@ -90,9 +90,9 @@ class IdCardPrintBatchesTable
                     ->label('Download PDF')
                     ->icon('heroicon-o-arrow-down-tray')
                     ->color('success')
-                    ->visible(fn(IdCardPrintBatch $record): bool => $record->status === 'completed' && $record->pdf_path !== null
+                    ->visible(fn (IdCardPrintBatch $record): bool => $record->status === 'completed' && $record->pdf_path !== null
                     )
-                    ->url(fn(IdCardPrintBatch $record): string => route('id-card-print-batches.download', ['record' => $record])
+                    ->url(fn (IdCardPrintBatch $record): string => route('id-card-print-batches.download', ['record' => $record])
                     )
                     ->openUrlInNewTab(),
 
@@ -101,7 +101,7 @@ class IdCardPrintBatchesTable
                     ->icon('heroicon-o-arrow-path')
                     ->color('warning')
                     ->requiresConfirmation()
-                    ->visible(fn(IdCardPrintBatch $record): bool => in_array($record->status, ['pending', 'processing', 'failed'], true))
+                    ->visible(fn (IdCardPrintBatch $record): bool => in_array($record->status, ['pending', 'processing', 'failed'], true))
                     ->action(function (IdCardPrintBatch $record) {
                         try {
                             app(IdCardPrintBatchService::class)->process($record);
@@ -121,7 +121,7 @@ class IdCardPrintBatchesTable
                     }),
 
                 DeleteAction::make()
-                    ->visible(fn(IdCardPrintBatch $record): bool => in_array($record->status, ['pending', 'failed'])
+                    ->visible(fn (IdCardPrintBatch $record): bool => in_array($record->status, ['pending', 'failed'])
                     ),
             ])
             ->toolbarActions([

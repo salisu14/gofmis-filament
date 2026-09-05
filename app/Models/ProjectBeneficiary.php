@@ -1,4 +1,5 @@
 <?php
+
 // app/Models/ProjectBeneficiary.php
 
 namespace App\Models;

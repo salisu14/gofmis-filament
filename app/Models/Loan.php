@@ -23,7 +23,7 @@ class Loan extends Model
         'description',
         'reject_reason',
         'business',
-        'status'
+        'status',
     ];
 
     protected $casts = [
@@ -58,6 +58,7 @@ class Loan extends Model
     public function getBalanceAttribute(): float
     {
         $paid = $this->repayments()->sum('amount');
+
         return max(0, $this->amount - $paid);
     }
 }

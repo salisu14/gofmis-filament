@@ -1,4 +1,5 @@
 <?php
+
 // app/Enums/ProjectStatus.php
 
 namespace App\Enums;
@@ -14,7 +15,7 @@ enum ProjectStatus: string
 
     public function label(): string
     {
-        return match($this) {
+        return match ($this) {
             self::PLANNING => 'Planning',
             self::APPROVED => 'Approved',
             self::IN_PROGRESS => 'In Progress',
@@ -26,7 +27,7 @@ enum ProjectStatus: string
 
     public function color(): string
     {
-        return match($this) {
+        return match ($this) {
             self::PLANNING => 'gray',
             self::APPROVED => 'info',
             self::IN_PROGRESS => 'warning',

@@ -1,4 +1,5 @@
 <?php
+
 // app/Filament/Widgets/GenderDistributionWidget.php
 
 namespace App\Filament\Widgets;
@@ -11,7 +12,9 @@ use Filament\Widgets\ChartWidget;
 class GenderDistributionWidget extends ChartWidget
 {
     protected ?string $heading = 'Gender Distribution';
+
     protected static ?int $sort = 8;
+
     protected int|string|array $columnSpan = ['lg' => 2];
 
     protected function getData(): array

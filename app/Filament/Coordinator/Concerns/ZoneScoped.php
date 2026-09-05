@@ -71,7 +71,9 @@ trait ZoneScoped
     {
         $user = auth()->user();
 
-        if (! $user) return false;
+        if (! $user) {
+            return false;
+        }
 
         if ($user->hasAnyRole(['admin', 'super_admin'])) {
             return true;
@@ -79,7 +81,9 @@ trait ZoneScoped
 
         $zoneId = $user->coordinatedZone?->id;
 
-        if (! $zoneId) return false;
+        if (! $zoneId) {
+            return false;
+        }
 
         return static::getRecordZoneId($record) === $zoneId;
     }

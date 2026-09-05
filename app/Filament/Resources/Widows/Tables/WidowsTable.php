@@ -13,7 +13,6 @@ use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
-use Filament\Actions\ExportAction;
 use Filament\Actions\ForceDeleteBulkAction;
 use Filament\Actions\RestoreBulkAction;
 use Filament\Actions\ViewAction;
@@ -108,7 +107,9 @@ class WidowsTable
                 TrashedFilter::make(),
             ])
             ->headerActions([
-                ExportAction::make()->visible(fn () => ! auth()->user()?->isDemoObserver())
+                \Filament\Actions\ImportAction::make()->visible(fn () => auth()->user()?->can('import_widows'))
+                    ->importer(\App\Filament\Imports\WidowImporter::class),
+                \Filament\Actions\ExportAction::make()->visible(fn () => auth()->user()?->can('export_widows'))
                     ->exporter(WidowExporter::class)
                     ->enableVisibleTableColumnsByDefault(),
             ])
