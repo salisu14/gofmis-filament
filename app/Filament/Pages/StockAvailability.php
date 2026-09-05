@@ -25,8 +25,6 @@ class StockAvailability extends Page implements HasForms, HasTable
 
     protected static ?string $navigationLabel = 'Stock Availability';
 
-    protected string $view = 'filament.pages.stock-availability';
-
     public function mount(): void
     {
         abort_unless(auth()->user()?->hasAnyRole(['admin', 'super_admin']) || auth()->user()?->can('view_welfare_interventions'), 403);
@@ -133,6 +131,13 @@ class StockAvailability extends Page implements HasForms, HasTable
                         ['Content-Type' => 'application/pdf']
                     );
                 }),
+        ];
+    }
+
+    protected function getHeaderWidgets(): array
+    {
+        return [
+            \App\Filament\Widgets\StockAvailabilityStatsWidget::class,
         ];
     }
 
