@@ -202,3 +202,13 @@ test('9. inventory reconcile command runs successfully', function () {
     $this->artisan('inventory:reconcile')
         ->assertSuccessful();
 });
+
+test('10. stock availability page renders both native stats widget and items table', function () {
+    Filament::setCurrentPanel(Filament::getPanel('admin'));
+    $this->actingAs($this->admin);
+
+    Livewire::test(\App\Filament\Pages\StockAvailability::class)
+        ->assertSuccessful()
+        ->assertSeeLivewire(\App\Filament\Widgets\StockAvailabilityStatsWidget::class)
+        ->assertCanSeeTableRecords([$this->rice, $this->oil]);
+});
