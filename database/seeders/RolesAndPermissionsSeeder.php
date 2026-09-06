@@ -35,8 +35,9 @@ class RolesAndPermissionsSeeder extends Seeder
             // --- Zones & Locations ---
             'view_zones', 'create_zones', 'edit_zones', 'delete_zones',
 
-            // --- Projects ---
+            // --- Projects & Sponsorships ---
             'view_projects', 'create_projects', 'edit_projects', 'delete_projects', 'manage_projects',
+            'view_sponsorships', 'create_sponsorships', 'edit_sponsorships', 'delete_sponsorships',
 
             // --- Interventions (Education) ---
             'view_education_interventions', 'create_education_interventions', 'edit_education_interventions', 'delete_education_interventions', 'verify_education_interventions',
@@ -99,9 +100,10 @@ class RolesAndPermissionsSeeder extends Seeder
             'view_widows', 'create_widows', 'edit_widows', 'delete_widows', 'import_widows', 'export_widows',
             'mark_orphan_married', 'mark_orphan_unmarried',
 
-            // Zones & Projects
+            // Zones & Projects & Sponsorships
             'view_zones', 'create_zones', 'edit_zones', 'delete_zones',
             'view_projects', 'create_projects', 'edit_projects', 'delete_projects', 'manage_projects',
+            'view_sponsorships', 'create_sponsorships', 'edit_sponsorships', 'delete_sponsorships',
 
             // Interventions
             'view_education_interventions', 'create_education_interventions', 'edit_education_interventions', 'delete_education_interventions', 'verify_education_interventions',

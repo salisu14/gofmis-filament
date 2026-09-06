@@ -52,8 +52,31 @@ class SponsorResource extends Resource
         ];
     }
 
+    public static function canViewAny(): bool
+    {
+        return auth()->user()?->can('view_sponsorships') ?? false;
+    }
+
+    public static function canCreate(): bool
+    {
+        return auth()->user()?->can('create_sponsorships') ?? false;
+    }
+
+    public static function canEdit(\Illuminate\Database\Eloquent\Model $record): bool
+    {
+        if (! (auth()->user()?->can('edit_sponsorships') ?? false)) {
+            return false;
+        }
+
+        return parent::canEdit($record);
+    }
+
     public static function canDelete(\Illuminate\Database\Eloquent\Model $record): bool
     {
+        if (! (auth()->user()?->can('delete_sponsorships') ?? false)) {
+            return false;
+        }
+
         /** @var Sponsor $record */
         if ($record->sponsorships()->exists() || $record->allocations()->exists()) {
             return false;

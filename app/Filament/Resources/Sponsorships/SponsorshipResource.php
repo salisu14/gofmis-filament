@@ -58,8 +58,22 @@ class SponsorshipResource extends Resource
         ];
     }
 
+    public static function canViewAny(): bool
+    {
+        return auth()->user()?->can('view_sponsorships') ?? false;
+    }
+
+    public static function canCreate(): bool
+    {
+        return auth()->user()?->can('create_sponsorships') ?? false;
+    }
+
     public static function canEdit(\Illuminate\Database\Eloquent\Model $record): bool
     {
+        if (! (auth()->user()?->can('edit_sponsorships') ?? false)) {
+            return false;
+        }
+
         /** @var Sponsorship $record */
         if ($record->end_date && $record->end_date->lt(now()->startOfDay())) {
             return false;
@@ -70,6 +84,10 @@ class SponsorshipResource extends Resource
 
     public static function canDelete(\Illuminate\Database\Eloquent\Model $record): bool
     {
+        if (! (auth()->user()?->can('delete_sponsorships') ?? false)) {
+            return false;
+        }
+
         /** @var Sponsorship $record */
         if ($record->allocations()->exists()) {
             return false;
