@@ -151,9 +151,10 @@ class RolesAndPermissionsSeeder extends Seeder
             // Biometrics (own-zone beneficiaries only; no revoke/verify/identify)
             'biometrics.view', 'biometrics.enroll',
 
-            // Interventions (Education Requests & Welfare Nominations only)
+            // Interventions (Education Requests, Welfare Nominations & Loan Requests)
             'view_education_interventions', 'create_education_interventions',
             'view_welfare_interventions', 'create_welfare_interventions',
+            'view_loans', 'create_loans', 'edit_loans',
         ]);
 
         // --------------------------------------------------------------

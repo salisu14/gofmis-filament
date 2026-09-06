@@ -175,13 +175,15 @@ class CoordinatorPortalScopeLockdownTest extends TestCase
         expect($this->coordinator->can('create_sponsorships'))->toBeFalse();
     }
 
-    public function test_12_coordinator_cannot_access_finance_and_loans(): void
+    public function test_12_coordinator_cannot_access_general_financial_administration(): void
     {
-        expect($this->coordinator->can('view_loans'))->toBeFalse();
-        expect($this->coordinator->can('create_loans'))->toBeFalse();
+        expect($this->coordinator->can('view_loans'))->toBeTrue();
+        expect($this->coordinator->can('create_loans'))->toBeTrue();
+        expect($this->coordinator->can('delete_loans'))->toBeFalse();
+        expect($this->coordinator->can('view_bank_accounts'))->toBeFalse();
 
         $response = $this->actingAs($this->coordinator)->get('/coordinator/loan-requests');
-        $response->assertStatus(403);
+        $response->assertStatus(200);
     }
 
     public function test_13_coordinator_cannot_access_user_administration(): void

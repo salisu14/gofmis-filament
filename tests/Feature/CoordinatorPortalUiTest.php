@@ -118,6 +118,7 @@ class CoordinatorPortalUiTest extends TestCase
             '/coordinator/orphans',
             '/coordinator/education-requests',
             '/coordinator/welfare-requests',
+            '/coordinator/loan-requests',
         ];
 
         foreach ($routes as $route) {
@@ -125,7 +126,7 @@ class CoordinatorPortalUiTest extends TestCase
             $response->assertStatus(200);
         }
 
-        // Out-of-scope route must return 403 Forbidden
-        $this->actingAs($this->coordinator, 'web')->get('/coordinator/loan-requests')->assertStatus(403);
+        // Out-of-scope coordinator route must return 403 Forbidden
+        $this->actingAs($this->coordinator, 'web')->get('/coordinator/healthcare-requests')->assertStatus(403);
     }
 }

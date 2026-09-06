@@ -235,7 +235,7 @@ class Widow extends Model
         return $this->hasMany(WidowLoan::class);
     }
 
-    public function canApplyForLoan(): bool
+    public function canApplyForLoan(int|string|null $ignoreLoanId = null): bool
     {
         if ($this->is_married) {
             return false;
@@ -248,6 +248,7 @@ class Widow extends Model
         // Block if there is any loan that is active (DRAFT, PENDING, APPROVED, DISBURSED, DEFAULTED)
         $hasActiveLoan = $this->widowLoans()
             ->whereIn('status', array_column(\App\Enums\WidowLoanStatus::activeStatuses(), 'value'))
+            ->when($ignoreLoanId, fn ($q) => $q->where('id', '!=', $ignoreLoanId))
             ->exists();
         if ($hasActiveLoan) {
             return false;
@@ -257,6 +258,7 @@ class Widow extends Model
         $hasDeniedWriteOff = $this->widowLoans()
             ->where('status', \App\Enums\WidowLoanStatus::WRITTEN_OFF->value)
             ->where('reapplication_allowed', false)
+            ->when($ignoreLoanId, fn ($q) => $q->where('id', '!=', $ignoreLoanId))
             ->exists();
         if ($hasDeniedWriteOff) {
             return false;
