@@ -138,18 +138,42 @@ php artisan inventory:reconcile
 php artisan id-cards:reconcile --details
 ```
 
-### 4.3 Manual Functional Smoke Checklist
+### 4.3 Manual Functional Smoke Checklist (24-Point Staging Browser Audit)
 
-| Component | Test Action | Expected Result | Pass/Fail |
-| :--- | :--- | :--- | :---: |
-| **Authentication** | Login as Super Admin | Successfully logs in; MFA challenged if enrolled | [ ] |
-| **MFA Verification** | Verify TOTP code | Challenge accepted; redirects to Admin Dashboard | [ ] |
-| **Coordinator Access** | Login as Coordinator | Redirects to `/coordinator`; sees only assigned zone data | [ ] |
-| **Deceased Records** | View Deceased dossier | Preview death certificate renders securely | [ ] |
-| **Orphan Records** | View Orphan dossier | Preview birth certificate renders securely | [ ] |
-| **Widow Loans** | Navigate to Widow Loans | Loan list & repayment schedules display properly | [ ] |
-| **ID Card Module** | Open ID Card Batches | Active/Revoked single-active status rendered | [ ] |
-| **Finance Module** | Open General Ledger | Accounts & Journal Entries display balanced | [ ] |
+For each check, the human operator must record one of: `PASS`, `FAIL`, or `NOT TESTED`. Do NOT pre-mark any result as PASS.
+
+| # | Category | Test Check / Action | Expected Result | Operator Result |
+| :---: | :--- | :--- | :--- | :---: |
+| **AUTHENTICATION & MFA** | | | | |
+| 1 | Authentication & MFA | Super Admin login page loads. | Login form renders cleanly with CSRF token and inputs | [ ] PASS  [ ] FAIL  [ ] NOT TESTED |
+| 2 | Authentication & MFA | Super Admin login succeeds. | Valid credentials accepted without server errors | [ ] PASS  [ ] FAIL  [ ] NOT TESTED |
+| 3 | Authentication & MFA | MFA challenge appears for enrolled Super Admin. | Prompted for TOTP 6-digit code after primary auth | [ ] PASS  [ ] FAIL  [ ] NOT TESTED |
+| 4 | Authentication & MFA | Valid TOTP completes authentication. | Code accepted, session verified, redirected to dashboard | [ ] PASS  [ ] FAIL  [ ] NOT TESTED |
+| 5 | Authentication & MFA | Logout terminates authenticated session. | Session invalidated, redirected back to login page | [ ] PASS  [ ] FAIL  [ ] NOT TESTED |
+| **SUPER ADMIN CORE ACCESS** | | | | |
+| 6 | Super Admin Core Access | Admin dashboard loads without errors. | Key metrics, navigation widgets, and status panels load cleanly | [ ] PASS  [ ] FAIL  [ ] NOT TESTED |
+| 7 | Super Admin Core Access | Users/MFA administration page loads. | User list, role badges, and MFA status controls render | [ ] PASS  [ ] FAIL  [ ] NOT TESTED |
+| 8 | Super Admin Core Access | Deceased resource/list/view loads. | Deceased records table and individual dossier pages display | [ ] PASS  [ ] FAIL  [ ] NOT TESTED |
+| 9 | Super Admin Core Access | Widow resource/list/view loads. | Widow records table and individual dossier pages display | [ ] PASS  [ ] FAIL  [ ] NOT TESTED |
+| 10 | Super Admin Core Access | Orphan resource/list/view loads. | Orphan records table and individual dossier pages display | [ ] PASS  [ ] FAIL  [ ] NOT TESTED |
+| **COORDINATOR & ZONE ISOLATION** | | | | |
+| 11 | Coordinator & Zone Isolation | Coordinator login succeeds. | Field coordinator account logs in cleanly | [ ] PASS  [ ] FAIL  [ ] NOT TESTED |
+| 12 | Coordinator & Zone Isolation | Coordinator dashboard loads. | Dashboard restricted to coordinator navigation and zone scope | [ ] PASS  [ ] FAIL  [ ] NOT TESTED |
+| 13 | Coordinator & Zone Isolation | Coordinator can access an assigned-zone beneficiary. | Assigned zone records viewable and editable | [ ] PASS  [ ] FAIL  [ ] NOT TESTED |
+| 14 | Coordinator & Zone Isolation | Coordinator is denied access to a beneficiary outside assigned zone. | HTTP 403 Forbidden or missing record notification | [ ] PASS  [ ] FAIL  [ ] NOT TESTED |
+| **PRIVATE FILES / MEDIA** | | | | |
+| 15 | Private Files / Media | Beneficiary photo renders. | Profile picture renders securely without broken image link | [ ] PASS  [ ] FAIL  [ ] NOT TESTED |
+| 16 | Private Files / Media | Deceased death certificate preview works. | In-browser PDF/image preview streams cleanly from private storage | [ ] PASS  [ ] FAIL  [ ] NOT TESTED |
+| 17 | Private Files / Media | Deceased death certificate download works with sanitized filename. | Download header triggers with sanitized filename | [ ] PASS  [ ] FAIL  [ ] NOT TESTED |
+| 18 | Private Files / Media | Orphan birth certificate preview works. | In-browser PDF/image preview streams cleanly from private storage | [ ] PASS  [ ] FAIL  [ ] NOT TESTED |
+| 19 | Private Files / Media | Orphan birth certificate download works with sanitized filename. | Download header triggers with sanitized filename | [ ] PASS  [ ] FAIL  [ ] NOT TESTED |
+| **BUSINESS WORKFLOWS** | | | | |
+| 20 | Business Workflows | Widow Loan resource and representative loan details load. | Loan list, principal amounts, and status tags display | [ ] PASS  [ ] FAIL  [ ] NOT TESTED |
+| 21 | Business Workflows | Widow Loan repayment schedule / DPD status renders. | Repayment installments and Days Past Due (DPD) status load | [ ] PASS  [ ] FAIL  [ ] NOT TESTED |
+| 22 | Business Workflows | Beneficiary ID-card status/lifecycle view loads correctly. | Single active card rule reflected; status badges active/revoked | [ ] PASS  [ ] FAIL  [ ] NOT TESTED |
+| 23 | Business Workflows | Finance General Ledger / Journal view loads without imbalance/UI error. | GL accounts and balanced debits/credits render correctly | [ ] PASS  [ ] FAIL  [ ] NOT TESTED |
+| **DOCUMENT / RESPONSIVE** | | | | |
+| 24 | Document / Responsive | Representative beneficiary PDF preview renders and representative mobile viewport remains usable. | PDF document generates properly and UI layout remains responsive on mobile screens | [ ] PASS  [ ] FAIL  [ ] NOT TESTED |
 
 ---
 
