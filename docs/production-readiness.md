@@ -86,28 +86,43 @@ This document provides deployment guidelines, system configuration settings, sec
 
 - **Public Storage**:
   - Symlink public storage: `php artisan storage:link`
-  - Uploaded photos and certificates stored on `public` disk.
+  - Uploaded beneficiary photos and public assets stored on `public` disk (`storage/app/public`).
 - **Private Storage**:
-  - Hardship evidence and write-off documents stored on `local` (private) disk.
-  - Access restricted via authorized controller endpoints (`/loans/write-off-documents/{writeOff}`).
+  - Beneficiary certificates (Orphan birth certificates & Deceased death certificates), hardship evidence, loan write-off documents, and OOP receipts are stored on `local` (private) disk (`storage/app/private`).
+  - Access is restricted via authorized controller endpoints (`BeneficiaryCertificateController`, `/loans/write-off-documents/{writeOff}`).
+  - Legacy public certificate files are safely migrated to private storage via `php artisan beneficiaries:migrate-certificates-private --apply --cleanup-public`.
 
 ---
 
-## 6. Pre-Flight Deployment Sequence
+## 6. Pre-Flight Deployment Sequence & Runbook
 
-1. **Code Checkout**:
+For complete operational steps, maintenance window procedures, and disaster recovery, refer to [`docs/go-live-runbook.md`](file:///home/salsafh/codes/projects/gof/gofmis-atg/docs/go-live-runbook.md).
+
+1. **Automated Environment Pre-Flight Audit**:
+   ```bash
+   php artisan system:health-check
+   ```
+2. **Code Checkout**:
    ```bash
    git checkout main && git pull origin main
    ```
-2. **Install Production Dependencies**:
+3. **Install Production Dependencies**:
    ```bash
    composer install --no-dev --optimize-autoloader
    ```
-3. **Database Migration**:
+4. **Database Migration**:
    ```bash
    php artisan migrate --force
    ```
-4. **Optimization & Caching**:
+5. **Beneficiary Certificate Storage Migration**:
+   ```bash
+   php artisan beneficiaries:migrate-certificates-private --apply --cleanup-public
+   ```
+6. **Frontend Assets Compilation**:
+   ```bash
+   npm ci && npm run build
+   ```
+7. **Optimization & Caching**:
    ```bash
    php artisan config:cache
    php artisan event:cache
@@ -115,16 +130,16 @@ This document provides deployment guidelines, system configuration settings, sec
    php artisan view:cache
    php artisan icons:cache
    ```
-5. **Queue & Worker Restart**:
+8. **Queue & Worker Restart**:
    ```bash
    php artisan queue:restart
+   sudo supervisorctl restart gofmis-worker:*
    ```
-6. **Diagnostic Verification**:
+9. **Diagnostic & Reconciliation Verification**:
    ```bash
    php artisan security:rbac-audit --details
    php artisan finance:reconcile --details
-   php artisan finance:repair-bank-balances
-   php artisan id-cards:reconcile --details
-   php artisan widow-loans:evaluate-delinquency
    php artisan widow-loans:reconcile
+   php artisan inventory:reconcile
+   php artisan id-cards:reconcile --details
    ```

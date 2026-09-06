@@ -54,7 +54,14 @@ class SystemDocumentationCompletenessTest extends TestCase
                 '# GOF MIS — Phase C Go-Live Readiness Roadmap',
                 '## Phase C Objective',
                 '## Phase C Work Packages & Status',
-                '## Deferred Items for WP-C05',
+            ],
+            'go-live-runbook.md' => [
+                '# GOF MIS — Production Deployment & Go-Live Runbook',
+                '## 1. Pre-Deployment Readiness & Approvals',
+                '## 2. Environment Pre-Flight Audit',
+                '## 3. Step-by-Step Deployment Execution Sequence',
+                '## 4. Post-Deployment Verification & Smoke Tests',
+                '## 5. Rollback & Disaster Recovery Strategy',
             ],
             'manual-qa-checklist.md' => [
                 '# GOF MIS — Manual Functional QA Checklist',
