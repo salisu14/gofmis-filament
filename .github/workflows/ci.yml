@@ -1,0 +1,165 @@
+name: CI Quality Gate
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  backend-tests:
+    name: Backend Tests (SQLite In-Memory)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, bcmath, intl, gd, exif, fileinfo, xml, simplexml, xmlwriter
+          coverage: none
+
+      - name: Copy .env
+        run: php -r "file_exists('.env') || copy('.env.example', '.env');"
+
+      - name: Cache Composer Dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.composer/cache/files
+          key: php-${{ runner.os }}-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            php-${{ runner.os }}-
+
+      - name: Install Composer Dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Generate App Key
+        run: php artisan key:generate
+
+      - name: Prepare Storage Directories
+        run: |
+          mkdir -p storage/framework/cache/data
+          mkdir -p storage/framework/sessions
+          mkdir -p storage/framework/views
+          mkdir -p storage/app/private
+          mkdir -p storage/app/public
+          mkdir -p storage/logs
+          mkdir -p bootstrap/cache
+
+      - name: Pint Code Style Check
+        run: vendor/bin/pint --diff=origin/main --test
+
+      - name: Run Test Suite (SQLite)
+        run: php artisan test --compact
+
+  postgres-tests:
+    name: PostgreSQL Parity Test Suite
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: gofmis_test
+          POSTGRES_USER: gofmis
+          POSTGRES_PASSWORD: gofmis_ci_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      APP_ENV: testing
+      BCRYPT_ROUNDS: 4
+      CACHE_STORE: array
+      SESSION_DRIVER: array
+      QUEUE_CONNECTION: sync
+      MAIL_MAILER: array
+      DB_CONNECTION: pgsql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_DATABASE: gofmis_test
+      DB_USERNAME: gofmis
+      DB_PASSWORD: gofmis_ci_password
+      PULSE_ENABLED: false
+      TELESCOPE_ENABLED: false
+      NIGHTWATCH_ENABLED: false
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, pgsql, pdo_pgsql, bcmath, intl, gd, exif, fileinfo, xml, simplexml, xmlwriter
+          coverage: none
+
+      - name: Copy .env
+        run: php -r "file_exists('.env') || copy('.env.example', '.env');"
+
+      - name: Cache Composer Dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.composer/cache/files
+          key: php-${{ runner.os }}-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            php-${{ runner.os }}-
+
+      - name: Install Composer Dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Generate App Key
+        run: php artisan key:generate
+
+      - name: Prepare Storage Directories
+        run: |
+          mkdir -p storage/framework/cache/data
+          mkdir -p storage/framework/sessions
+          mkdir -p storage/framework/views
+          mkdir -p storage/app/private
+          mkdir -p storage/app/public
+          mkdir -p storage/logs
+          mkdir -p bootstrap/cache
+
+      - name: Configure PostgreSQL PHPUnit Harness
+        run: |
+          sed -e 's/name="DB_CONNECTION" value="sqlite"/name="DB_CONNECTION" value="pgsql"/g' \
+              -e 's/name="DB_DATABASE" value=":memory:"/name="DB_DATABASE" value="gofmis_test"/g' \
+              phpunit.xml > phpunit.pgsql.xml
+
+      - name: Run Test Suite (PostgreSQL)
+        run: php artisan test --compact --configuration=phpunit.pgsql.xml
+
+  frontend-build:
+    name: Frontend Asset Build Validation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Frontend Dependencies
+        run: npm install
+
+      - name: Build Frontend Assets
+        run: npm run build

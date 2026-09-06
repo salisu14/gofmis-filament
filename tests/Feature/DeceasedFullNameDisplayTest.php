@@ -3,17 +3,17 @@
 use App\Enums\VulnerabilityStatus;
 use App\Filament\Resources\Deceased\Pages\ListDeceaseds;
 use App\Models\Deceased;
+use App\Models\Role;
 use App\Models\User;
 use App\Models\Zone;
 use Filament\Facades\Filament;
 use Illuminate\Support\Str;
 use Livewire\Livewire;
-use Spatie\Permission\Models\Role;
 
 beforeEach(function () {
-    Role::firstOrCreate(['name' => 'admin'], ['id' => Str::uuid(), 'uuid' => Str::uuid()]);
-    Role::firstOrCreate(['name' => 'super_admin'], ['id' => Str::uuid(), 'uuid' => Str::uuid()]);
-    Role::firstOrCreate(['name' => 'coordinator'], ['id' => Str::uuid(), 'uuid' => Str::uuid()]);
+    Role::firstOrCreate(['name' => 'admin'], ['uuid' => Str::uuid()]);
+    Role::firstOrCreate(['name' => 'super_admin'], ['uuid' => Str::uuid()]);
+    Role::firstOrCreate(['name' => 'coordinator'], ['uuid' => Str::uuid()]);
 
     $this->admin = User::factory()->create();
     $this->admin->assignRole('admin');

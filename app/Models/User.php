@@ -187,6 +187,7 @@ class User extends Authenticatable implements FilamentUser, HasAppAuthentication
             ->where('users.is_active', true)
             ->where('users.status', \App\Enums\UserStatus::ACTIVE->value)
             ->lockForUpdate()
+            ->get()
             ->count();
     }
 

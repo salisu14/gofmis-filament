@@ -706,7 +706,7 @@ test('24. legacy drop migration down recreates the original welfare schema', fun
     expect($welfareColumns)->toContain('id', 'name', 'date', 'collection_status', 'welfare_status');
 
     $welfareIdType = \Illuminate\Support\Facades\Schema::getColumnType('welfare', 'id');
-    expect($welfareIdType)->toBe('varchar'); // uuid columns introspect as varchar in SQLite
+    expect($welfareIdType)->toBeIn(['varchar', 'uuid', 'string']); // uuid columns introspect as varchar in SQLite and uuid in PostgreSQL
 
     $dwColumns = \Illuminate\Support\Facades\Schema::getColumnListing('deceased_welfare');
     expect($dwColumns)->toContain('id', 'welfare_id', 'deceased_id', 'collection_status');

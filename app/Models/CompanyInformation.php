@@ -62,15 +62,12 @@ class CompanyInformation extends Model
 
     public static function instance(): self
     {
-        return self::query()->firstOrCreate(
-            ['id' => self::SINGLETON_ID],
-            [
-                'id' => self::SINGLETON_ID,
-                'company_name' => self::DEFAULT_COMPANY_NAME,
-                'address_line_1' => self::DEFAULT_ADDRESS_LINE_1,
-                'country_code' => self::DEFAULT_COUNTRY_CODE,
-            ]
-        );
+        return self::query()->first() ?? self::query()->create([
+            'id' => self::SINGLETON_ID,
+            'company_name' => self::DEFAULT_COMPANY_NAME,
+            'address_line_1' => self::DEFAULT_ADDRESS_LINE_1,
+            'country_code' => self::DEFAULT_COUNTRY_CODE,
+        ]);
     }
 
     public static function setInstance(array $data): self
