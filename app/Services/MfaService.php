@@ -248,6 +248,42 @@ class MfaService
     }
 
     /**
+     * Administrative MFA Deactivation / Disabling.
+     */
+    public function adminDisableMfa(User $actor, User $target): void
+    {
+        \App\Services\Security\DemoReadOnlyGuard::ensureCanMutate($actor);
+
+        if (Gate::forUser($actor)->denies('disableMfa', $target) && Gate::forUser($actor)->denies('update', $target)) {
+            throw ValidationException::withMessages([
+                'mfa' => ['Unauthorized: You are not authorized to disable MFA for this user.'],
+            ]);
+        }
+
+        DB::transaction(function () use ($target) {
+            $target->saveAppAuthenticationSecret(null);
+            $target->saveAppAuthenticationRecoveryCodes(null);
+            $target->update([
+                'mfa_confirmed_at' => null,
+                'mfa_enabled_at' => null,
+                'mfa_enrollment_required' => false,
+            ]);
+
+            if ($target->id === auth()->id()) {
+                session()->forget(['mfa_verified_at', 'mfa_verified_user_id']);
+            }
+        });
+
+        SecurityAuditService::log(
+            'MFA_DISABLED_BY_ADMIN',
+            "MFA disabled for user {$target->email} by administrator {$actor->email}",
+            $actor,
+            $target,
+            ['actor_id' => $actor->id, 'target_user_id' => $target->id]
+        );
+    }
+
+    /**
      * Force target user to enroll in MFA on next login.
      */
     public function requireMfaEnrollment(User $actor, User $target): void

@@ -167,6 +167,16 @@ class UserPolicy
         return $this->update($user, $model);
     }
 
+    public function disableMfa(User $user, User $model): bool
+    {
+        // Must NOT disable any super_admin MFA
+        if ($model->isSuperAdmin()) {
+            return false;
+        }
+
+        return $this->update($user, $model);
+    }
+
     public function changeRoles(User $user, User $model): bool
     {
         if ($model->isProtectedSystemAccount()) {
