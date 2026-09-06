@@ -75,6 +75,23 @@ if (app()->environment('local')) {
     })->middleware('auth');
 }
 
+// Beneficiary Certificate Document Routes (Deceased Death Cert & Orphan Birth Cert)
+Route::get('/deceased/{deceased}/death-certificate/preview', [\App\Http\Controllers\BeneficiaryCertificateController::class, 'previewDeathCertificate'])
+    ->name('deceased.death-certificate.preview')
+    ->middleware('auth');
+
+Route::get('/deceased/{deceased}/death-certificate/download', [\App\Http\Controllers\BeneficiaryCertificateController::class, 'downloadDeathCertificate'])
+    ->name('deceased.death-certificate.download')
+    ->middleware('auth');
+
+Route::get('/orphans/{orphan}/birth-certificate/preview', [\App\Http\Controllers\BeneficiaryCertificateController::class, 'previewBirthCertificate'])
+    ->name('orphans.birth-certificate.preview')
+    ->middleware('auth');
+
+Route::get('/orphans/{orphan}/birth-certificate/download', [\App\Http\Controllers\BeneficiaryCertificateController::class, 'downloadBirthCertificate'])
+    ->name('orphans.birth-certificate.download')
+    ->middleware('auth');
+
 // Orphan Dossier Report Route
 Route::get('/orphans/{orphan}/report', [OrphanReportController::class, 'download'])
     ->name('orphans.report.download')

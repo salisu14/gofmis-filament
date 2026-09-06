@@ -216,8 +216,7 @@ class OrphanResource extends Resource
                             FileUpload::make('birth_certificate_path')
                                 ->label('Birth Certificate Scan')
                                 ->visible(fn (Get $get) => (bool) $get('has_birth_cert'))
-                                ->directory('certificates')
-                                ->disk('public')
+                                ->directory('birth-certificates')
                                 ->acceptedFileTypes(['application/pdf', 'image/*']),
 
                             DatePicker::make('married_at')

@@ -215,8 +215,6 @@ class OrphanForm
                                     ->label('Certificate Scan')
                                     ->visible(fn ($get) => $get('has_birth_cert'))
                                     ->directory('birth-certificates')
-                                    ->disk('public')
-                                    ->visibility('public')
                                     ->acceptedFileTypes(['application/pdf', 'image/*']),
                             ])->columns(2),
                     ]),
