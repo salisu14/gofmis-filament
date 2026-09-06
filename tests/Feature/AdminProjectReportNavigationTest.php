@@ -1,8 +1,8 @@
 <?php
 
 use App\Filament\Pages\Reports\ProjectReport;
+use App\Models\Role;
 use App\Models\User;
-use Spatie\Permission\Models\Role;
 
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\get;

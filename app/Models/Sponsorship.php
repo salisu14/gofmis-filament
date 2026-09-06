@@ -83,7 +83,7 @@ class Sponsorship extends Model
 
                     $duplicateQuery = static::query()
                         ->where('orphan_id', $sponsorship->orphan_id)
-                        ->where('id', '!=', $sponsorship->id ?? '')
+                        ->when($sponsorship->id, fn ($q) => $q->where('id', '!=', $sponsorship->id))
                         ->where(function ($q) use ($startDate, $endDate) {
                             $q->where('start_date', '<=', $endDate)
                                 ->where(function ($sub) use ($startDate) {
