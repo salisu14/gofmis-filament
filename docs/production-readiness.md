@@ -58,10 +58,27 @@ This document provides deployment guidelines, system configuration settings, sec
   redirect_stderr=true
   stdout_logfile=/var/www/gofmis/storage/logs/worker.log
   ```
-- **Cron Scheduler**: Add to server crontab:
+- **Cron Scheduler**: Add to server crontab (example deployment path `/var/www/gofmis`):
   ```cron
   * * * * * cd /var/www/gofmis && php artisan schedule:run >> /dev/null 2>&1
   ```
+
+  **Scheduled Tasks & Cadence Policy**:
+  - `widow-loans:evaluate-delinquency`: Daily at 00:00 (DPD evaluation & status updates)
+  - `finance:reconcile`: Daily at 01:00 (Read-only financial ledger diagnostic audit)
+  - `inventory:reconcile`: Daily at 01:30 (Read-only stock movement ledger audit)
+  - `widow-loans:reconcile`: Daily at 02:00 (Read-only WRL portfolio audit)
+  - `id-cards:reconcile`: Weekly on Sunday at 02:30 (Read-only ID card status & expiration audit)
+  - `security:rbac-audit`: Weekly on Sunday at 03:00 (Read-only security & permission audit)
+  - `zone-coordinators:reconcile`: Monthly on 1st at 04:00 (Read-only coordinator assignment audit)
+
+  **Failure Monitoring & Log Evidence**:
+  - Scheduled command executions and errors log directly to standard application logs (`storage/logs/laravel.log`).
+  - Failed command executions return non-zero CLI exit codes as a machine-detectable failure signal.
+  - OS-level crontab trigger is required in production; actual server crontab installation is managed during host deployment.
+
+  > [!IMPORTANT]
+  > **Manual-Only Repair Commands**: Mutating repair commands (`finance:repair-bank-balances`, `zone-coordinators:backfill`, `finance:fix-transaction-morphs`, `biometrics:reencrypt`) MUST NOT be scheduled unattended. They must be executed manually by authorized system administrators after reviewing diagnostic audit logs.
 
 ---
 
