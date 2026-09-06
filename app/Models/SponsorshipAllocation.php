@@ -35,7 +35,7 @@ class SponsorshipAllocation extends Model
                 $sponsorship = $allocation->sponsorship;
                 if ($sponsorship) {
                     $existingAllocated = (float) $sponsorship->allocations()
-                        ->where('id', '!=', $allocation->id ?? '')
+                        ->when($allocation->id, fn ($q) => $q->where('id', '!=', $allocation->id))
                         ->sum('amount_allocated');
                     $remaining = (float) $sponsorship->amount_committed - $existingAllocated;
 

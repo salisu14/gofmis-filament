@@ -3,7 +3,6 @@
 use App\Data\Loan\RecordWidowLoanRepaymentData;
 use App\Enums\Gender;
 use App\Enums\WidowLoanStatus;
-use App\Filament\Coordinator\Resources\LoanRequestResource\Pages\ViewLoanRequest;
 use App\Models\BankAccount;
 use App\Models\Deceased;
 use App\Models\User;
@@ -11,8 +10,6 @@ use App\Models\Widow;
 use App\Models\WidowLoan;
 use App\Models\Zone;
 use App\Services\WidowLoanService;
-use Filament\Facades\Filament;
-use Livewire\Livewire;
 
 beforeEach(function () {
     $this->seed(\Database\Seeders\RolesAndPermissionsSeeder::class);

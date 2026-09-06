@@ -41,7 +41,7 @@ class EducationFeeInvoicePaymentRelationManagerTest extends TestCase
     {
         parent::setUp();
 
-        \Spatie\Permission\Models\Role::firstOrCreate(
+        \App\Models\Role::firstOrCreate(
             ['name' => 'admin', 'guard_name' => 'web'],
             ['uuid' => (string) \Illuminate\Support\Str::uuid()]
         );
@@ -51,7 +51,7 @@ class EducationFeeInvoicePaymentRelationManagerTest extends TestCase
 
         $this->unauthorizedUser = User::factory()->create();
 
-        $this->zone = Zone::create(['name' => 'Kano Central Zone', 'code' => 'KCZ']);
+        $this->zone = Zone::create(['name' => 'Kano Central Zone']);
 
         $this->deceased = Deceased::create([
             'first_name' => 'Deceased',

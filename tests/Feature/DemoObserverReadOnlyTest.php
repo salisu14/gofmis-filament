@@ -28,8 +28,7 @@ beforeEach(function () {
     $this->seed(RolesAndPermissionsSeeder::class);
 
     $this->zone = Zone::firstOrCreate(
-        ['code' => 'KCZ'],
-        ['name' => 'Kano Central Zone', 'state_id' => 1]
+        ['name' => 'Kano Central Zone']
     );
 
     $this->demoObserver = User::factory()->create([
@@ -486,8 +485,8 @@ test('48. Admin CAN perform normal authorized mutations and exports', function (
 // ─────────────────────────────────────────────────────────────
 
 test('50. Demo Observer can see existing records regardless of zone scope', function () {
-    $zone1 = Zone::create(['code' => 'Z1', 'name' => 'Zone 1', 'state_id' => 1]);
-    $zone2 = Zone::create(['code' => 'Z2', 'name' => 'Zone 2', 'state_id' => 1]);
+    $zone1 = Zone::create(['name' => 'Zone 1']);
+    $zone2 = Zone::create(['name' => 'Zone 2']);
 
     demoObserverCreateTestDeceased($zone1->id);
     demoObserverCreateTestDeceased($zone2->id);
@@ -505,8 +504,8 @@ test('51. Coordinator zone isolation has not been weakened', function () {
     ]);
     $coordinator->assignRole('coordinator');
 
-    $zone1 = Zone::create(['code' => 'Z3', 'name' => 'Zone 3', 'state_id' => 1, 'coordinator_id' => $coordinator->id]);
-    $zone2 = Zone::create(['code' => 'Z4', 'name' => 'Zone 4', 'state_id' => 1]);
+    $zone1 = Zone::create(['name' => 'Zone 3', 'coordinator_id' => $coordinator->id]);
+    $zone2 = Zone::create(['name' => 'Zone 4']);
 
     demoObserverCreateTestDeceased($zone1->id);
     demoObserverCreateTestDeceased($zone2->id);

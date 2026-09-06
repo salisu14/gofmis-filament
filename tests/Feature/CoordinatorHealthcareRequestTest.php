@@ -3,18 +3,13 @@
 use App\Enums\Gender;
 use App\Enums\IllnessCategory;
 use App\Enums\OrphanStatus;
-use App\Filament\Coordinator\Resources\HealthcareRequestResource\Pages\CreateHealthcareRequest;
-use App\Filament\Coordinator\Resources\HealthcareRequestResource\Pages\EditHealthcareRequest;
-use App\Filament\Coordinator\Resources\HealthcareRequestResource\Pages\ViewHealthcareRequest;
 use App\Models\Deceased;
 use App\Models\Illness;
 use App\Models\Orphan;
-use App\Models\Prescription;
 use App\Models\User;
 use App\Models\Widow;
 use App\Models\Zone;
 use Filament\Facades\Filament;
-use Livewire\Livewire;
 
 beforeEach(function () {
     Filament::setCurrentPanel(Filament::getPanel('coordinator'));
@@ -93,15 +88,12 @@ beforeEach(function () {
     $this->actingAs($this->coordinator);
 });
 
-
 test('1. coordinator is blocked from rendering Healthcare Request create page', function () {
     $this->get(\App\Filament\Coordinator\Resources\HealthcareRequestResource\Pages\CreateHealthcareRequest::getUrl())
-         ->assertForbidden();
+        ->assertForbidden();
 });
 
 test('2. coordinator is blocked from rendering Healthcare Request list page', function () {
     $this->get(\App\Filament\Coordinator\Resources\HealthcareRequestResource::getUrl('index'))
-         ->assertForbidden();
+        ->assertForbidden();
 });
-
-

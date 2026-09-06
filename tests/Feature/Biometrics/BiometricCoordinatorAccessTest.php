@@ -5,6 +5,7 @@ namespace Tests\Feature\Biometrics;
 use App\Filament\RelationManagers\FingerprintsRelationManager;
 use App\Models\BeneficiaryFingerprint;
 use App\Models\Orphan;
+use App\Models\Role;
 use App\Models\User;
 use App\Models\Widow;
 use App\Models\Zone;
@@ -12,7 +13,6 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Livewire\Livewire;
-use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 /**

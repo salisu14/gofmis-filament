@@ -32,7 +32,7 @@ class WelfarePackageItemCategoryInvariantTest extends TestCase
     {
         parent::setUp();
 
-        \Spatie\Permission\Models\Role::firstOrCreate(
+        \App\Models\Role::firstOrCreate(
             ['name' => 'admin', 'guard_name' => 'web'],
             ['uuid' => (string) \Illuminate\Support\Str::uuid()]
         );

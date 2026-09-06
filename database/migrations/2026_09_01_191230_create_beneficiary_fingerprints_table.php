@@ -21,7 +21,7 @@ return new class extends Migration
             $table->string('device_model')->nullable();
             $table->string('device_serial')->nullable();
             $table->string('sdk_version')->nullable();
-            $table->foreignId('enrolled_by')->nullable()->constrained('users');
+            $table->foreignUuid('enrolled_by')->nullable()->constrained('users');
             $table->timestamp('enrolled_at')->useCurrent();
             $table->timestamp('last_verified_at')->nullable();
             $table->boolean('is_active')->default(true);

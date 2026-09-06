@@ -43,7 +43,7 @@ class InterventionRequestItemRelationManagerTest extends TestCase
     {
         parent::setUp();
 
-        \Spatie\Permission\Models\Role::firstOrCreate(
+        \App\Models\Role::firstOrCreate(
             ['name' => 'admin', 'guard_name' => 'web'],
             ['uuid' => (string) \Illuminate\Support\Str::uuid()]
         );
@@ -51,7 +51,7 @@ class InterventionRequestItemRelationManagerTest extends TestCase
         $this->admin = User::factory()->create();
         $this->admin->assignRole('admin');
 
-        $this->zone = Zone::create(['name' => 'Kano Central Zone', 'code' => 'KCZ']);
+        $this->zone = Zone::create(['name' => 'Kano Central Zone']);
 
         $this->deceased = Deceased::create([
             'first_name' => 'Deceased',

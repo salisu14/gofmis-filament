@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\CompanyInformation;
+use App\Models\Role;
 use App\Models\User;
 use App\Services\Company\CompanyInformationService;
 use App\Services\DocumentBrandingService;
@@ -8,7 +9,6 @@ use App\Services\ReportSignatoryResolverService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use Spatie\Permission\Models\Role;
 
 use function Pest\Laravel\actingAs;
 

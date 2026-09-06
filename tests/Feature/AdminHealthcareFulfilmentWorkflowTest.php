@@ -4,7 +4,6 @@ use App\Enums\Gender;
 use App\Enums\IllnessCategory;
 use App\Enums\PrescriptionStatus;
 use App\Filament\Coordinator\Resources\HealthcareRequestResource;
-use App\Filament\Coordinator\Resources\HealthcareRequestResource\Pages\ViewHealthcareRequest;
 use App\Filament\Resources\Prescriptions\Pages\ViewPrescription;
 use App\Models\Deceased;
 use App\Models\Illness;

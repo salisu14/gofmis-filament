@@ -158,6 +158,7 @@ class ConsolidatedFinancialReportService
         $query = $this->getTransactionsQuery($filters, $mode);
 
         $results = (clone $query)
+            ->reorder()
             ->select('type', DB::raw('SUM(amount) as total_amount'), DB::raw('COUNT(*) as total_count'))
             ->groupBy('type')
             ->get();
