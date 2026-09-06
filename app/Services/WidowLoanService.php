@@ -313,7 +313,11 @@ class WidowLoanService
                 ]);
             }
 
-            $bankAccountId = $data->bankAccountId ?: ($loan->repayment_bank_id ?: $loan->bank_account_id);
+            $defaultRepaymentBankId = BankAccount::query()
+                ->dedicatedTo(BankAccount::USAGE_WIDOW_LOAN_REPAYMENT)
+                ->value('id');
+
+            $bankAccountId = $data->bankAccountId ?: ($loan->repayment_bank_id ?: $defaultRepaymentBankId);
             if (! $bankAccountId) {
                 throw new \RuntimeException('A bank account is required to record a repayment.');
             }

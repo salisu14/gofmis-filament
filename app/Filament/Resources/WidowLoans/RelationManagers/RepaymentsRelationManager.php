@@ -68,7 +68,18 @@ class RepaymentsRelationManager extends RelationManager
                             ])
                             ->toArray()
                     )
-                    ->default(fn () => $this->ownerRecord?->repayment_bank_id ?? $this->ownerRecord?->bank_account_id)
+                    ->default(function () {
+                        if ($this->ownerRecord?->repayment_bank_id) {
+                            $repaymentBank = BankAccount::find($this->ownerRecord->repayment_bank_id);
+                            if ($repaymentBank && ($repaymentBank->usage === BankAccount::USAGE_WIDOW_LOAN_REPAYMENT || $repaymentBank->usage === BankAccount::USAGE_GENERAL)) {
+                                return $this->ownerRecord->repayment_bank_id;
+                            }
+                        }
+
+                        return BankAccount::query()
+                            ->dedicatedTo(BankAccount::USAGE_WIDOW_LOAN_REPAYMENT)
+                            ->value('id');
+                    })
                     ->searchable()
                     ->required(),
                 Select::make('payment_method')

@@ -101,9 +101,8 @@ class WidowLoanRepaymentForm
                                         $loanId = $get('widow_loan_id') ?? request()->query('widow_loan_id');
                                         if ($loanId) {
                                             $loan = WidowLoan::find($loanId);
-                                            if ($loan && ($loan->repayment_bank_id || $loan->bank_account_id)) {
-                                                $linkedId = $loan->repayment_bank_id ?? $loan->bank_account_id;
-                                                $query->orWhere('id', $linkedId);
+                                            if ($loan && $loan->repayment_bank_id) {
+                                                $query->orWhere('id', $loan->repayment_bank_id);
                                             }
                                         }
 
@@ -118,10 +117,10 @@ class WidowLoanRepaymentForm
                                         $loanId = $get('widow_loan_id') ?? request()->query('widow_loan_id');
                                         if ($loanId) {
                                             $loan = WidowLoan::find($loanId);
-                                            if ($loan) {
-                                                $targetBankId = $loan->repayment_bank_id ?? $loan->bank_account_id;
-                                                if ($targetBankId) {
-                                                    return $targetBankId;
+                                            if ($loan && $loan->repayment_bank_id) {
+                                                $repaymentBank = BankAccount::find($loan->repayment_bank_id);
+                                                if ($repaymentBank && ($repaymentBank->usage === BankAccount::USAGE_WIDOW_LOAN_REPAYMENT || $repaymentBank->usage === BankAccount::USAGE_GENERAL)) {
+                                                    return $loan->repayment_bank_id;
                                                 }
                                             }
                                         }
@@ -160,13 +159,15 @@ class WidowLoanRepaymentForm
 
     protected static function hydrateReceivingBankAccount(mixed $loanId, callable $set, callable $get): void
     {
-        $loan = $loanId ? WidowLoan::find($loanId) : null;
-        if ($loan) {
-            $targetBankId = $loan->repayment_bank_id ?? $loan->bank_account_id;
-            if ($targetBankId && BankAccount::where('id', $targetBankId)->exists()) {
-                $set('bank_account_id', $targetBankId);
+        if ($loanId) {
+            $loan = WidowLoan::find($loanId);
+            if ($loan && $loan->repayment_bank_id) {
+                $repaymentBank = BankAccount::find($loan->repayment_bank_id);
+                if ($repaymentBank && ($repaymentBank->usage === BankAccount::USAGE_WIDOW_LOAN_REPAYMENT || $repaymentBank->usage === BankAccount::USAGE_GENERAL)) {
+                    $set('bank_account_id', $loan->repayment_bank_id);
 
-                return;
+                    return;
+                }
             }
         }
 
