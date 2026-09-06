@@ -257,7 +257,7 @@ class IdCardsTable
                                 ->success()
                                 ->send();
                         })
-                        ->visible(fn (IdCard $record) => $record->status === 'revoked'),
+                        ->visible(fn (IdCard $record) => $record->status === 'revoked' && ! $record->hasOtherActiveCard()),
                 ]),
             ])
             ->toolbarActions([

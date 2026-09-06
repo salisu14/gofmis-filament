@@ -158,7 +158,7 @@ class ViewIdCard extends ViewRecord
                         ->success()
                         ->send();
                 })
-                ->visible(fn (IdCard $record): bool => $record->status === 'revoked'),
+                ->visible(fn (IdCard $record): bool => $record->status === 'revoked' && ! $record->hasOtherActiveCard()),
         ];
     }
 }
