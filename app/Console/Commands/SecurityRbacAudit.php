@@ -125,7 +125,7 @@ class SecurityRbacAudit extends Command
         $duplicateCoordinators = Zone::whereNotNull('coordinator_id')
             ->select('coordinator_id', DB::raw('count(*) as zone_count'))
             ->groupBy('coordinator_id')
-            ->having('zone_count', '>', 1)
+            ->havingRaw('COUNT(*) > 1')
             ->get();
 
         if ($duplicateCoordinators->isNotEmpty()) {

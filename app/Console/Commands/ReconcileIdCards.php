@@ -46,7 +46,7 @@ class ReconcileIdCards extends Command
         $duplicateNumbers = DB::table('id_cards')
             ->select('card_number', DB::raw('COUNT(*) as card_count'))
             ->groupBy('card_number')
-            ->having('card_count', '>', 1)
+            ->havingRaw('COUNT(*) > 1')
             ->get();
 
         if ($duplicateNumbers->isEmpty()) {
@@ -63,7 +63,7 @@ class ReconcileIdCards extends Command
         $multiCardBeneficiaries = DB::table('id_cards')
             ->select('cardable_type', 'cardable_id', DB::raw('COUNT(*) as total_cards'))
             ->groupBy('cardable_type', 'cardable_id')
-            ->having('total_cards', '>', 1)
+            ->havingRaw('COUNT(*) > 1')
             ->get();
 
         if ($multiCardBeneficiaries->isEmpty()) {
@@ -84,7 +84,7 @@ class ReconcileIdCards extends Command
             ->select('cardable_type', 'cardable_id', DB::raw('COUNT(*) as open_cards'))
             ->whereIn('status', ['draft', 'active'])
             ->groupBy('cardable_type', 'cardable_id')
-            ->having('open_cards', '>', 1)
+            ->havingRaw('COUNT(*) > 1')
             ->get();
 
         if ($multiOpenBeneficiaries->isEmpty()) {

@@ -244,3 +244,19 @@ test('write-off document downloading is secure and rejects unauthorized users', 
         ->get(route('loans.write-off-document.download', $writeOff))
         ->assertStatus(200);
 });
+
+test('widow_loans status column can persist every WidowLoanStatus enum value', function () {
+    foreach (WidowLoanStatus::cases() as $status) {
+        $loan = WidowLoan::create([
+            'widow_id' => $this->widow->id,
+            'principal_amount' => 10000.00,
+            'total_payable' => 10000.00,
+            'outstanding_balance' => 10000.00,
+            'status' => $status,
+            'bank_account_id' => $this->bankAccount->id,
+            'purpose' => 'Enum test '.$status->value,
+        ]);
+
+        expect($loan->fresh()->status)->toBe($status);
+    }
+});
