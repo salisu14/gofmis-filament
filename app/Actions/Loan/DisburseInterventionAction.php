@@ -6,8 +6,8 @@ use App\Data\Loan\DisburseInterventionData;
 use App\Events\InterventionDisbursed;
 use App\Models\BankAccount;
 use App\Models\Intervention;
-use App\Models\InterventionRequest;
 use App\Models\InterventionItem;
+use App\Models\InterventionRequest;
 use App\Models\Transaction;
 use Illuminate\Support\Facades\DB;
 

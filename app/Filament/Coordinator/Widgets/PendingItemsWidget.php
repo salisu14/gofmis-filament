@@ -3,17 +3,15 @@
 namespace App\Filament\Coordinator\Widgets;
 
 use App\Enums\BeneficiaryStatus;
-use App\Enums\WidowLoanStatus;
 use App\Models\InterventionRequest;
 use App\Models\WelfareBeneficiary;
-use App\Models\WidowLoan;
 use Filament\Widgets\Widget;
 
 class PendingItemsWidget extends Widget
 {
-    protected static ?int $sort = 4;
+    protected static ?int $sort = 5;
 
-    protected int|string|array $columnSpan = ['lg' => 2];
+    protected int|string|array $columnSpan = ['lg' => 1];
 
     protected string $view = 'filament.coordinator.widgets.pending-items';
 
@@ -34,13 +32,12 @@ class PendingItemsWidget extends Widget
             ];
         }
 
-        // Counts — global scopes on Widow/Orphan auto-filter by zone
+        // Counts — zone scoped
         $counts = [
-            'loans' => WidowLoan::where('status', WidowLoanStatus::PENDING)->count(),
             'education' => InterventionRequest::where('status', 'pending')
                 ->whereHas('type', fn ($q) => $q->where('name', 'like', '%education%'))
+                ->whereHas('orphan.deceased', fn ($q) => $q->where('zone_id', $zoneId))
                 ->count(),
-            'healthcare' => \App\Models\Prescription::whereMonth('created_at', now()->month)->count(),
             'welfare' => WelfareBeneficiary::where('status', BeneficiaryStatus::PENDING)
                 ->whereHas('deceased', fn ($q) => $q->where('zone_id', $zoneId))
                 ->count(),
@@ -49,28 +46,12 @@ class PendingItemsWidget extends Widget
         // Recent pending items
         $items = collect();
 
-        WidowLoan::where('status', WidowLoanStatus::PENDING)
-            ->with('widow')
-            ->latest()
-            ->limit(3)
-            ->get()
-            ->each(fn ($item) => $items->push([
-                'type' => 'loan',
-                'label' => 'Loan Request',
-                'name' => $item->widow?->display_name ?? 'Unknown',
-                'detail' => '₦'.number_format($item->principal_amount, 2),
-                'status' => 'Pending Approval',
-                'color' => 'warning',
-                'icon' => 'heroicon-m-banknotes',
-                'url' => \App\Filament\Coordinator\Resources\LoanRequestResource::getUrl('view', ['record' => $item]),
-                'time' => $item->created_at,
-            ]));
-
         InterventionRequest::where('status', 'pending')
             ->whereHas('type', fn ($q) => $q->where('name', 'like', '%education%'))
+            ->whereHas('orphan.deceased', fn ($q) => $q->where('zone_id', $zoneId))
             ->with('orphan')
             ->latest()
-            ->limit(3)
+            ->limit(4)
             ->get()
             ->each(fn ($item) => $items->push([
                 'type' => 'education',
@@ -88,7 +69,7 @@ class PendingItemsWidget extends Widget
             ->whereHas('deceased', fn ($q) => $q->where('zone_id', $zoneId))
             ->with('deceased', 'welfarePackage')
             ->latest()
-            ->limit(3)
+            ->limit(4)
             ->get()
             ->each(fn ($item) => $items->push([
                 'type' => 'welfare',

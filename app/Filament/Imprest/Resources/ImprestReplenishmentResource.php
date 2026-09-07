@@ -53,7 +53,19 @@ class ImprestReplenishmentResource extends Resource
 
     public static function canCreate(): bool
     {
-        // A8: Non-destructively disable new Imprest / Out-of-Pocket creation
+        // B-07: Operationally deactivate new Imprest / Out-of-Pocket creation
+        return false;
+    }
+
+    public static function canEdit($record): bool
+    {
+        // B-07: Operationally deactivate editing Imprest replenishments
+        return false;
+    }
+
+    public static function canDelete($record): bool
+    {
+        // B-07: Operationally deactivate deleting Imprest replenishments
         return false;
     }
 

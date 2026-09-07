@@ -57,11 +57,11 @@ class IdCardPDFService
     }
 
     /**
-     * Generate bulk PDF with multiple cards per page (10-up layout)
+     * Generate bulk PDF with multiple cards per page (8-up layout: 2 columns x 4 rows)
      */
     public function generateBulk(Collection $idCards, IdCardPrintBatch $batch): string
     {
-        $cardsPerPage = 10; // 2 columns x 5 rows with cut marks
+        $cardsPerPage = 8; // 2 columns x 4 rows with cut marks (fits A4 portrait without page overflows)
         $chunks = $idCards->chunk($cardsPerPage);
 
         $pages = [];
@@ -161,9 +161,9 @@ class IdCardPDFService
             'zone' => $zone?->name ?? 'N/A',
             'coordinator_name' => $coordinator?->name ?? 'N/A',
             'coordinator_phone' => $coordinator?->phone ?? $coordinator?->phone_number ?? 'N/A',
-//            'zone' => $beneficiary->zone?->name ?? 'N/A',
-//            'coordinator_name' => $beneficiary->zone?->coordinator_name ?? 'N/A',
-//            'coordinator_phone' => $beneficiary->zone?->coordinator_phone ?? 'N/A',
+            //            'zone' => $beneficiary->zone?->name ?? 'N/A',
+            //            'coordinator_name' => $beneficiary->zone?->coordinator_name ?? 'N/A',
+            //            'coordinator_phone' => $beneficiary->zone?->coordinator_phone ?? 'N/A',
             'foundation_address' => $company['address'],
             'issue_date' => $idCard->issued_at?->format('M d, Y') ?? now()->format('M d, Y'),
             'expiry_date' => $idCard->expires_at?->format('M d, Y'),

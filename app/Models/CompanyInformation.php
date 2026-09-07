@@ -46,6 +46,9 @@ class CompanyInformation extends Model
         'bank_account_no',
         'bank_branch',
         'swift_code',
+        'report_signatory_name',
+        'report_signatory_title',
+        'report_signature_path',
         'fiscal_year_start_month',
     ];
 
@@ -135,6 +138,11 @@ class CompanyInformation extends Model
     public function getFaviconUrlAttribute(): ?string
     {
         return $this->resolveStorageUrl($this->favicon_path);
+    }
+
+    public function getReportSignatureUrlAttribute(): ?string
+    {
+        return $this->resolveStorageUrl($this->report_signature_path);
     }
 
     public function getDisplayNameAttribute(): string

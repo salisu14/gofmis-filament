@@ -75,24 +75,30 @@ class CoordinatorHistoryRelationManager extends RelationManager
 
                 Tables\Columns\TextColumn::make('status')
                     ->label('Status')
-                    ->state(fn (ZoneCoordinatorHistory $record) => $record->isActive() ? 'Active' : 'Previous')
+                    ->state(fn (ZoneCoordinatorHistory $record) => $record->isActive() ? 'Current' : 'Previous')
                     ->badge()
-                    ->color(fn ($state) => $state === 'Active' ? 'success' : 'gray')
-                    ->icon(fn ($state) => $state === 'Active' ? 'heroicon-m-check-circle' : 'heroicon-m-clock'),
+                    ->color(fn ($state) => $state === 'Current' ? 'success' : 'gray')
+                    ->icon(fn ($state) => $state === 'Current' ? 'heroicon-m-check-circle' : 'heroicon-m-clock'),
 
                 Tables\Columns\TextColumn::make('assigned_at')
-                    ->label('Assigned')
+                    ->label('Assigned From')
                     ->dateTime('d M, Y H:i')
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('unassigned_at')
-                    ->label('Relinquished')
+                    ->label('Assigned Until')
                     ->dateTime('d M, Y H:i')
-                    ->placeholder('Currently Active')
+                    ->placeholder('—')
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('changer.name')
-                    ->label('Authorized By')
+                    ->label('Assigned By')
+                    ->placeholder('System')
+                    ->toggleable(),
+
+                Tables\Columns\TextColumn::make('reason')
+                    ->label('Reason')
+                    ->placeholder('—')
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->defaultSort('assigned_at', 'desc')

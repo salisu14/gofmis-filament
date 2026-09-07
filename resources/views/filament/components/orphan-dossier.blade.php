@@ -321,9 +321,10 @@
     <table class="data-table">
         <thead>
             <tr>
+                <th>Session</th>
                 <th>Institution / School</th>
                 <th>Class / Level</th>
-                <th>Fee Frequency</th>
+                <th>Outcome / Decision</th>
                 <th class="text-right">School Fee</th>
                 <th class="text-right">Support Amount</th>
                 <th>Status</th>
@@ -331,10 +332,16 @@
         </thead>
         <tbody>
             @foreach($orphan->educations as $edu)
+                @php
+                    $decisionLabel = $edu->progression_decision instanceof \App\Enums\AcademicProgressionDecision
+                        ? $edu->progression_decision->label()
+                        : ($edu->progression_decision ? ucfirst($edu->progression_decision) : 'Ongoing');
+                @endphp
                 <tr>
+                    <td><span class="text-mono">{{ $edu->academic_session ?? 'N/A' }}</span></td>
                     <td><strong>{{ $edu->institution?->name ?? 'N/A' }}</strong></td>
                     <td>{{ $edu->orphanClass?->name ?? $edu->class_level ?? 'N/A' }}</td>
-                    <td>{{ ucfirst($edu->fee_frequency ?? 'N/A') }}</td>
+                    <td>{{ $decisionLabel }}</td>
                     <td class="text-right">₦{{ number_format((float) ($edu->school_fee ?? 0), 2) }}</td>
                     <td class="text-right">₦{{ number_format((float) ($edu->support_amount ?? 0), 2) }}</td>
                     <td>
@@ -519,9 +526,35 @@
     <p class="empty-text">No active or historical sponsorship records on file.</p>
 @endif
 
+@php
+    $signatory = $company['signatory'] ?? [
+        'name' => $company['signatory_name'] ?? null,
+        'title' => $company['signatory_title'] ?? null,
+        'signature_data_uri' => $company['signature_data_uri'] ?? null,
+    ];
+@endphp
+
+@if(!empty($signatory['signature_data_uri']) || !empty($signatory['name']) || !empty($signatory['title']))
+    <div style="margin-top: 25px; text-align: right;">
+        <div style="display: inline-block; text-align: center; width: 180px;">
+            @if(!empty($signatory['signature_data_uri']))
+                <img src="{{ $signatory['signature_data_uri'] }}" style="max-height: 45px; max-width: 150px; object-fit: contain; margin-bottom: 2px;" alt="Signature">
+            @endif
+            <div style="border-top: 1px solid #111827; padding-top: 4px;">
+                <p style="font-size: 8.5px; font-weight: bold; text-transform: uppercase; margin: 0; color: #111827;">
+                    {{ $signatory['name'] ?: 'Authorized Signature' }}
+                </p>
+                <p style="font-size: 7.5px; color: #6b7280; margin: 1px 0 0 0;">
+                    {{ $signatory['title'] ?: 'Welfare Department' }}
+                </p>
+            </div>
+        </div>
+    </div>
+@endif
+
 <!-- Footer -->
 <div class="footer">
-    <p>{{ $company['name'] }} — Official Beneficiary Dossier — Confidential Document — Page 1 of 1</p>
+    <p>{{ $company['name'] }} — Welfare Department — Official Beneficiary Dossier — Confidential Document — Page 1 of 1</p>
 </div>
 
 </body>

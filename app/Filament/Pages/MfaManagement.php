@@ -144,6 +144,43 @@ class MfaManagement extends Page implements HasTable
             actionKey: 'reset_user_mfa'
         );
 
+        $disableMfaAction = Action::make('disableMfa')
+            ->label('Disable MFA')
+            ->icon('heroicon-o-x-circle')
+            ->color('danger')
+            ->requiresConfirmation()
+            ->modalHeading('Disable User MFA?')
+            ->modalDescription('Are you sure you want to disable Multi-Factor Authentication for this user? Their active secret and recovery codes will be removed.')
+            ->modalSubmitActionLabel('Disable MFA')
+            ->visible(fn (User $record) => Gate::allows('disableMfa', $record) && $record->twoFactorAuthEnabled())
+            ->action(function (User $record) {
+                try {
+                    $service = new \App\Services\MfaService;
+                    $service->adminDisableMfa(auth()->user(), $record);
+
+                    \Filament\Notifications\Notification::make()
+                        ->title('MFA Disabled Successfully')
+                        ->body("Multi-Factor Authentication for {$record->email} has been disabled.")
+                        ->success()
+                        ->send();
+                } catch (\Throwable $e) {
+                    report($e);
+
+                    \Filament\Notifications\Notification::make()
+                        ->title('MFA Disable Failed')
+                        ->body($e->getMessage())
+                        ->danger()
+                        ->send();
+                }
+            });
+
+        SensitiveActionConfirmation::apply(
+            action: $disableMfaAction,
+            level: SensitiveConfirmationLevel::PASSWORD_AND_PHRASE,
+            phrase: 'DISABLE MFA',
+            actionKey: 'disable_user_mfa'
+        );
+
         return $table
             ->query($this->getTableQuery())
             ->columns([
@@ -301,7 +338,7 @@ class MfaManagement extends Page implements HasTable
                         ->modalHeading('Force MFA Enrollment?')
                         ->modalDescription('This user will be required to configure multi-factor authentication before continuing to use protected areas of the system.')
                         ->modalSubmitActionLabel('Force Enrollment')
-                        ->visible(fn (User $record) => Gate::allows('update', $record) && ! $record->mfa_enrollment_required)
+                        ->visible(fn (User $record) => Gate::allows('update', $record) && ! $record->twoFactorAuthEnabled() && ! $record->mfa_enrollment_required)
                         ->action(function (User $record) {
                             try {
                                 $service = new \App\Services\MfaService;
@@ -329,7 +366,7 @@ class MfaManagement extends Page implements HasTable
                         ->modalHeading('Remove Forced MFA Enrollment?')
                         ->modalDescription('This will remove the administrative forced enrollment requirement for this user. If their role mandates MFA, MFA will remain mandatory.')
                         ->modalSubmitActionLabel('Remove Forced Enrollment')
-                        ->visible(fn (User $record) => Gate::allows('update', $record) && $record->mfa_enrollment_required)
+                        ->visible(fn (User $record) => Gate::allows('update', $record) && ! $record->twoFactorAuthEnabled() && $record->mfa_enrollment_required)
                         ->action(function (User $record) {
                             try {
                                 $service = new \App\Services\MfaService;
@@ -349,6 +386,7 @@ class MfaManagement extends Page implements HasTable
                             }
                         }),
 
+                    $disableMfaAction,
                     $resetAction,
                 ]),
             ]);

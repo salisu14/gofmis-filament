@@ -3,8 +3,6 @@
 namespace App\Listeners\Imprest;
 
 use App\Events\Imprest\TransactionCreated;
-use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Queue\InteractsWithQueue;
 
 class CheckMissingReceipts
 {
@@ -21,7 +19,7 @@ class CheckMissingReceipts
      */
     public function handle(TransactionCreated $event): void
     {
-        if (!$event->transaction->receipt_attached) {
+        if (! $event->transaction->receipt_attached) {
             // Schedule reminder notification after 48 hours
             // or dispatch immediate alert to supervisor
         }

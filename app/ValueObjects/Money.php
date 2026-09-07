@@ -38,18 +38,21 @@ readonly class Money
     public function add(Money $other): self
     {
         $this->ensureSameCurrency($other);
+
         return new self($this->cents + $other->cents, $this->currency);
     }
 
     public function subtract(Money $other): self
     {
         $this->ensureSameCurrency($other);
+
         return new self($this->cents - $other->cents, $this->currency);
     }
 
     public function isGreaterThan(Money $other): bool
     {
         $this->ensureSameCurrency($other);
+
         return $this->cents > $other->cents;
     }
 

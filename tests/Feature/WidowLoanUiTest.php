@@ -494,3 +494,214 @@ test('30. no raw enum/string mismatch crashes UI', function () {
     Livewire::test(ListWidowLoans::class)->assertSuccessful();
     Livewire::test(ViewWidowLoan::class, ['record' => $this->loan->getRouteKey()])->assertSuccessful();
 });
+
+/*
+|--------------------------------------------------------------------------
+| LIST TABS & USABILITY UI TESTS
+|--------------------------------------------------------------------------
+*/
+
+test('31. active tab scopes correctly', function () {
+    // Create completed loan
+    $completedLoan = WidowLoan::create([
+        'widow_id' => $this->widow->id,
+        'principal_amount' => 50000.00,
+        'total_payable' => 50000.00,
+        'outstanding_balance' => 0.00,
+        'total_paid' => 50000.00,
+        'status' => WidowLoanStatus::COMPLETED,
+        'performance_status' => WidowLoanPerformanceStatus::CURRENT,
+        'fully_repaid' => true,
+        'disbursed_at' => now()->subDays(40),
+        'bank_account_id' => $this->bankAccount->id,
+        'purpose' => 'Trading',
+    ]);
+
+    // Create rejected loan
+    $rejectedLoan = WidowLoan::create([
+        'widow_id' => $this->widow->id,
+        'principal_amount' => 50000.00,
+        'total_payable' => 50000.00,
+        'outstanding_balance' => 50000.00,
+        'status' => WidowLoanStatus::REJECTED,
+        'performance_status' => WidowLoanPerformanceStatus::CURRENT,
+        'fully_repaid' => false,
+        'bank_account_id' => $this->bankAccount->id,
+        'purpose' => 'Trading',
+    ]);
+
+    $this->actingAs($this->superAdmin);
+
+    Livewire::test(ListWidowLoans::class)
+        ->set('activeTab', 'active')
+        ->assertCanSeeTableRecords([$this->loan]) // Active
+        ->assertCanNotSeeTableRecords([$completedLoan, $rejectedLoan]);
+});
+
+test('32. draft_pending_approved tab scopes correctly', function () {
+    $pendingLoan = WidowLoan::create([
+        'widow_id' => $this->widow->id,
+        'principal_amount' => 50000.00,
+        'total_payable' => 50000.00,
+        'outstanding_balance' => 50000.00,
+        'status' => WidowLoanStatus::PENDING,
+        'performance_status' => WidowLoanPerformanceStatus::CURRENT,
+        'fully_repaid' => false,
+        'bank_account_id' => $this->bankAccount->id,
+        'purpose' => 'Trading',
+    ]);
+
+    $this->actingAs($this->superAdmin);
+
+    Livewire::test(ListWidowLoans::class)
+        ->set('activeTab', 'draft_pending_approved')
+        ->assertCanSeeTableRecords([$pendingLoan])
+        ->assertCanNotSeeTableRecords([$this->loan]); // This loan is disbursed
+});
+
+test('33. fully repaid tab scopes correctly', function () {
+    $completedLoan = WidowLoan::create([
+        'widow_id' => $this->widow->id,
+        'principal_amount' => 50000.00,
+        'total_payable' => 50000.00,
+        'outstanding_balance' => 0.00,
+        'total_paid' => 50000.00,
+        'status' => WidowLoanStatus::COMPLETED,
+        'performance_status' => WidowLoanPerformanceStatus::CURRENT,
+        'fully_repaid' => true,
+        'disbursed_at' => now()->subDays(40),
+        'bank_account_id' => $this->bankAccount->id,
+        'purpose' => 'Trading',
+    ]);
+
+    $this->actingAs($this->superAdmin);
+
+    Livewire::test(ListWidowLoans::class)
+        ->set('activeTab', 'fully_repaid')
+        ->assertCanSeeTableRecords([$completedLoan])
+        ->assertCanNotSeeTableRecords([$this->loan]);
+});
+
+test('34. rejected tab scopes correctly', function () {
+    $rejectedLoan = WidowLoan::create([
+        'widow_id' => $this->widow->id,
+        'principal_amount' => 50000.00,
+        'total_payable' => 50000.00,
+        'outstanding_balance' => 50000.00,
+        'status' => WidowLoanStatus::REJECTED,
+        'performance_status' => WidowLoanPerformanceStatus::CURRENT,
+        'fully_repaid' => false,
+        'bank_account_id' => $this->bankAccount->id,
+        'purpose' => 'Trading',
+    ]);
+
+    $this->actingAs($this->superAdmin);
+
+    Livewire::test(ListWidowLoans::class)
+        ->set('activeTab', 'rejected')
+        ->assertCanSeeTableRecords([$rejectedLoan])
+        ->assertCanNotSeeTableRecords([$this->loan]);
+});
+
+test('35. defaulted_written_off tab scopes correctly', function () {
+    $defaultedLoan = WidowLoan::create([
+        'widow_id' => $this->widow->id,
+        'principal_amount' => 50000.00,
+        'total_payable' => 50000.00,
+        'outstanding_balance' => 50000.00,
+        'status' => WidowLoanStatus::DEFAULTED,
+        'performance_status' => WidowLoanPerformanceStatus::DEFAULTED,
+        'fully_repaid' => false,
+        'bank_account_id' => $this->bankAccount->id,
+        'purpose' => 'Trading',
+    ]);
+
+    $this->actingAs($this->superAdmin);
+
+    Livewire::test(ListWidowLoans::class)
+        ->set('activeTab', 'defaulted_written_off')
+        ->assertCanSeeTableRecords([$defaultedLoan])
+        ->assertCanNotSeeTableRecords([$this->loan]);
+});
+
+test('36. all tab scopes correctly', function () {
+    $this->actingAs($this->superAdmin);
+
+    Livewire::test(ListWidowLoans::class)
+        ->set('activeTab', 'all')
+        ->assertCanSeeTableRecords([$this->loan]);
+});
+
+test('37. tabs isolate zones for coordinators', function () {
+    $otherDeceased = Deceased::factory()->create(['zone_id' => $this->otherZone->id]);
+    $otherWidow = Widow::create([
+        'first_name' => 'Amina',
+        'last_name' => 'Isa',
+        'nin' => '12345678902',
+        'reg_no' => 'WID-44444',
+        'is_eligible' => true,
+        'is_married' => false,
+        'deceased_id' => $otherDeceased->id,
+        'full_name' => 'Amina Isa',
+        'child_sequence' => 1,
+    ]);
+
+    // Create an active loan in another zone
+    $otherLoan = WidowLoan::create([
+        'widow_id' => $otherWidow->id,
+        'principal_amount' => 50000.00,
+        'total_payable' => 50000.00,
+        'outstanding_balance' => 50000.00,
+        'status' => WidowLoanStatus::DISBURSED,
+        'performance_status' => WidowLoanPerformanceStatus::CURRENT,
+        'fully_repaid' => false,
+        'bank_account_id' => $this->bankAccount->id,
+        'purpose' => 'Trading',
+    ]);
+
+    $this->actingAs($this->coordinator); // Only has access to $this->zone
+
+    Livewire::test(ListWidowLoans::class)
+        ->set('activeTab', 'all')
+        ->assertCanSeeTableRecords([$this->loan])
+        ->assertCanNotSeeTableRecords([$otherLoan]);
+});
+
+test('38. loan reference derives from uuid and prevents sequential collision', function () {
+    $this->actingAs($this->admin);
+
+    $loan1 = WidowLoan::create([
+        'widow_id' => $this->widow->id,
+        'principal_amount' => 50000.00,
+        'total_payable' => 50000.00,
+        'outstanding_balance' => 50000.00,
+        'status' => WidowLoanStatus::PENDING,
+        'performance_status' => WidowLoanPerformanceStatus::CURRENT,
+        'fully_repaid' => false,
+        'bank_account_id' => $this->bankAccount->id,
+        'purpose' => 'Trading 1',
+    ]);
+
+    $loan2 = WidowLoan::create([
+        'widow_id' => $this->widow->id,
+        'principal_amount' => 50000.00,
+        'total_payable' => 50000.00,
+        'outstanding_balance' => 50000.00,
+        'status' => WidowLoanStatus::PENDING,
+        'performance_status' => WidowLoanPerformanceStatus::CURRENT,
+        'fully_repaid' => false,
+        'bank_account_id' => $this->bankAccount->id,
+        'purpose' => 'Trading 2',
+    ]);
+
+    $ref1 = 'WRL-'.str($loan1->id)->substr(-8)->upper();
+    $ref2 = 'WRL-'.str($loan2->id)->substr(-8)->upper();
+
+    expect($ref1)->not->toBe($ref2);
+
+    Livewire::test(ListWidowLoans::class)
+        ->set('activeTab', 'draft_pending_approved')
+        ->assertCanSeeTableRecords([$loan1, $loan2])
+        ->assertSee($ref1)
+        ->assertSee($ref2);
+});

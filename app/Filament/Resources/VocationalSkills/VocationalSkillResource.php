@@ -35,7 +35,7 @@ class VocationalSkillResource extends Resource
     public static function getRelations(): array
     {
         return [
-            RelationManagers\VocationalSkillRelationManager::class
+            RelationManagers\VocationalSkillRelationManager::class,
         ];
     }
 

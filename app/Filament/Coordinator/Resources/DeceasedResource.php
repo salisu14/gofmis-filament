@@ -172,7 +172,7 @@ class DeceasedResource extends Resource
                                         $set('death_place', $val);
                                     } elseif (str_starts_with($val, 'Other — ')) {
                                         $set('death_place', 'Other');
-                                        $set('death_place_other', substr($val, 8));
+                                        $set('death_place_other', \Illuminate\Support\Str::after($val, 'Other — '));
                                     } else {
                                         $set('death_place', 'Other');
                                         $set('death_place_other', $val);
@@ -202,7 +202,7 @@ class DeceasedResource extends Resource
                                         $set('death_cause', $val);
                                     } elseif (str_starts_with($val, 'Other — ')) {
                                         $set('death_cause', 'Other');
-                                        $set('death_cause_other', substr($val, 8));
+                                        $set('death_cause_other', \Illuminate\Support\Str::after($val, 'Other — '));
                                     } else {
                                         $set('death_cause', 'Other');
                                         $set('death_cause_other', $val);

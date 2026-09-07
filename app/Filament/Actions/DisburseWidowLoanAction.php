@@ -2,7 +2,6 @@
 
 namespace App\Filament\Actions;
 
-use App\Enums\WidowLoanStatus;
 use App\Exceptions\InsufficientBankBalanceException;
 use App\Models\WidowLoan;
 use App\Services\WidowLoanService;
@@ -19,10 +18,9 @@ class DisburseWidowLoanAction
             ->color('primary')
             ->requiresConfirmation()
             ->modalHeading('Confirm Loan Disbursement')
-            ->modalDescription(fn (WidowLoan $record) =>
-                "You are about to disburse ₦" . number_format($record->principal_amount, 2) .
-                " to {$record->widow->full_name} via {$record->bankAccount?->account_name}. " .
-                "This will debit the bank account and generate the repayment schedule."
+            ->modalDescription(fn (WidowLoan $record) => 'You are about to disburse ₦'.number_format($record->principal_amount, 2).
+                " to {$record->widow->full_name} via {$record->bankAccount?->account_name}. ".
+                'This will debit the bank account and generate the repayment schedule.'
             )
             ->modalSubmitActionLabel('Yes, Disburse Now')
             ->action(function (WidowLoan $record): void {
@@ -32,7 +30,7 @@ class DisburseWidowLoanAction
                     Notification::make()
                         ->success()
                         ->title('Loan Disbursed')
-                        ->body("₦" . number_format($record->principal_amount, 2) .
+                        ->body('₦'.number_format($record->principal_amount, 2).
                               " has been disbursed to {$record->widow->full_name}. Repayment schedule generated.")
                         ->send();
                 } catch (InsufficientBankBalanceException $e) {
@@ -49,8 +47,7 @@ class DisburseWidowLoanAction
                         ->send();
                 }
             })
-            ->visible(fn (WidowLoan $record) =>
-                $record->canDisburse() &&
+            ->visible(fn (WidowLoan $record) => $record->canDisburse() &&
                 auth()->user()->can('disburse_widow_loans')
             );
     }

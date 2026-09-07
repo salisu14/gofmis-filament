@@ -10,27 +10,27 @@ return new class extends Migration
     {
         Schema::table('intervention_request_items', function (Blueprint $table) {
             // Add item relationship and snapshot
-            if (!Schema::hasColumn('intervention_request_items', 'item_id')) {
+            if (! Schema::hasColumn('intervention_request_items', 'item_id')) {
                 $table->uuid('item_id')->nullable()->after('intervention_request_id');
                 $table->foreign('item_id')->references('id')->on('items')->nullOnDelete();
             }
-            if (!Schema::hasColumn('intervention_request_items', 'item_name')) {
+            if (! Schema::hasColumn('intervention_request_items', 'item_name')) {
                 $table->string('item_name')->nullable()->after('item_id');
             }
 
             // Add details
-            if (!Schema::hasColumn('intervention_request_items', 'specification')) {
+            if (! Schema::hasColumn('intervention_request_items', 'specification')) {
                 $table->string('specification')->nullable()->after('item_name');
             }
-            if (!Schema::hasColumn('intervention_request_items', 'orphan_class')) {
+            if (! Schema::hasColumn('intervention_request_items', 'orphan_class')) {
                 $table->string('orphan_class')->nullable()->after('specification');
             }
 
             // Add quantities
-            if (!Schema::hasColumn('intervention_request_items', 'quantity_requested')) {
+            if (! Schema::hasColumn('intervention_request_items', 'quantity_requested')) {
                 $table->integer('quantity_requested')->default(0)->after('orphan_class');
             }
-            if (!Schema::hasColumn('intervention_request_items', 'quantity_fulfilled')) {
+            if (! Schema::hasColumn('intervention_request_items', 'quantity_fulfilled')) {
                 $table->integer('quantity_fulfilled')->default(0)->after('quantity_requested');
             }
         });

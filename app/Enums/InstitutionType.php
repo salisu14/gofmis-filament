@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Enums;
+
 enum InstitutionType: string
 {
     case WESTERN = 'western';

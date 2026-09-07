@@ -13,6 +13,7 @@ class ImprestReplenishment extends Model
     use HasFactory, HasUuids, SoftDeletes;
 
     public $incrementing = false;
+
     protected $keyType = 'string';
 
     protected $fillable = [
@@ -65,6 +66,6 @@ class ImprestReplenishment extends Model
 
     public function isProcessed(): bool
     {
-        return $this->status === 'processed' && !is_null($this->processed_at);
+        return $this->status === 'processed' && ! is_null($this->processed_at);
     }
 }

@@ -14,8 +14,9 @@ class SufficientFundBalance implements ValidationRule
     {
         $fund = ImprestFund::find($this->fundId);
 
-        if (!$fund) {
+        if (! $fund) {
             $fail('Fund not found.');
+
             return;
         }
 

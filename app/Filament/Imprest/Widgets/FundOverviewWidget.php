@@ -27,7 +27,7 @@ class FundOverviewWidget extends BaseWidget
                 ->color('success'),
 
             Stat::make('Available Balance', number_format($totalCurrent, 2))
-                ->description(number_format(($totalCurrent / max($totalAuthorized, 1)) * 100, 1) . '% remaining')
+                ->description(number_format(($totalCurrent / max($totalAuthorized, 1)) * 100, 1).'% remaining')
                 ->descriptionIcon('heroicon-m-wallet')
                 ->color($totalCurrent < ($totalAuthorized * 0.3) ? 'danger' : 'success'),
 

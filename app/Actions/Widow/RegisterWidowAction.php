@@ -41,6 +41,7 @@ class RegisterWidowAction
                 'last_name' => $data->lastName,
                 'middle_name' => $data->middleName,
                 'nin' => $data->nin,
+                'has_nin' => $data->hasNin,
                 'reg_no' => $registrationData['reg_no'],
                 'child_sequence' => $registrationData['child_sequence'],
 

@@ -23,7 +23,7 @@ class SponsorshipInfolist
                         TextEntry::make('sponsor.name')
                             ->label('Sponsor')
                             ->weight('bold')
-                            ->hint(fn($record) => $record->sponsor?->type?->getLabel()),
+                            ->hint(fn ($record) => $record->sponsor?->type?->getLabel()),
 
                         TextEntry::make('amount_committed')
                             ->label('Committed Amount')
@@ -54,7 +54,7 @@ class SponsorshipInfolist
                         TextEntry::make('deleted_at')
                             ->label('Archived On')
                             ->dateTime()
-                            ->visible(fn($record) => $record->trashed()),
+                            ->visible(fn ($record) => $record->trashed()),
                     ])->columns(3),
             ]);
     }

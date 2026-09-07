@@ -4,6 +4,7 @@
 
 namespace App\Filament\Resources\IdCards\Pages;
 
+use App\Filament\Resources\IdCardPrintBatches\IdCardPrintBatchResource;
 use App\Filament\Resources\IdCards\IdCardResource;
 use App\Jobs\GenerateIdCardsJob;
 use App\Models\IdCardPrintBatch;
@@ -27,6 +28,7 @@ use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
+use Illuminate\Support\Facades\DB;
 
 class BulkPrintIdCards extends Page implements HasForms
 {
@@ -45,15 +47,6 @@ class BulkPrintIdCards extends Page implements HasForms
     public ?IdCardPrintBatch $currentBatch = null;
 
     protected string $view = 'filament.resources.id-cards.pages.bulk-print-id-cards';
-
-    public function mount(): void
-    {
-        $this->form->fill([
-            'type' => 'widow',
-            'range_type' => 'all',
-            'template_id' => IdCardTemplate::query()->active()->forType('widow')->latest('updated_at')->value('id'),
-        ]);
-    }
 
     public function form(Schema $schema): Schema
     {
@@ -318,14 +311,41 @@ class BulkPrintIdCards extends Page implements HasForms
         ]);
     }
 
-    public function refreshBatch(): void
+    public static function canAccess(array $parameters = []): bool
     {
-        if ($this->currentBatch) {
-            $this->currentBatch->refresh();
+        $user = auth()->user();
+
+        if (! $user) {
+            return false;
         }
+
+        return $user->hasAnyRole(['admin', 'super_admin'])
+            || $user->can('id_cards.bulk_print')
+            || $user->can('id_cards.create')
+            || $user->can('create_id_cards');
     }
 
-    protected function getFormActions(): array
+    protected function authorizeAccess(): void
+    {
+        abort_unless(static::canAccess(), 403, 'Unauthorized access to Bulk ID Card Print.');
+    }
+
+    public function mount(): void
+    {
+        $this->authorizeAccess();
+
+        $this->form->fill([
+            'type' => 'widow',
+            'range_type' => 'all',
+            'template_id' => IdCardTemplate::query()->active()->forType('widow')->latest('updated_at')->value('id'),
+            'filters' => [
+                'exclude_printed' => true,
+            ],
+            'batch_name' => 'Batch '.now()->format('Y-m-d H:i'),
+        ]);
+    }
+
+    protected function getActions(): array
     {
         return [
             Action::make('create_batch')
@@ -352,8 +372,7 @@ class BulkPrintIdCards extends Page implements HasForms
 
         if ($this->estimatedCount === 0) {
             Notification::make()
-                ->title('No beneficiaries found')
-                ->body('Please adjust your filters and try again.')
+                ->title('No eligible beneficiaries found for this print batch.')
                 ->warning()
                 ->send();
 
@@ -361,50 +380,60 @@ class BulkPrintIdCards extends Page implements HasForms
         }
 
         try {
-            $beneficiaries = $this->buildBeneficiaryCollection($data);
+            $descriptors = $this->buildBeneficiaryDescriptors($data);
 
-            if ($beneficiaries->isEmpty()) {
+            if (empty($descriptors)) {
                 Notification::make()
-                    ->title('No beneficiaries found')
-                    ->body('Please adjust your filters and try again.')
+                    ->title('No eligible beneficiaries found for this print batch.')
                     ->warning()
                     ->send();
 
                 return;
             }
 
-            $batch = IdCardPrintBatch::create([
-                'batch_name' => $data['batch_name'],
-                'type' => $data['type'],
-                'filters' => [
-                    'zone_id' => $data['filters']['zone_id'] ?? null,
-                    'gender' => $data['filters']['gender'] ?? null,
-                    'exclude_printed' => $data['filters']['exclude_printed'] ?? true,
-                    'template_id' => $data['template_id'] ?? null,
-                ],
-                'range' => $this->getRangePayload($data),
-                'total_count' => $beneficiaries->count(),
-                'created_by' => auth()->id(),
-            ]);
+            $batch = DB::transaction(function () use ($data, $descriptors) {
+                $batch = IdCardPrintBatch::create([
+                    'batch_name' => $data['batch_name'],
+                    'type' => $data['type'],
+                    'filters' => [
+                        'zone_id' => $data['filters']['zone_id'] ?? null,
+                        'gender' => $data['filters']['gender'] ?? null,
+                        'exclude_printed' => $data['filters']['exclude_printed'] ?? true,
+                        'template_id' => $data['template_id'] ?? null,
+                    ],
+                    'range' => $this->getRangePayload($data),
+                    'total_count' => count($descriptors),
+                    'created_by' => auth()->id(),
+                ]);
 
-            GenerateIdCardsJob::dispatchSync(
-                $batch,
-                $beneficiaries,
-                $data['type'] === 'mixed' ? null : ($data['template_id'] ?? null)
-            );
+                GenerateIdCardsJob::dispatchSync(
+                    $batch,
+                    $descriptors,
+                    $data['type'] === 'mixed' ? null : ($data['template_id'] ?? null)
+                );
+
+                return $batch;
+            });
 
             $this->currentBatch = $batch->fresh();
-            $this->estimatedCount = $beneficiaries->count();
+            $this->estimatedCount = count($descriptors);
 
             Notification::make()
-                ->title('Print Batch Ready')
+                ->title('ID card batch generated successfully')
                 ->body("Batch '{$batch->batch_name}' generated {$this->currentBatch->processed_count} printable cards.")
                 ->success()
                 ->send();
+
+            $this->redirect(IdCardPrintBatchResource::getUrl('view', ['record' => $batch]));
         } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Failed to generate bulk ID card batch', [
+                'user_id' => auth()->id(),
+                'error' => $e->getMessage(),
+            ]);
+
             Notification::make()
-                ->title('Failed to Create Batch')
-                ->body($e->getMessage())
+                ->title('Batch Generation Failed')
+                ->body('ID card batch could not be generated. Please try again or contact the system administrator.')
                 ->danger()
                 ->send();
         }
@@ -426,6 +455,16 @@ class BulkPrintIdCards extends Page implements HasForms
             ],
             default => null,
         };
+    }
+
+    private function buildBeneficiaryDescriptors(array $data): array
+    {
+        $beneficiaries = $this->buildBeneficiaryCollection($data);
+
+        return $beneficiaries->map(fn ($b) => [
+            'type' => $b instanceof Widow ? 'widow' : 'orphan',
+            'id' => $b->id,
+        ])->values()->all();
     }
 
     private function buildBeneficiaryCollection(array $data): \Illuminate\Support\Collection

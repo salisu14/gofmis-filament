@@ -68,7 +68,19 @@ class ImprestFundResource extends Resource
 
     public static function canCreate(): bool
     {
-        // A8: Non-destructively disable new Imprest creation
+        // B-07: Operationally deactivate new Imprest creation
+        return false;
+    }
+
+    public static function canEdit($record): bool
+    {
+        // B-07: Operationally deactivate editing existing Imprest funds
+        return false;
+    }
+
+    public static function canDelete($record): bool
+    {
+        // B-07: Operationally deactivate deleting Imprest funds
         return false;
     }
 

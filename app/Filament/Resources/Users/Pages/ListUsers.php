@@ -17,7 +17,7 @@ class ListUsers extends ListRecords
         return [
             Actions\CreateAction::make(),
 
-            ExportAction::make()
+            ExportAction::make()->visible(fn () => ! auth()->user()?->isDemoObserver())
                 ->exporter(UserExporter::class)
                 ->enableVisibleTableColumnsByDefault(),
         ];

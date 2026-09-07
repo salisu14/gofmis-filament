@@ -13,6 +13,22 @@ class ViewOrphan extends ViewRecord
     protected function getHeaderActions(): array
     {
         return [
+            \Filament\Actions\Action::make('previewBirthCert')
+                ->label('Preview Birth Certificate')
+                ->icon('heroicon-o-eye')
+                ->color('info')
+                ->url(fn (\App\Models\Orphan $record): string => route('orphans.birth-certificate.preview', ['orphan' => $record]))
+                ->openUrlInNewTab()
+                ->visible(fn (\App\Models\Orphan $record): bool => filled($record->birth_certificate_path) && (\Illuminate\Support\Facades\Storage::disk('local')->exists($record->birth_certificate_path) || \Illuminate\Support\Facades\Storage::disk('public')->exists($record->birth_certificate_path))),
+
+            \Filament\Actions\Action::make('downloadBirthCert')
+                ->label('Download Birth Certificate')
+                ->icon('heroicon-o-arrow-down-tray')
+                ->color('success')
+                ->url(fn (\App\Models\Orphan $record): string => route('orphans.birth-certificate.download', ['orphan' => $record]))
+                ->openUrlInNewTab()
+                ->visible(fn (\App\Models\Orphan $record): bool => filled($record->birth_certificate_path) && (\Illuminate\Support\Facades\Storage::disk('local')->exists($record->birth_certificate_path) || \Illuminate\Support\Facades\Storage::disk('public')->exists($record->birth_certificate_path))),
+
             \Filament\Actions\Action::make('downloadDossier')
                 ->label('Download Dossier')
                 ->icon('heroicon-o-document-arrow-down')

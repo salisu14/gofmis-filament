@@ -135,6 +135,7 @@ class WidowsRelationManager extends RelationManager
                             lastName: $data['last_name'],
                             middleName: $data['middle_name'] ?? null,
                             nin: $data['nin'] ?? null,
+                            hasNin: $data['has_nin'] ?? false,
                             address: $data['address'] ?? null,
                             picture: $data['picture_url'] ?? null,
                             skills: is_array($skills) ? array_values($skills) : [],

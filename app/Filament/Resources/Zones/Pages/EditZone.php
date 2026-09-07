@@ -19,21 +19,25 @@ class EditZone extends EditRecord
     protected function afterSave(): void
     {
         $zone = $this->record;
+        $reason = $this->data['assignment_reason'] ?? null;
 
-        // Only run if coordinator actually changed and new one is set
-        if ($zone->wasChanged('coordinator_id') && $zone->coordinator_id) {
+        // Run if coordinator changed or is explicitly set/cleared
+        if ($zone->wasChanged('coordinator_id') || filled($zone->coordinator_id)) {
             app(ZoneCoordinatorService::class)
                 ->assignCoordinator(
                     $zone,
                     $zone->coordinator_id,
-                    auth()->id()
+                    auth()->id(),
+                    $reason
                 );
 
             Notification::make()
                 ->success()
-                ->title('Coordinator Updated')
-                ->body('Coordinator assigned successfully and history logged.')
+                ->title('Coordinator Assignment Updated')
+                ->body('Coordinator assignment processed successfully and history logged.')
                 ->send();
+
+            $this->dispatch('refreshRelation');
         }
     }
 
@@ -41,8 +45,8 @@ class EditZone extends EditRecord
     {
         return parent::getSaveFormAction()
             ->requiresConfirmation(fn () => $this->record->isDirty('coordinator_id'))
-            ->modalHeading('Confirm Coordinator Change')
-            ->modalDescription('Changing the coordinator will replace the current one and update history.')
+            ->modalHeading('Confirm Coordinator Assignment Change')
+            ->modalDescription('Changing the coordinator will close the previous assignment history and log the new assignment.')
             ->modalSubmitActionLabel('Yes, continue');
     }
 

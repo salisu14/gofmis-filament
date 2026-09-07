@@ -2,10 +2,8 @@
 
 namespace App\Actions\Category;
 
-use App\Models\Category;
-use App\Models\Item;
 use App\Data\Category\CategoryData;
-use App\Data\Item\ItemData;
+use App\Models\Category;
 
 class UpsertCategoryAction
 {

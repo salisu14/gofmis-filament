@@ -82,6 +82,16 @@ class Transaction extends Model
                 ]);
             }
 
+            if (! $transaction->is_system && in_array($transaction->type, ['deposit', 'withdrawal', 'transfer'])) {
+                // Load bank account if not loaded
+                $bankAccount = $transaction->bankAccount ?? BankAccount::find($transaction->bank_account_id);
+                if ($bankAccount && ! $bankAccount->isMainAccount()) {
+                    throw ValidationException::withMessages([
+                        'bank_account_id' => 'Only the Main Treasury account can perform generic manual transactions.',
+                    ]);
+                }
+            }
+
             $transaction->date ??= now();
             $transaction->reference ??= static::generateReference($transaction->type);
         });
@@ -145,6 +155,7 @@ class Transaction extends Model
             'imprest_expense',
             'education_fee_payment',
             'intervention',
+            'out_of_pocket_reimbursement',
         ];
     }
 
@@ -180,6 +191,7 @@ class Transaction extends Model
             'education_fee_payment' => 'EDUP',
             'education_fee_payment_void' => 'EDUV',
             'intervention' => 'INTV',
+            'out_of_pocket_reimbursement' => 'OOPR',
             default => 'TXN',
         };
 
@@ -200,7 +212,11 @@ class Transaction extends Model
             return;
         }
 
-        if (! $this->is_system && ! $bankAccount->canPerformManualBankMovement()) {
+        // Only generic manual transactions (deposit/withdrawal/transfer) are restricted to the
+        // Main Treasury Account. Domain-specific transactions (OOP reimbursements, loan disbursements,
+        // education payments, etc.) operate legitimately on dedicated sub-accounts.
+        $genericManualTypes = ['deposit', 'withdrawal', 'transfer'];
+        if (! $this->is_system && in_array($this->type, $genericManualTypes) && ! $bankAccount->canPerformManualBankMovement()) {
             throw ValidationException::withMessages([
                 'bank_account_id' => 'Manual bank transactions can only be posted against parent accounts.',
             ]);

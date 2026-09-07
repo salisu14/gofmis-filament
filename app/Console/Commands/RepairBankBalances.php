@@ -36,7 +36,7 @@ class RepairBankBalances extends Command
         $this->info('Mode: '.($apply ? 'APPLY (Writing changes to database)' : 'READ-ONLY DRY RUN (No database changes)'));
         $this->newLine();
 
-        $accounts = BankAccount::whereNull('parent_bank_account_id')->get();
+        $accounts = BankAccount::all();
         $creditTypes = Transaction::getCreditTypes();
         $debitTypes = Transaction::getDebitTypes();
 

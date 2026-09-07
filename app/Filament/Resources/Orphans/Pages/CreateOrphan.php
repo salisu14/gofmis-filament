@@ -42,6 +42,7 @@ class CreateOrphan extends CreateRecord
             birthDate: $data['birth_date'],
             picture: $data['picture_url'], // Passed as UploadedFile or path string
             nin: $data['nin'] ?? null,
+            hasNin: $data['has_nin'] ?? false,
             guardianName: $data['guardian_name'] ?? null,
             guardianPhone: $data['guardian_phone'] ?? null,
             address: $data['address'] ?? null,

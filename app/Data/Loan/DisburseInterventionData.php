@@ -2,8 +2,6 @@
 
 namespace App\Data\Loan;
 
-use Spatie\LaravelData\Data;
-
 readonly class DisburseInterventionData
 {
     public function __construct(

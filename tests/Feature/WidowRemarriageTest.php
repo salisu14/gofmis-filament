@@ -210,6 +210,7 @@ test('10. same NIN + same deceased rejected cleanly by validation', function () 
         ->set('data.first_name', 'Amina')
         ->set('data.last_name', 'Usman')
         ->set('data.nin', '12345678901')
+        ->set('data.has_nin', true)
         ->set('data.address', 'Garko, Kano')
         ->call('create')
         ->assertHasFormErrors(['nin']);
@@ -227,6 +228,7 @@ test('11. same NIN + different deceased allowed', function () {
         ->set('data.first_name', 'Amina')
         ->set('data.last_name', 'Usman')
         ->set('data.nin', '12345678901')
+        ->set('data.has_nin', true)
         ->set('data.address', 'Garko, Kano')
         ->call('create')
         ->assertHasNoFormErrors();
@@ -439,6 +441,7 @@ test('20. no SQL exception leaks for duplicate submissions', function () {
         ->set('data.first_name', 'Amina')
         ->set('data.last_name', 'Usman')
         ->set('data.nin', '12345678901')
+        ->set('data.has_nin', true)
         ->set('data.address', 'Garko, Kano')
         ->call('create')
         ->assertHasFormErrors(['nin']);

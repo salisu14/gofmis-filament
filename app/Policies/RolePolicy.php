@@ -17,21 +17,28 @@ class RolePolicy
 
     public function viewAny(User $user): bool
     {
-        return $user->can('view_roles') || $user->can('role_access') || $user->isSuperAdmin();
+        return $user->isDemoObserver() || $user->can('view_roles') || $user->can('role_access') || $user->isSuperAdmin();
     }
 
     public function view(User $user, Role $role): bool
     {
-        return $user->can('view_roles') || $user->can('role_access') || $user->isSuperAdmin();
+        return $user->isDemoObserver() || $user->can('view_roles') || $user->can('role_access') || $user->isSuperAdmin();
     }
 
     public function create(User $user): bool
     {
+        if ($user->isDemoObserver()) {
+            return false;
+        }
+
         return $user->isSuperAdmin();
     }
 
     public function update(User $user, Role $role): bool
     {
+        if ($user->isDemoObserver()) {
+            return false;
+        }
         if ($role->name === 'super_admin' && ! $user->isSuperAdmin()) {
             return false;
         }

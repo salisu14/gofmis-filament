@@ -12,6 +12,7 @@ class WidowData extends Data
         public string $lastName,
         public ?string $middleName = null,
         public ?string $nin = null,
+        public ?bool $hasNin = false,
         public ?string $address = null,
         public mixed $picture = null,
 

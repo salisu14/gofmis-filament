@@ -1,4 +1,5 @@
 <?php
+
 // app/Filament/Admin/Resources/EducationVerificationResource/Pages/ListEducationVerifications.php
 
 namespace App\Filament\Resources\Verifications\Pages;

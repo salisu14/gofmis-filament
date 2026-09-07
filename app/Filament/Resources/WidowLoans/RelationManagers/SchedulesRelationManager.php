@@ -64,10 +64,9 @@ class SchedulesRelationManager extends RelationManager
                     ->requiresConfirmation()
                     ->modalHeading('Regenerate Repayment Schedule')
                     ->modalDescription('This will delete the existing schedule and recalculate all installments based on the current Total Payable and Disbursement Date. This action cannot be undone.')
-                    ->visible(fn () => 
-                        $this->ownerRecord->status === WidowLoanStatus::DISBURSED && 
-                        $this->ownerRecord->repayments()->doesntExist() && 
-                        !$this->ownerRecord->schedules()->where('is_paid', true)->exists()
+                    ->visible(fn () => $this->ownerRecord->status === WidowLoanStatus::DISBURSED &&
+                        $this->ownerRecord->repayments()->doesntExist() &&
+                        ! $this->ownerRecord->schedules()->where('is_paid', true)->exists()
                     )
                     ->action(function () {
                         try {
@@ -96,9 +95,9 @@ class SchedulesRelationManager extends RelationManager
             ->recordActions([
                 // Only super admins can manually correct schedule entries.
                 EditAction::make()
-                    ->visible(fn ($record) => auth()->user()->hasRole('super_admin') && !$record->is_paid),
+                    ->visible(fn ($record) => auth()->user()->hasRole('super_admin') && ! $record->is_paid),
                 DeleteAction::make()
-                    ->visible(fn ($record) => auth()->user()->hasRole('super_admin') && !$record->is_paid),
+                    ->visible(fn ($record) => auth()->user()->hasRole('super_admin') && ! $record->is_paid),
             ]);
     }
 }

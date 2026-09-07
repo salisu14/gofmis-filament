@@ -94,6 +94,7 @@ test('creating widow from deceased A relation manager automatically assigns dece
             'first_name' => 'Amina',
             'last_name' => 'Dandali',
             'nin' => '12345678901',
+            'has_nin' => true,
             'address' => 'House 1, Kano Road',
             'is_eligible' => true,
             'is_married' => false,
@@ -127,6 +128,7 @@ test('creating orphan from deceased A relation manager automatically assigns dec
             'gender' => Gender::MALE,
             'birth_date' => now()->subYears(10)->toDateString(),
             'nin' => '98765432101',
+            'has_nin' => true,
             'address' => 'House 1, Kano Road',
             'has_birth_cert' => false,
         ])
@@ -148,6 +150,7 @@ test('attempting to forge deceased_id B while creating widow under deceased A is
             'first_name' => 'Fatima',
             'last_name' => 'Dandali',
             'nin' => '11223344556',
+            'has_nin' => true,
             'address' => 'House 1, Kano Road',
             'is_eligible' => true,
             'is_married' => false,
@@ -172,6 +175,7 @@ test('attempting to forge deceased_id B while creating orphan under deceased A i
             'gender' => Gender::MALE,
             'birth_date' => now()->subYears(8)->toDateString(),
             'nin' => '66554433221',
+            'has_nin' => true,
             'address' => 'House 1, Kano Road',
             'has_birth_cert' => false,
         ])

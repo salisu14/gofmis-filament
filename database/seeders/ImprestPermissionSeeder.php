@@ -2,10 +2,10 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
-use Illuminate\Support\Str;
 use App\Models\Permission;
 use App\Models\Role;
+use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
 
 class ImprestPermissionSeeder extends Seeder
 {
@@ -65,34 +65,22 @@ class ImprestPermissionSeeder extends Seeder
         // Assign all permissions to super_admin
         $superAdmin->syncPermissions(Permission::all());
 
-        // Assign admin permissions
+        // Assign admin permissions (read-only for historical auditing)
         $admin->syncPermissions([
             'imprest.transactions.view',
-            'imprest.transactions.create',
-            'imprest.transactions.edit',
-            'imprest.transactions.approve',
-            'imprest.transactions.void',
             'imprest.funds.view',
-            'imprest.funds.create',
-            'imprest.funds.edit',
-            'imprest.funds.reconcile',
-            'imprest.funds.replenish',
-            'imprest.manage_all',
-            'imprest.bypass_custodian_check',
         ]);
 
-        // Assign custodian permissions
+        // Assign custodian permissions (read-only)
         $custodian->syncPermissions([
             'imprest.transactions.view',
-            'imprest.transactions.create',
             'imprest.funds.view',
         ]);
 
-        // Assign auditor permissions
+        // Assign auditor permissions (read-only)
         $auditor->syncPermissions([
             'imprest.transactions.view',
             'imprest.funds.view',
-            'imprest.funds.reconcile',
         ]);
     }
 }

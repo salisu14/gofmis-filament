@@ -2,10 +2,9 @@
 
 namespace Database\Seeders;
 
-use App\Models\State;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
-use Illuminate\Database\Seeder;
 use App\Models\City;
+use App\Models\State;
+use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
 
 class CitiesTableSeeder extends Seeder
@@ -23,10 +22,10 @@ class CitiesTableSeeder extends Seeder
             [
                 'id' => Str::uuid(),
                 'name' => 'Garko',
-                'state_id' =>  $state->id,
+                'state_id' => $state->id,
                 'created_at' => now(),
                 'updated_at' => now(),
-            ]
+            ],
         ];
 
         City::insert($cities);

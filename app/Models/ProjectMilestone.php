@@ -1,4 +1,5 @@
 <?php
+
 // app/Models/ProjectMilestone.php
 
 namespace App\Models;

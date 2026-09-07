@@ -2,11 +2,11 @@
 
 namespace Database\Seeders;
 
+use App\Enums\WidowLoanStatus;
 use App\Models\ApprovalFlow;
 use App\Models\ApprovalStep;
 use App\Models\Widow;
 use App\Models\WidowLoan;
-use App\Enums\WidowLoanStatus;
 use Illuminate\Database\Seeder;
 
 class WidowLoanWithApprovalsSeeder extends Seeder
@@ -104,4 +104,3 @@ class WidowLoanWithApprovalsSeeder extends Seeder
         $this->command->info('Widow loans with approval workflows created successfully!');
     }
 }
-

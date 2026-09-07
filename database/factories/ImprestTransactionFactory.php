@@ -5,9 +5,7 @@ namespace Database\Factories;
 use App\Enums\PaymentMethod;
 use App\Enums\TransactionCategory;
 use App\Enums\TransactionStatus;
-use App\Models\ImprestFund;
 use App\Models\ImprestTransaction;
-use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 
@@ -46,12 +44,12 @@ class ImprestTransactionFactory extends Factory
             'approved_by' => null,
 
             'category' => fake()->randomElement(
-                array_map(fn($c) => strtolower($c->value), TransactionCategory::cases())
+                array_map(fn ($c) => strtolower($c->value), TransactionCategory::cases())
             ),
 
             // 🔥 CRITICAL FIX
             'payment_method' => fake()->randomElement(
-                array_map(fn($p) => strtolower($p->value), PaymentMethod::cases())
+                array_map(fn ($p) => strtolower($p->value), PaymentMethod::cases())
             ),
 
             'status' => TransactionStatus::PENDING->value,
@@ -71,14 +69,12 @@ class ImprestTransactionFactory extends Factory
         ]);
     }
 
-
-
-//    public function voided(): static
-//    {
-//        return $this->state(fn () => [
-//            'status' => TransactionStatus::VOIDED->value,
-//            'void_reason' => fake()->sentence(),
-//            'voided_at' => now(),
-//        ]);
-//    }
+    //    public function voided(): static
+    //    {
+    //        return $this->state(fn () => [
+    //            'status' => TransactionStatus::VOIDED->value,
+    //            'void_reason' => fake()->sentence(),
+    //            'voided_at' => now(),
+    //        ]);
+    //    }
 }

@@ -76,7 +76,7 @@ class EducationFeePayment extends Model
     public static function generateReference(): string
     {
         do {
-            $reference = 'EDU-PAY-' . now()->format('Ymd') . '-' . Str::upper(Str::random(6));
+            $reference = 'EDU-PAY-'.now()->format('Ymd').'-'.Str::upper(Str::random(6));
         } while (static::where('reference', $reference)->exists());
 
         return $reference;
@@ -86,7 +86,7 @@ class EducationFeePayment extends Model
     {
         $invoice = $this->invoice()->first();
 
-        if (!$invoice) {
+        if (! $invoice) {
             return;
         }
 
@@ -103,10 +103,10 @@ class EducationFeePayment extends Model
         }
 
         $otherPayments = $invoice->payments()
-            ->when($this->exists, fn($query) => $query->whereKeyNot($this->getKey()))
+            ->when($this->exists, fn ($query) => $query->whereKeyNot($this->getKey()))
             ->sum('amount');
 
-        if (((float)$otherPayments + (float)$this->amount) > (float)$invoice->amount) {
+        if (((float) $otherPayments + (float) $this->amount) > (float) $invoice->amount) {
             throw ValidationException::withMessages([
                 'amount' => 'This payment would exceed the outstanding invoice balance.',
             ]);

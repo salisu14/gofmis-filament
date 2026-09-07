@@ -17,7 +17,7 @@ class ListZones extends ListRecords
         return [
             CreateAction::make(),
 
-            ExportAction::make()
+            ExportAction::make()->visible(fn () => ! auth()->user()?->isDemoObserver())
                 ->exporter(ZoneExporter::class)
                 ->enableVisibleTableColumnsByDefault(),
         ];

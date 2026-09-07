@@ -41,6 +41,7 @@ class ImprestFundRepository implements ImprestFundRepositoryInterface
     {
         $fund = ImprestFund::findOrFail($fundId);
         $fund->update(['current_balance' => $amount]);
+
         return $fund->fresh();
     }
 
@@ -48,6 +49,7 @@ class ImprestFundRepository implements ImprestFundRepositoryInterface
     {
         $fund = ImprestFund::findOrFail($fundId);
         $fund->update(['last_reconciled_at' => now()]);
+
         return $fund->fresh();
     }
 
@@ -56,8 +58,9 @@ class ImprestFundRepository implements ImprestFundRepositoryInterface
         $fund = ImprestFund::findOrFail($fundId);
         $fund->update([
             'status' => 'suspended',
-            'notes' => $fund->notes . "\n[SUSPENDED]: " . $reason,
+            'notes' => $fund->notes."\n[SUSPENDED]: ".$reason,
         ]);
+
         return $fund->fresh();
     }
 }

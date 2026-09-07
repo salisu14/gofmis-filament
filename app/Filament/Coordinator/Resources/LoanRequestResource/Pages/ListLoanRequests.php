@@ -1,4 +1,5 @@
 <?php
+
 // app/Filament/Coordinator/Resources/LoanRequestResource/Pages/ListLoanRequests.php
 
 namespace App\Filament\Coordinator\Resources\LoanRequestResource\Pages;

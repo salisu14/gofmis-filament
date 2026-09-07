@@ -68,7 +68,7 @@ class OrphanEducationForm
                                 ->required(),
                         ]),
 
-                        Grid::make(2)->schema([
+                        Grid::make(3)->schema([
                             Select::make('orphan_class_id')
                                 ->label('Level / Grade')
                                 ->placeholder('e.g. Primary 5, SS 2')
@@ -79,6 +79,10 @@ class OrphanEducationForm
                             TextInput::make('class_level')
                                 ->label('Class / Section')
                                 ->placeholder('e.g. Blue House, Science A'),
+
+                            TextInput::make('academic_session')
+                                ->label('Academic Session')
+                                ->placeholder('e.g. 2025/2026'),
                         ]),
                     ]),
 

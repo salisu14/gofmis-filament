@@ -19,7 +19,7 @@ class Repayment extends Model
         'receipt_number',
         'loan_id',
         'widow_id',
-        'user_id'
+        'user_id',
     ];
 
     protected $casts = [

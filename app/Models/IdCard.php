@@ -50,11 +50,54 @@ class IdCard extends Model
         return $this->belongsTo(IdCardTemplate::class, 'template_id');
     }
 
+    protected static function booted(): void
+    {
+        static::saving(function (IdCard $card) {
+            if ($card->isDirty('status') && $card->status === 'active') {
+                if (! $card->beneficiaryIsEligible()) {
+                    throw \Illuminate\Validation\ValidationException::withMessages([
+                        'card' => 'This ID card cannot be activated because the beneficiary is not currently eligible.',
+                    ]);
+                }
+
+                if ($card->hasOtherActiveCard()) {
+                    throw \Illuminate\Validation\ValidationException::withMessages([
+                        'card' => 'This beneficiary already has an active ID card.',
+                    ]);
+                }
+            }
+        });
+    }
+
+    public function hasOtherActiveCard(): bool
+    {
+        if (! $this->cardable_type || ! $this->cardable_id) {
+            return false;
+        }
+
+        return static::query()
+            ->where('cardable_type', $this->cardable_type)
+            ->where('cardable_id', $this->cardable_id)
+            ->where('status', 'active')
+            ->where(function ($q) {
+                $q->whereNull('expires_at')
+                    ->orWhere('expires_at', '>', now());
+            })
+            ->when($this->exists, fn ($q) => $q->where('id', '!=', $this->id))
+            ->exists();
+    }
+
     public function activate(): void
     {
         if (! $this->beneficiaryIsEligible()) {
             throw \Illuminate\Validation\ValidationException::withMessages([
                 'card' => 'This ID card cannot be activated because the beneficiary is not currently eligible.',
+            ]);
+        }
+
+        if ($this->hasOtherActiveCard()) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'card' => 'This beneficiary already has an active ID card.',
             ]);
         }
 
@@ -91,6 +134,12 @@ class IdCard extends Model
             ]);
         }
 
+        if ($this->hasOtherActiveCard()) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'card' => 'This beneficiary already has an active ID card.',
+            ]);
+        }
+
         $this->update([
             'printed_at' => now(),
             'status' => 'active',
@@ -107,15 +156,19 @@ class IdCard extends Model
 
     public function beneficiaryIsEligible(): bool
     {
-        $beneficiary = $this->cardable;
+        $beneficiary = null;
+
+        if ($this->cardable_type && $this->cardable_id && class_exists($this->cardable_type)) {
+            $beneficiary = $this->cardable_type::withoutGlobalScopes()->find($this->cardable_id);
+        }
 
         if (! $beneficiary) {
             return false;
         }
 
         if ($beneficiary instanceof Orphan) {
-            return $beneficiary->status === OrphanStatus::ACTIVE
-                && $beneficiary->is_eligible;
+            return ($beneficiary->status === OrphanStatus::ACTIVE || $beneficiary->status === OrphanStatus::ACTIVE->value)
+                && (bool) $beneficiary->is_eligible;
         }
 
         if ($beneficiary instanceof Widow) {

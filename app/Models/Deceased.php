@@ -24,6 +24,7 @@ class Deceased extends Model
         'last_name',
         'middle_name',
         'nin',
+        'has_nin',
         'reg_no',
         'age',
         'address',
@@ -45,6 +46,7 @@ class Deceased extends Model
     ];
 
     protected $casts = [
+        'has_nin' => 'boolean',
         'has_death_cert' => 'boolean',
         'age' => 'integer',
         'date_registered' => 'date',
@@ -122,7 +124,7 @@ class Deceased extends Model
         return $this->hasMany(Widow::class);
     }
 
-// Legacy welfare relationship removed as part of canonical consolidation.
+    // Legacy welfare relationship removed as part of canonical consolidation.
 
     public function welfarePackages(): BelongsToMany
     {
@@ -147,7 +149,7 @@ class Deceased extends Model
         static::addGlobalScope('zone', function ($query) {
             $user = auth()->user();
 
-            if (! $user || $user->hasAnyRole(['admin', 'super_admin'])) {
+            if (! $user || $user->hasAnyRole(['admin', 'super_admin']) || $user->isDemoObserver()) {
                 return;
             }
 
@@ -162,6 +164,14 @@ class Deceased extends Model
         });
 
         static::saving(function ($model) {
+            if ($model->has_nin === null) {
+                $model->has_nin = filled($model->nin);
+            }
+
+            if (! $model->has_nin) {
+                $model->nin = null;
+            }
+
             $today = \Carbon\Carbon::today();
 
             if ($model->date_of_birth && \Carbon\Carbon::parse($model->date_of_birth)->greaterThan($today)) {

@@ -6,7 +6,6 @@ use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\KeyValue;
-use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Infolists\Components\TextEntry;
@@ -90,7 +89,7 @@ class IdCardPrintBatchForm
 
                             TextEntry::make('progress_percentage')
                                 ->label('Job Progress')
-                                ->state(fn($record) => $record ? $record->progressPercentage() . '%' : '0%'),
+                                ->state(fn ($record) => $record ? $record->progressPercentage().'%' : '0%'),
                         ]),
 
                         FileUpload::make('pdf_path')

@@ -21,7 +21,7 @@ readonly class ImprestTransactionService implements ImprestTransactionServiceInt
 {
     public function __construct(
         private ImprestTransactionRepositoryInterface $transactionRepo,
-        private ImprestFundRepositoryInterface        $fundRepo,
+        private ImprestFundRepositoryInterface $fundRepo,
     ) {}
 
     /**
@@ -32,7 +32,7 @@ readonly class ImprestTransactionService implements ImprestTransactionServiceInt
         return DB::transaction(function () use ($dto, $custodianId) {
             $fund = $this->fundRepo->findById($dto->fundId);
 
-            if (!$fund || $fund->status !== 'active') {
+            if (! $fund || $fund->status !== 'active') {
                 throw new \RuntimeException('Fund is not active');
             }
 
@@ -40,7 +40,7 @@ readonly class ImprestTransactionService implements ImprestTransactionServiceInt
             $user = auth()->user();
             $isSuperAdmin = $user->hasRole('super_admin') || $user->hasPermissionTo('imprest.manage_all');
 
-            if (!$isSuperAdmin && $fund->custodian_id !== $custodianId) {
+            if (! $isSuperAdmin && $fund->custodian_id !== $custodianId) {
                 throw new \RuntimeException('You are not the custodian of this fund.');
             }
 
@@ -52,7 +52,7 @@ readonly class ImprestTransactionService implements ImprestTransactionServiceInt
                 ]);
             }
 
-            if (!$this->validateSpendingLimit($dto->fundId, $totalPrice)) {
+            if (! $this->validateSpendingLimit($dto->fundId, $totalPrice)) {
                 throw new \RuntimeException('Transaction exceeds the available fund balance.');
             }
 
@@ -95,7 +95,7 @@ readonly class ImprestTransactionService implements ImprestTransactionServiceInt
         return DB::transaction(function () use ($dto) {
             $transaction = $this->transactionRepo->findById($dto->transactionId);
 
-            if (!$transaction || !$transaction->isVoidable()) {
+            if (! $transaction || ! $transaction->isVoidable()) {
                 throw new TransactionNotVoidableException('Transaction cannot be voided');
             }
 
@@ -115,15 +115,15 @@ readonly class ImprestTransactionService implements ImprestTransactionServiceInt
     {
         $query = $this->transactionRepo->getActiveByFund($fundId);
 
-        if (!empty($filters['deceased_id'])) {
+        if (! empty($filters['deceased_id'])) {
             $query = $query->where('deceased_id', $filters['deceased_id']);
         }
 
-        if (!empty($filters['category'])) {
+        if (! empty($filters['category'])) {
             $query = $query->where('category', $filters['category']);
         }
 
-        if (!empty($filters['date_from']) && !empty($filters['date_to'])) {
+        if (! empty($filters['date_from']) && ! empty($filters['date_to'])) {
             $query = $query->whereBetween('date', [$filters['date_from'], $filters['date_to']]);
         }
 

@@ -13,6 +13,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class OrphanHistoryResource extends Resource
 {
+    use \App\Filament\Coordinator\Concerns\ZoneScoped;
+
     protected static ?string $model = Orphan::class;
 
     protected static string|null|\BackedEnum $navigationIcon = 'heroicon-o-archive-box';
@@ -52,6 +54,21 @@ class OrphanHistoryResource extends Resource
         return $user->can('view_orphans');
     }
 
+    public static function canView(Model $record): bool
+    {
+        $user = auth()->user();
+
+        if (! $user) {
+            return false;
+        }
+
+        if ($user->hasAnyRole(['admin', 'super_admin'])) {
+            return true;
+        }
+
+        return $user->can('view_orphans') && $user->managesZone(static::getRecordZoneId($record));
+    }
+
     public static function canCreate(): bool
     {
         return false;
@@ -74,6 +91,16 @@ class OrphanHistoryResource extends Resource
                 \App\Models\Scopes\EligibleOrphanScope::class,
             ])
             ->historical();
+    }
+
+    protected static function applyZoneScope(Builder $query, string $zoneId): Builder
+    {
+        return $query->whereHas('deceased', fn (Builder $q) => $q->where('zone_id', $zoneId));
+    }
+
+    protected static function getRecordZoneId($record): ?string
+    {
+        return $record->deceased()->withoutGlobalScopes()->value('zone_id');
     }
 
     public static function table(Table $table): Table

@@ -45,6 +45,13 @@ class DeceasedInfolist
                         IconEntry::make('has_death_cert')
                             ->boolean()
                             ->label('Certificate Available'),
+                        TextEntry::make('death_cert_url')
+                            ->label('Certificate Link')
+                            ->url(fn ($record) => $record->death_cert_url ? route('deceased.death-certificate.preview', ['deceased' => $record]) : null)
+                            ->openUrlInNewTab()
+                            ->visible(fn ($record) => filled($record->death_cert_url) && (\Illuminate\Support\Facades\Storage::disk('local')->exists($record->death_cert_url) || \Illuminate\Support\Facades\Storage::disk('public')->exists($record->death_cert_url)))
+                            ->placeholder('No file uploaded')
+                            ->icon('heroicon-m-link'),
                     ])->columns(3),
 
                 Section::make('Location & Contact')

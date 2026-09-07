@@ -1,4 +1,5 @@
 <?php
+
 // app/Jobs/GenerateIdCardsJob.php
 
 namespace App\Jobs;
@@ -22,11 +23,15 @@ class GenerateIdCardsJob implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public $timeout = 600; // 10 minutes
+
     public $tries = 3;
 
+    /**
+     * @param  array<int, array{type: string, id: string}>|null  $beneficiaryDescriptors
+     */
     public function __construct(
         private IdCardPrintBatch $batch,
-        private Collection $beneficiaries,
+        private ?array $beneficiaryDescriptors = null,
         private ?string $templateId = null,
     ) {}
 
@@ -40,13 +45,18 @@ class GenerateIdCardsJob implements ShouldQueue
         ]);
 
         try {
-//            $idCards = collect();
-            $idCards = new \Illuminate\Database\Eloquent\Collection();
+            $idCards = new \Illuminate\Database\Eloquent\Collection;
             $processed = 0;
-            $template = $this->templateId ? IdCardTemplate::find($this->templateId) : null;
 
-            foreach ($this->beneficiaries as $beneficiary) {
+            $beneficiaries = $this->resolveBeneficiaries();
+
+            foreach ($beneficiaries as $beneficiary) {
                 try {
+                    $type = $beneficiary instanceof Widow ? 'widow' : 'orphan';
+                    $template = ($this->batch->type === 'mixed' || ! $this->templateId)
+                        ? IdCardTemplate::defaultForType($type)
+                        : (IdCardTemplate::find($this->templateId) ?? IdCardTemplate::defaultForType($type));
+
                     $card = $this->reusableCardFor($beneficiary, $template)
                         ?? $generationService->generateCard($beneficiary, $template, queuePdf: false);
 
@@ -60,6 +70,7 @@ class GenerateIdCardsJob implements ShouldQueue
                 } catch (\Exception $e) {
                     Log::error('Failed to generate card for beneficiary', [
                         'beneficiary_id' => $beneficiary->id,
+                        'beneficiary_type' => get_class($beneficiary),
                         'error' => $e->getMessage(),
                     ]);
                 }
@@ -94,6 +105,77 @@ class GenerateIdCardsJob implements ShouldQueue
 
             throw $e;
         }
+    }
+
+    private function resolveBeneficiaries(): Collection
+    {
+        if (! empty($this->beneficiaryDescriptors)) {
+            $beneficiaries = collect();
+            foreach ($this->beneficiaryDescriptors as $descriptor) {
+                $type = $descriptor['type'] ?? 'widow';
+                $id = $descriptor['id'] ?? null;
+                if (! $id) {
+                    continue;
+                }
+
+                $modelClass = $type === 'widow' ? Widow::class : Orphan::class;
+                $model = $modelClass::find($id);
+                if ($model) {
+                    $beneficiaries->push($model);
+                }
+            }
+
+            return $beneficiaries;
+        }
+
+        return static::resolveBeneficiariesFromBatch($this->batch);
+    }
+
+    public static function resolveBeneficiariesFromBatch(IdCardPrintBatch $batch): Collection
+    {
+        $type = $batch->type;
+        $filters = $batch->filters ?? [];
+        $range = $batch->range ?? [];
+
+        $applyFilters = function ($query) use ($filters, $range) {
+            $query->where('is_eligible', true);
+
+            if ($filters['exclude_printed'] ?? true) {
+                $query->whereDoesntHave('idCards', fn ($q) => $q->where('status', 'active'));
+            }
+
+            if (! empty($filters['zone_id'])) {
+                $query->whereHas('deceased.zone', fn ($q) => $q->where('id', $filters['zone_id']));
+            }
+
+            if (! empty($filters['gender']) && $query->getModel() instanceof Orphan) {
+                $query->where('gender', $filters['gender']);
+            }
+
+            if (! empty($range['start_date']) && ! empty($range['end_date'])) {
+                $query->whereBetween('created_at', [$range['start_date'], $range['end_date']]);
+            }
+
+            if (! empty($range['start_reg_no']) && ! empty($range['end_reg_no'])) {
+                $query->whereBetween('reg_no', [$range['start_reg_no'], $range['end_reg_no']]);
+            }
+
+            if (! empty($range['specific_ids'])) {
+                $query->whereIn('id', $range['specific_ids']);
+            }
+
+            return $query;
+        };
+
+        if ($type === 'mixed') {
+            return $applyFilters(Widow::query())
+                ->get()
+                ->merge($applyFilters(Orphan::query())->get());
+        }
+
+        $modelClass = $type === 'widow' ? Widow::class : Orphan::class;
+
+        return $applyFilters($modelClass::query())->get();
     }
 
     private function reusableCardFor(Widow|Orphan $beneficiary, ?IdCardTemplate $template)

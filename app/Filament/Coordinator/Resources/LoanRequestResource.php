@@ -65,47 +65,29 @@ class LoanRequestResource extends Resource
         ));
     }
 
+    public static function canViewAny(): bool
+    {
+        return auth()->user()?->can('view_loans') ?? false;
+    }
+
     public static function canCreate(): bool
     {
-        $user = auth()->user();
-
-        return $user?->hasAnyRole(['admin', 'super_admin'])
-            || $user?->managesZone();
+        return auth()->user()?->can('create_loans') ?? false;
     }
 
     public static function canView($record): bool
     {
-        $user = auth()->user();
-
-        if (! $user) {
-            return false;
-        }
-
-        if ($user->hasAnyRole(['admin', 'super_admin'])) {
-            return true;
-        }
-
-        return $user->managesZone($record->widow?->deceased?->zone_id);
+        return auth()->user()?->can('view_loans') ?? false;
     }
 
     public static function canEdit($record): bool
     {
-        $user = auth()->user();
-        if ($user?->hasAnyRole(['admin', 'super_admin'])) {
-            return true;
-        }
-
-        // ✅ FIXED: Use coordinatedZone for zone comparison
-        $zoneId = $user?->coordinatedZone?->id;
-
-        // Coordinators can only edit draft/pending loans they created
-        return $record->status === WidowLoanStatus::DRAFT &&
-            $user?->managesZone($record->widow?->deceased?->zone_id);
+        return auth()->user()?->can('edit_loans') ?? false;
     }
 
     public static function canDelete($record): bool
     {
-        return auth()->user()?->hasAnyRole(['admin', 'super_admin']) ?? false;
+        return auth()->user()?->can('delete_loans') ?? false;
     }
 
     public static function form(Schema $schema): Schema
@@ -123,7 +105,7 @@ class LoanRequestResource extends Resource
                             ->relationship(
                                 'widow',
                                 'full_name',
-                                function (Builder $query) {
+                                function (Builder $query, ?WidowLoan $record = null, $livewire = null) {
                                     $user = auth()->user();
                                     $zoneId = $user?->coordinatedZone?->id;
 
@@ -135,11 +117,19 @@ class LoanRequestResource extends Resource
                                         $query->whereHas('deceased', fn ($q) => $q->where('zone_id', $zoneId));
                                     }
 
+                                    $routeRecord = request()?->route('record');
+                                    $currentRecordId = $record?->id
+                                        ?? (is_object($livewire) && method_exists($livewire, 'getRecord') ? $livewire->getRecord()?->id : null)
+                                        ?? ($routeRecord instanceof WidowLoan ? $routeRecord->id : $routeRecord);
+
                                     return $query
                                         ->where('is_eligible', true)
                                         ->where('is_married', false)
                                         ->whereDoesntHave('widowLoans', fn ($q) => $q
-                                            ->whereIn('status', array_column(WidowLoanStatus::activeStatuses(), 'value'))
+                                            ->where(function ($q1) use ($currentRecordId) {
+                                                $q1->whereIn('status', array_column(WidowLoanStatus::activeStatuses(), 'value'))
+                                                    ->when($currentRecordId, fn ($q2) => $q2->where('id', '!=', $currentRecordId));
+                                            })
                                             ->orWhere(fn ($q2) => $q2
                                                 ->where('status', WidowLoanStatus::WRITTEN_OFF->value)
                                                 ->where('reapplication_allowed', false)
@@ -151,13 +141,18 @@ class LoanRequestResource extends Resource
                             ->preload()
                             ->required()
                             ->live()
-                            ->afterStateUpdated(function (Set $set, ?string $state) {
+                            ->afterStateUpdated(function (Set $set, ?string $state, ?WidowLoan $record = null, $livewire = null) {
                                 if (! $state) {
                                     return;
                                 }
 
+                                $routeRecord = request()?->route('record');
+                                $currentRecordId = $record?->id
+                                    ?? (is_object($livewire) && method_exists($livewire, 'getRecord') ? $livewire->getRecord()?->id : null)
+                                    ?? ($routeRecord instanceof WidowLoan ? $routeRecord->id : $routeRecord);
+
                                 $widow = Widow::find($state);
-                                if ($widow && ! $widow->canApplyForLoan()) {
+                                if ($widow && ! $widow->canApplyForLoan($currentRecordId ? (string) $currentRecordId : null)) {
                                     Notification::make()
                                         ->title('Not Eligible')
                                         ->body('This widow already has an active loan or is remarried.')

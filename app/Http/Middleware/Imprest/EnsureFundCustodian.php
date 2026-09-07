@@ -14,7 +14,7 @@ class EnsureFundCustodian
         $user = auth()->user();
 
         // ✅ FIX: Handle guest users
-        if (!$user) {
+        if (! $user) {
             return $next($request); // allow login page
         }
 
@@ -25,13 +25,13 @@ class EnsureFundCustodian
 
         $fundId = $request->route('fund') ?? $request->input('fund_id');
 
-        if (!$fundId) {
+        if (! $fundId) {
             return $next($request);
         }
 
         $fund = ImprestFund::find($fundId);
 
-        if (!$fund) {
+        if (! $fund) {
             abort(404, 'Fund not found.');
         }
 

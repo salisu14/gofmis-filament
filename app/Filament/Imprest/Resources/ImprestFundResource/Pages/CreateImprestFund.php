@@ -6,9 +6,9 @@ use App\Filament\Imprest\Resources\ImprestFundResource;
 use App\Models\BankAccount;
 use App\Models\ImprestFund;
 use App\Models\Transaction;
+use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
-use Filament\Resources\Pages\CreateRecord;
 
 class CreateImprestFund extends CreateRecord
 {

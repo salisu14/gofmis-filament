@@ -3,12 +3,11 @@
 namespace App\Services;
 
 use App\Enums\WelfarePackageStatus;
+use App\Models\Item;
 use App\Models\WelfarePackage;
 use App\Models\WelfarePackageItem;
-use App\Models\WelfareBeneficiary;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
-use InvalidArgumentException;
 use RuntimeException;
 
 class WelfarePackageService
@@ -21,7 +20,7 @@ class WelfarePackageService
         return DB::transaction(function () use ($data, $items) {
             $package = WelfarePackage::create($data);
 
-            if (!empty($items)) {
+            if (! empty($items)) {
                 $this->syncItems($package, $items);
             }
 
@@ -41,7 +40,7 @@ class WelfarePackageService
         return DB::transaction(function () use ($package, $data, $items) {
             $package->update($data);
 
-            if (!empty($items)) {
+            if (! empty($items)) {
                 $this->syncItems($package, $items);
             }
 
@@ -101,7 +100,6 @@ class WelfarePackageService
                 WelfarePackageItem::create([
                     'welfare_package_id' => $newPackage->id,
                     'item_id' => $item->item_id,
-                    'category_id' => $item->category_id,
                     'quantity_per_family' => $item->quantity_per_family,
                     'notes' => $item->notes,
                 ]);
@@ -122,11 +120,18 @@ class WelfarePackageService
         $package->items()->whereNotIn('item_id', $incomingIds)->delete();
 
         foreach ($items as $itemData) {
+            $itemModel = Item::find($itemData['item_id']);
+            if (! $itemModel) {
+                throw new \InvalidArgumentException("Item ID {$itemData['item_id']} does not exist.");
+            }
+            if (! $itemModel->category_id) {
+                throw new \InvalidArgumentException("Selected item '{$itemModel->name}' has no category assigned.");
+            }
+
             WelfarePackageItem::updateOrCreate(
                 [
                     'welfare_package_id' => $package->id,
                     'item_id' => $itemData['item_id'],
-                    'category_id' => $itemData['category_id'],
                 ],
                 [
                     'quantity_per_family' => $itemData['quantity_per_family'] ?? 1,

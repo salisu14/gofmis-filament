@@ -43,7 +43,7 @@ class InterventionItem extends Model
     protected static function booted(): void
     {
         static::creating(function ($model) {
-            if (!empty($model->item_id) && empty($model->item_name)) {
+            if (! empty($model->item_id) && empty($model->item_name)) {
                 $model->item_name = $model->item?->name;
             }
         });

@@ -15,6 +15,8 @@ class UserSecurityService
      */
     public function resetPassword(User $actor, User $target, string $newPassword): void
     {
+        \App\Services\Security\DemoReadOnlyGuard::ensureCanMutate($actor);
+
         if (Gate::forUser($actor)->denies('resetPassword', $target)) {
             throw ValidationException::withMessages([
                 'user' => ['Unauthorized: You are not authorized to reset this user\'s password.'],
@@ -42,9 +44,11 @@ class UserSecurityService
      */
     public function disableUser(User $actor, User $target): void
     {
-        if (Gate::forUser($actor)->denies('disable', $target)) {
+        \App\Services\Security\DemoReadOnlyGuard::ensureCanMutate($actor);
+
+        if ($target->isProtectedSystemAccount() || Gate::forUser($actor)->denies('disable', $target)) {
             throw ValidationException::withMessages([
-                'user' => ['Unauthorized: You are not authorized to disable this user account.'],
+                'user' => ['Unauthorized: Protected system accounts cannot be disabled or deactivated.'],
             ]);
         }
 
@@ -66,9 +70,11 @@ class UserSecurityService
      */
     public function suspendUser(User $actor, User $target, string $reason): void
     {
-        if (Gate::forUser($actor)->denies('suspend', $target)) {
+        \App\Services\Security\DemoReadOnlyGuard::ensureCanMutate($actor);
+
+        if ($target->isProtectedSystemAccount() || Gate::forUser($actor)->denies('suspend', $target)) {
             throw ValidationException::withMessages([
-                'user' => ['Unauthorized: You are not authorized to suspend this user account.'],
+                'user' => ['Unauthorized: Protected system accounts cannot be suspended.'],
             ]);
         }
 
@@ -90,9 +96,11 @@ class UserSecurityService
      */
     public function deleteUser(User $actor, User $target): void
     {
-        if (Gate::forUser($actor)->denies('delete', $target)) {
+        \App\Services\Security\DemoReadOnlyGuard::ensureCanMutate($actor);
+
+        if ($target->isProtectedSystemAccount() || Gate::forUser($actor)->denies('delete', $target)) {
             throw ValidationException::withMessages([
-                'user' => ['Unauthorized: You are not authorized to delete this user account.'],
+                'user' => ['Unauthorized: Protected system accounts cannot be deleted.'],
             ]);
         }
 

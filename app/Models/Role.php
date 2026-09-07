@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Support\Str;
 use Spatie\Permission\Models\Role as SpatieRole;
 
 class Role extends SpatieRole
@@ -14,6 +15,44 @@ class Role extends SpatieRole
     public $incrementing = false;
 
     protected $keyType = 'string';
+
+    public static function findByIdentifier(mixed $identifier): ?static
+    {
+        if ($identifier instanceof SpatieRole || $identifier instanceof self) {
+            return $identifier;
+        }
+
+        if (! is_string($identifier)) {
+            return null;
+        }
+
+        if (Str::isUuid($identifier)) {
+            return static::where('uuid', $identifier)->orWhere('name', $identifier)->first();
+        }
+
+        return static::where('name', $identifier)->first();
+    }
+
+    public static function findByIdentifiers(array $identifiers): \Illuminate\Database\Eloquent\Collection
+    {
+        $uuids = collect($identifiers)->filter(fn ($v) => is_string($v) && Str::isUuid($v))->values()->all();
+        $names = collect($identifiers)->filter(fn ($v) => is_string($v) && ! Str::isUuid($v))->values()->all();
+
+        return static::query()
+            ->where(function ($q) use ($uuids, $names) {
+                if (! empty($uuids)) {
+                    $q->whereIn('uuid', $uuids);
+                }
+                if (! empty($names)) {
+                    if (! empty($uuids)) {
+                        $q->orWhereIn('name', $names);
+                    } else {
+                        $q->whereIn('name', $names);
+                    }
+                }
+            })
+            ->get();
+    }
 
     protected static function booted(): void
     {

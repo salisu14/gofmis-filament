@@ -53,14 +53,14 @@ class ImprestReplenishmentRepository implements ImprestReplenishmentRepositoryIn
     {
         $replenishment = ImprestReplenishment::findOrFail($replenishmentId);
 
-        if (!in_array($replenishment->status, ['submitted', 'approved'])) {
+        if (! in_array($replenishment->status, ['submitted', 'approved'])) {
             throw new \RuntimeException('Replenishment cannot be rejected');
         }
 
         $replenishment->update([
             'status' => 'rejected',
             'approved_by' => $rejectedBy,
-            'notes' => $replenishment->notes . "\n[REJECTED]: " . $reason,
+            'notes' => $replenishment->notes."\n[REJECTED]: ".$reason,
         ]);
 
         return $replenishment->fresh();

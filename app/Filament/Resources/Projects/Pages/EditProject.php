@@ -25,7 +25,7 @@ class EditProject extends EditRecord
                 ->label('Approve')
                 ->icon('heroicon-m-check')
                 ->color('success')
-                ->visible(fn($record) => $record->status === ProjectStatus::PLANNING)
+                ->visible(fn ($record) => $record->status === ProjectStatus::PLANNING)
                 ->requiresConfirmation()
                 ->action(function (ProjectService $service) {
                     $service->approveProject($this->record);
@@ -44,7 +44,7 @@ class EditProject extends EditRecord
                 ->label('Start Work')
                 ->icon('heroicon-m-play')
                 ->color('warning')
-                ->visible(fn($record) => $record->status === ProjectStatus::APPROVED)
+                ->visible(fn ($record) => $record->status === ProjectStatus::APPROVED)
                 ->requiresConfirmation()
                 ->action(function (ProjectService $service) {
                     $service->startProject($this->record);
@@ -59,7 +59,7 @@ class EditProject extends EditRecord
                 ->label('Mark Complete')
                 ->icon('heroicon-m-flag')
                 ->color('success')
-                ->visible(fn($record) => $record->status === ProjectStatus::IN_PROGRESS)
+                ->visible(fn ($record) => $record->status === ProjectStatus::IN_PROGRESS)
                 ->requiresConfirmation()
                 ->action(function (ProjectService $service) {
                     $service->completeProject($this->record);
@@ -74,7 +74,7 @@ class EditProject extends EditRecord
                 ->label('Place on Hold')
                 ->icon('heroicon-m-pause')
                 ->color('danger')
-                ->visible(fn($record) => $record->status === ProjectStatus::IN_PROGRESS)
+                ->visible(fn ($record) => $record->status === ProjectStatus::IN_PROGRESS)
                 ->schema([
                     \Filament\Forms\Components\Textarea::make('reason')
                         ->required()

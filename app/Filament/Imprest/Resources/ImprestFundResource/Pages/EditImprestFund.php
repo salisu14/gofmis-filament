@@ -15,7 +15,7 @@ class EditImprestFund extends EditRecord
         return [
             Actions\ViewAction::make(),
             Actions\DeleteAction::make()
-                ->visible(fn(): bool => auth()->user()->hasRole('admin')),
+                ->visible(fn (): bool => auth()->user()->hasRole('admin')),
         ];
     }
 
@@ -29,6 +29,7 @@ class EditImprestFund extends EditRecord
         // Prevent changing authorized amount without proper workflow
         unset($data['current_balance']);
         unset($data['bank_account_id']);
+
         return $data;
     }
 }

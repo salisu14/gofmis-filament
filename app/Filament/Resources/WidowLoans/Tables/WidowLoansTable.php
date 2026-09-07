@@ -22,7 +22,19 @@ class WidowLoansTable
     public static function configure(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(fn (Builder $query) => $query->with(['widow.deceased.zone', 'bankAccount', 'collector']))
+            ->defaultSort('created_at', 'desc')
             ->columns([
+                TextColumn::make('id')
+                    ->label('Loan Reference')
+                    ->formatStateUsing(fn ($state) => 'WRL-'.(string) str($state)->substr(-8)->upper())
+                    ->searchable()
+                    ->sortable()
+                    ->weight('bold')
+                    ->copyable()
+                    ->copyMessage('Reference copied')
+                    ->copyMessageDuration(1500),
+
                 TextColumn::make('widow.full_name')
                     ->label('Widow')
                     ->searchable()
@@ -41,46 +53,56 @@ class WidowLoansTable
                     ->money('NGN')
                     ->sortable(),
 
-                TextColumn::make('bankAccount.account_name')
-                    ->label('Bank Account')
-                    ->formatStateUsing(fn ($state, WidowLoan $record) => $state
-                        ? "{$record->bankAccount->account_name} ({$record->bankAccount->account_number})"
-                        : 'N/A')
-                    ->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('total_paid')
+                    ->label('Amount Repaid')
+                    ->money('NGN')
+                    ->sortable(),
 
                 TextColumn::make('outstanding_balance')
                     ->label('Remaining Balance')
                     ->money('NGN')
                     ->state(fn (WidowLoan $record) => (float) $record->outstanding_balance)
-                    ->color(fn ($state) => $state > 0 ? 'danger' : 'success')
+                    ->color(fn ($state) => $state <= 0 ? 'success' : 'danger')
                     ->weight('bold')
                     ->sortable(),
 
                 TextColumn::make('status')
-                    ->label('Operational Status')
+                    ->label('Lifecycle Status')
                     ->badge()
                     ->sortable(),
 
                 TextColumn::make('performance_status')
                     ->label('Performance Status')
+                    ->formatStateUsing(function ($state, WidowLoan $record) {
+                        if (in_array($record->status, [WidowLoanStatus::DRAFT, WidowLoanStatus::PENDING, WidowLoanStatus::APPROVED, WidowLoanStatus::REJECTED])) {
+                            return '—';
+                        }
+
+                        return $state instanceof \Filament\Support\Contracts\HasLabel ? $state->getLabel() : $state;
+                    })
+                    ->color(function ($state, WidowLoan $record) {
+                        if (in_array($record->status, [WidowLoanStatus::DRAFT, WidowLoanStatus::PENDING, WidowLoanStatus::APPROVED, WidowLoanStatus::REJECTED])) {
+                            return 'gray';
+                        }
+
+                        return $state instanceof \Filament\Support\Contracts\HasColor ? $state->getColor() : null;
+                    })
                     ->badge()
                     ->sortable(),
 
                 TextColumn::make('days_past_due')
                     ->label('DPD')
-                    ->state(fn (WidowLoan $record) => (int) $record->days_past_due)
-                    ->formatStateUsing(fn ($state) => $state > 0 ? "{$state} d" : '0 d')
-                    ->color(fn ($state) => $state > 0 ? 'danger' : 'gray')
+                    ->state(function (WidowLoan $record) {
+                        if (in_array($record->status, [WidowLoanStatus::DRAFT, WidowLoanStatus::PENDING, WidowLoanStatus::APPROVED, WidowLoanStatus::REJECTED])) {
+                            return null;
+                        }
+
+                        return (int) $record->days_past_due;
+                    })
+                    ->formatStateUsing(fn ($state) => $state === null ? '—' : ($state > 0 ? "{$state} d" : '0 d'))
+                    ->color(fn ($state) => $state === null ? 'gray' : ($state > 0 ? 'danger' : 'gray'))
                     ->sortable()
                     ->weight('bold'),
-
-                TextColumn::make('overdue_amount')
-                    ->label('Overdue')
-                    ->money('NGN')
-                    ->state(fn (WidowLoan $record) => (float) $record->overdue_amount)
-                    ->color(fn ($state) => $state > 0 ? 'danger' : 'gray')
-                    ->sortable()
-                    ->toggleable(),
 
                 TextColumn::make('repayment_progress')
                     ->label('Repaid')
@@ -89,7 +111,22 @@ class WidowLoansTable
                         : '0%')
                     ->badge()
                     ->color('gray')
-                    ->toggleable(),
+                    ->toggleable(isToggledHiddenByDefault: true),
+
+                TextColumn::make('overdue_amount')
+                    ->label('Overdue')
+                    ->money('NGN')
+                    ->state(fn (WidowLoan $record) => (float) $record->overdue_amount)
+                    ->color(fn ($state) => $state > 0 ? 'danger' : 'gray')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+
+                TextColumn::make('bankAccount.account_name')
+                    ->label('Bank Account')
+                    ->formatStateUsing(fn ($state, WidowLoan $record) => $state
+                        ? "{$record->bankAccount->account_name} ({$record->bankAccount->account_number})"
+                        : 'N/A')
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 IconColumn::make('hardship_active')
                     ->label('Hardship')

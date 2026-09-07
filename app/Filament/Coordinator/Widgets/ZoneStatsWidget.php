@@ -7,7 +7,6 @@ namespace App\Filament\Coordinator\Widgets;
 use App\Models\Deceased;
 use App\Models\Orphan;
 use App\Models\Widow;
-use App\Models\WidowLoan;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 
@@ -44,10 +43,6 @@ class ZoneStatsWidget extends BaseWidget
                 Stat::make('Widows', '0')
                     ->description('No zone assigned')
                     ->color('gray'),
-
-                Stat::make('Active Loans', '0')
-                    ->description('No zone assigned')
-                    ->color('gray'),
             ];
         }
 
@@ -78,14 +73,6 @@ class ZoneStatsWidget extends BaseWidget
                 ->description('Active Operational')
                 ->descriptionIcon('heroicon-m-heart')
                 ->color('warning'),
-
-            Stat::make('Active Loans', number_format(
-                WidowLoan::whereHas('widow', fn ($q) => $q->whereHas('deceased', fn ($q2) => $q2->where('zone_id', $zoneId)
-                ))->whereIn('status', ['approved', 'disbursed'])->count()
-            ))
-                ->description('In your zone')
-                ->descriptionIcon('heroicon-m-banknotes')
-                ->color('success'),
         ];
     }
 }

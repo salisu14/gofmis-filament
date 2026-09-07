@@ -1,4 +1,5 @@
 <?php
+
 // app/Models/IdCardTemplate.php
 
 namespace App\Models;
@@ -12,7 +13,9 @@ class IdCardTemplate extends Model
     use HasUuids;
 
     protected $primaryKey = 'id';
+
     public $incrementing = false;
+
     protected $keyType = 'string';
 
     protected $fillable = [
@@ -20,7 +23,7 @@ class IdCardTemplate extends Model
         'type',
         'layout_config',
         'background_image_path',
-        'is_active'
+        'is_active',
     ];
 
     protected $casts = [

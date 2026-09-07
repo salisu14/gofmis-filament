@@ -43,7 +43,7 @@ class WelfarePackageForm
                         DatePicker::make('end_date')
                             ->required()
                             ->native(false)
-                            ->minDate(fn(Get $get) => $get('start_date'))
+                            ->minDate(fn (Get $get) => $get('start_date'))
                             ->after('start_date'),
                     ])->columns(2),
 
@@ -53,16 +53,36 @@ class WelfarePackageForm
                             ->relationship('items')
                             ->schema([
                                 Select::make('item_id')
+                                    ->label('Item')
                                     ->relationship('item', 'name')
                                     ->searchable()
                                     ->preload()
-                                    ->required(),
+                                    ->required()
+                                    ->live()
+                                    ->afterStateUpdated(function ($state, Set $set) {
+                                        if ($state) {
+                                            $item = \App\Models\Item::with('category')->find($state);
+                                            $set('category_display', $item?->category?->name ?? '-');
+                                        } else {
+                                            $set('category_display', null);
+                                        }
+                                    }),
 
-                                Select::make('category_id')
-                                    ->relationship('category', 'name')
-                                    ->searchable()
-                                    ->preload()
-                                    ->required(),
+                                TextInput::make('category_display')
+                                    ->label('Category')
+                                    ->helperText('Derived automatically from selected item')
+                                    ->disabled()
+                                    ->dehydrated(false)
+                                    ->formatStateUsing(function (Get $get, $record) {
+                                        $itemId = $get('item_id');
+                                        if ($itemId) {
+                                            $item = \App\Models\Item::with('category')->find($itemId);
+
+                                            return $item?->category?->name;
+                                        }
+
+                                        return $record?->item?->category?->name;
+                                    }),
 
                                 TextInput::make('quantity_per_family')
                                     ->numeric()
@@ -76,7 +96,7 @@ class WelfarePackageForm
                             ->addActionLabel('Add Item')
                             ->reorderable()
                             ->collapsible()
-                            ->itemLabel(fn(array $state): ?string => $state['item_id'] ?? 'New Item'),
+                            ->itemLabel(fn (array $state): ?string => $state['item_id'] ?? 'New Item'),
                     ]),
             ]);
     }

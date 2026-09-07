@@ -3,13 +3,12 @@
 use App\Http\Controllers\IdCardController;
 use App\Http\Controllers\IdCardDownloadController;
 use App\Http\Controllers\OrphanReportController;
+use App\Http\Controllers\PortalController;
 use App\Http\Controllers\WidowLoanRepaymentController;
 use App\Http\Controllers\WidowLoanWriteOffController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    return view('welcome');
-});
+Route::get('/', PortalController::class)->name('home');
 
 Route::get('/id-cards/{idCard}/download', IdCardDownloadController::class)
     ->name('id-cards.download')
@@ -76,6 +75,23 @@ if (app()->environment('local')) {
     })->middleware('auth');
 }
 
+// Beneficiary Certificate Document Routes (Deceased Death Cert & Orphan Birth Cert)
+Route::get('/deceased/{deceased}/death-certificate/preview', [\App\Http\Controllers\BeneficiaryCertificateController::class, 'previewDeathCertificate'])
+    ->name('deceased.death-certificate.preview')
+    ->middleware('auth');
+
+Route::get('/deceased/{deceased}/death-certificate/download', [\App\Http\Controllers\BeneficiaryCertificateController::class, 'downloadDeathCertificate'])
+    ->name('deceased.death-certificate.download')
+    ->middleware('auth');
+
+Route::get('/orphans/{orphan}/birth-certificate/preview', [\App\Http\Controllers\BeneficiaryCertificateController::class, 'previewBirthCertificate'])
+    ->name('orphans.birth-certificate.preview')
+    ->middleware('auth');
+
+Route::get('/orphans/{orphan}/birth-certificate/download', [\App\Http\Controllers\BeneficiaryCertificateController::class, 'downloadBirthCertificate'])
+    ->name('orphans.birth-certificate.download')
+    ->middleware('auth');
+
 // Orphan Dossier Report Route
 Route::get('/orphans/{orphan}/report', [OrphanReportController::class, 'download'])
     ->name('orphans.report.download')
@@ -131,6 +147,16 @@ Route::get('/prescriptions/{prescription}/referral/download', [\App\Http\Control
 // Healthcare Period Report PDF Export Route
 Route::get('/admin/reports/prescription-report/pdf', [\App\Http\Controllers\PrescriptionReportController::class, 'exportPdf'])
     ->name('reports.prescription-report.pdf')
+    ->middleware('auth');
+
+// Consolidated Financial Report PDF Export Route
+Route::get('/admin/consolidated-financial-report/pdf', [\App\Http\Controllers\ConsolidatedFinancialReportController::class, 'exportPdf'])
+    ->name('reports.consolidated-financial-report.pdf')
+    ->middleware('auth');
+
+// Out of Pocket Expenditure Receipt Download Route
+Route::get('/admin/out-of-pocket-expenditures/{record}/receipt', \App\Http\Controllers\OutOfPocketReceiptDownloadController::class)
+    ->name('out-of-pocket.receipt.download')
     ->middleware('auth');
 
 Route::middleware(['auth'])->group(function () {

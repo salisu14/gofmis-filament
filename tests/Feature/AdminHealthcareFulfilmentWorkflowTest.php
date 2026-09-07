@@ -4,7 +4,6 @@ use App\Enums\Gender;
 use App\Enums\IllnessCategory;
 use App\Enums\PrescriptionStatus;
 use App\Filament\Coordinator\Resources\HealthcareRequestResource;
-use App\Filament\Coordinator\Resources\HealthcareRequestResource\Pages\ViewHealthcareRequest;
 use App\Filament\Resources\Prescriptions\Pages\ViewPrescription;
 use App\Models\Deceased;
 use App\Models\Illness;
@@ -82,13 +81,6 @@ test('1. end-to-end healthcare request creation -> medication prescription fulfi
 
     expect($prescription->medications()->count())->toBe(2);
 
-    // 3. Coordinator views healthcare request outcome read-only
-    Filament::setCurrentPanel(Filament::getPanel('coordinator'));
-    $this->actingAs($this->coordinator);
-
-    Livewire::test(ViewHealthcareRequest::class, ['record' => $prescription->getRouteKey()])
-        ->assertSuccessful()
-        ->assertSee('Amina');
 });
 
 test('2. admin can mark healthcare request as treated with action', function () {

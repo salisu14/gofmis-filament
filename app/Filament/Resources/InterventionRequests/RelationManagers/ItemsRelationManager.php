@@ -2,7 +2,6 @@
 
 namespace App\Filament\Resources\InterventionRequests\RelationManagers;
 
-use App\Filament\Resources\InterventionRequests\InterventionRequestResource;
 use App\Models\Category;
 use App\Models\Item;
 use Filament\Actions\BulkActionGroup;
@@ -23,7 +22,6 @@ use Filament\Tables\Table;
 class ItemsRelationManager extends RelationManager
 {
     protected static string $relationship = 'items';
-    protected static ?string $relatedResource = InterventionRequestResource::class;
 
     protected static ?string $recordTitleAttribute = 'item_name';
 

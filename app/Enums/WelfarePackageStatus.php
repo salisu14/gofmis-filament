@@ -11,27 +11,27 @@ enum WelfarePackageStatus: string
     public function label(): string
     {
         return match ($this) {
-            self::DRAFT   => 'Draft',
-            self::OPEN    => 'Open',
-            self::CLOSED  => 'Closed',
+            self::DRAFT => 'Draft',
+            self::OPEN => 'Open',
+            self::CLOSED => 'Closed',
         };
     }
 
     public function color(): string
     {
         return match ($this) {
-            self::DRAFT   => 'gray',
-            self::OPEN    => 'success',
-            self::CLOSED  => 'danger',
+            self::DRAFT => 'gray',
+            self::OPEN => 'success',
+            self::CLOSED => 'danger',
         };
     }
 
     public function icon(): string
     {
         return match ($this) {
-            self::DRAFT   => 'heroicon-o-pencil-square',
-            self::OPEN    => 'heroicon-o-check-circle',
-            self::CLOSED  => 'heroicon-o-lock-closed',
+            self::DRAFT => 'heroicon-o-pencil-square',
+            self::OPEN => 'heroicon-o-check-circle',
+            self::CLOSED => 'heroicon-o-lock-closed',
         };
     }
 
@@ -51,9 +51,9 @@ enum WelfarePackageStatus: string
     public function canTransitionTo(self $target): bool
     {
         return match (true) {
-            $this === self::DRAFT  && $target === self::OPEN   => true,
-            $this === self::OPEN   && $target === self::CLOSED => true,
-            $this === self::CLOSED && $target === self::OPEN   => true,
+            $this === self::DRAFT && $target === self::OPEN => true,
+            $this === self::OPEN && $target === self::CLOSED => true,
+            $this === self::CLOSED && $target === self::OPEN => true,
             default => false,
         };
     }

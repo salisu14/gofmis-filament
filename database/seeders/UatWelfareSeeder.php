@@ -105,7 +105,6 @@ class UatWelfareSeeder extends Seeder
             [
                 'welfare_package_id' => $package->id,
                 'item_id' => $item->id,
-                'category_id' => $item->category_id,
             ],
             [
                 'quantity_per_family' => $quantityPerFamily,

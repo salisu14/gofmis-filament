@@ -8,7 +8,7 @@
                 <p class="text-sm text-slate-400">Manage your Multi-Factor Authentication (MFA) setup and recovery codes.</p>
             </div>
             @php
-                $dashboardUrl = auth()->user()?->isAdmin() ? '/admin' : (auth()->user()?->isCoordinator() ? '/coordinator' : '/admin');
+                $dashboardUrl = auth()->user()?->getDashboardUrl() ?? url('/');
             @endphp
 
             <a href="{{ $dashboardUrl }}" class="text-xs font-semibold text-slate-450 hover:text-slate-200 transition bg-slate-800/80 px-3.5 py-2 rounded-xl border border-slate-700/50">

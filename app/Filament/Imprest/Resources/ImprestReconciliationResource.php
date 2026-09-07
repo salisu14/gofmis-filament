@@ -38,6 +38,19 @@ class ImprestReconciliationResource extends Resource
 
     public static function canCreate(): bool
     {
+        // B-07: Operationally deactivate new Imprest reconciliations
+        return false;
+    }
+
+    public static function canEdit($record): bool
+    {
+        // B-07: Operationally deactivate editing Imprest reconciliations
+        return false;
+    }
+
+    public static function canDelete($record): bool
+    {
+        // B-07: Operationally deactivate deleting Imprest reconciliations
         return false;
     }
 

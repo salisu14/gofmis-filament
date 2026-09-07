@@ -131,6 +131,7 @@ test('6. incoming transfers are included once and outgoing transfers debited onc
         'opening_balance' => 100000.00,
         'ledger_balance' => 100000.00,
         'reserved_balance' => 0.00,
+        'parent_bank_account_id' => $sourceAccount->id,
         'usage' => BankAccount::USAGE_GENERAL,
     ]);
 
@@ -152,9 +153,10 @@ test('6. incoming transfers are included once and outgoing transfers debited onc
     Artisan::call('finance:repair-bank-balances', ['--apply' => true]);
 
     // Source expected = 500,000 opening - 50,000 transfer out = 450,000
-    // Dest expected = 100,000 opening + 50,000 transfer in = 150,000
+    // Source expected = 500,000 opening - 50,000 transfer out = 450,000
+    // Dest expected = 0 opening (child account) + 50,000 transfer in = 50,000
     expect((float) $sourceAccount->fresh()->ledger_balance)->toBe(450000.00)
-        ->and((float) $destAccount->fresh()->ledger_balance)->toBe(150000.00);
+        ->and((float) $destAccount->fresh()->ledger_balance)->toBe(50000.00);
 });
 
 test('7. reserved balance does not alter ledger reconstruction', function () {

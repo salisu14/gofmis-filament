@@ -1,11 +1,11 @@
 <?php
+
 // app/Filament/Widgets/LoanBeneficiariesWidget.php
 
 namespace App\Filament\Widgets;
 
 use App\Models\Widow;
 use App\Models\WidowLoan;
-use Filament\Tables;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Filament\Widgets\TableWidget as BaseWidget;
@@ -13,7 +13,9 @@ use Filament\Widgets\TableWidget as BaseWidget;
 class LoanBeneficiariesWidget extends BaseWidget
 {
     protected static ?string $heading = 'Loan Beneficiaries';
+
     protected static ?int $sort = 3;
+
     protected int|string|array $columnSpan = 'full';
 
     public function table(Table $table): Table
@@ -21,14 +23,14 @@ class LoanBeneficiariesWidget extends BaseWidget
         return $table
             ->query(
                 Widow::query()
-                    ->whereHas('widowLoans', fn($q) => $q->where('status', '!=', 'rejected'))
-                    ->withCount(['widowLoans as total_loans' => fn($q) => $q->where('status', '!=', 'rejected')])
-                    ->withSum(['widowLoans as total_principal' => fn($q) => $q->where('status', '!=', 'rejected')], 'principal_amount')
-                    ->withSum(['widowLoans as total_repaid' => fn($q) => $q->where('status', '!=', 'rejected')], 'total_paid')
+                    ->whereHas('widowLoans', fn ($q) => $q->where('status', '!=', 'rejected'))
+                    ->withCount(['widowLoans as total_loans' => fn ($q) => $q->where('status', '!=', 'rejected')])
+                    ->withSum(['widowLoans as total_principal' => fn ($q) => $q->where('status', '!=', 'rejected')], 'principal_amount')
+                    ->withSum(['widowLoans as total_repaid' => fn ($q) => $q->where('status', '!=', 'rejected')], 'total_paid')
             )
             ->heading('Loan Beneficiaries Summary')
-            ->description(fn() => 'Total beneficiaries: ' . Widow::whereHas('widowLoans')->count() .
-                ' | Total principal: ₦' . number_format((float) WidowLoan::where('status', '!=', 'rejected')->sum('principal_amount'), 2))
+            ->description(fn () => 'Total beneficiaries: '.Widow::whereHas('widowLoans')->count().
+                ' | Total principal: ₦'.number_format((float) WidowLoan::where('status', '!=', 'rejected')->sum('principal_amount'), 2))
             ->columns([
                 TextColumn::make('full_name')
                     ->searchable()
@@ -61,7 +63,7 @@ class LoanBeneficiariesWidget extends BaseWidget
                 TextColumn::make('widowLoans.status')
                     ->label('Latest Status')
                     ->badge()
-                    ->formatStateUsing(fn($state) => is_array($state) ? end($state) : $state)
+                    ->formatStateUsing(fn ($state) => is_array($state) ? end($state) : $state)
                     ->colors([
                         'warning' => 'pending',
                         'success' => 'approved',

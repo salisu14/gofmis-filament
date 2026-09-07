@@ -85,7 +85,7 @@ class TransactionResource extends Resource
     public static function getRelations(): array
     {
         return [
-           // RelationManagers\TransactionLinesRelationManager::class,
+            // RelationManagers\TransactionLinesRelationManager::class,
         ];
     }
 

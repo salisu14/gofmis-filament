@@ -19,12 +19,12 @@ class WelfarePackageFactory extends Factory
         return [
             'id' => Str::uuid(),
             'name' => fake()->randomElement([
-                    'Ramadan Food Support',
-                    'Eid Clothing Assistance',
-                    'Back to School Supplies',
-                    'Winter Warmth Program',
-                    'Medical Aid Package',
-                ]) . ' ' . fake()->year(),
+                'Ramadan Food Support',
+                'Eid Clothing Assistance',
+                'Back to School Supplies',
+                'Winter Warmth Program',
+                'Medical Aid Package',
+            ]).' '.fake()->year(),
             'description' => fake()->paragraph(),
             'start_date' => $startDate,
             'end_date' => $endDate,

@@ -25,22 +25,22 @@ class BankOverviewStatsWidget extends BaseWidget
             ->sum('amount');
 
         return [
-            Stat::make('Cumulative Ledger Balance', '₦' . number_format($totalLedger, 2))
+            Stat::make('Cumulative Ledger Balance', '₦'.number_format($totalLedger, 2))
                 ->description('Total actual cash across all accounts')
                 ->descriptionIcon('heroicon-m-building-library')
                 ->color('primary'),
 
-            Stat::make('Cumulative Reserved Funds', '₦' . number_format($totalReserved, 2))
+            Stat::make('Cumulative Reserved Funds', '₦'.number_format($totalReserved, 2))
                 ->description('Funds tied up in pending approval flows')
                 ->descriptionIcon('heroicon-m-lock-closed')
                 ->color('warning'),
 
-            Stat::make('Cumulative Available Balance', '₦' . number_format($totalAvailable, 2))
+            Stat::make('Cumulative Available Balance', '₦'.number_format($totalAvailable, 2))
                 ->description('Total funds free to be utilized')
                 ->descriptionIcon('heroicon-m-banknotes')
                 ->color($totalAvailable > 0 ? 'success' : 'danger'),
 
-            Stat::make('Total Expenditures', '₦' . number_format($totalExpenditures, 2))
+            Stat::make('Total Expenditures', '₦'.number_format($totalExpenditures, 2))
                 ->description('Total debits, withdrawals & expenses')
                 ->descriptionIcon('heroicon-m-arrow-trending-down')
                 ->color('gray'),

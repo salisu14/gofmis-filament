@@ -130,6 +130,7 @@ class OrphansRelationManager extends RelationManager
                             birthDate: $data['birth_date'] instanceof \Carbon\Carbon ? $data['birth_date']->toDateString() : $data['birth_date'],
                             picture: $data['picture_url'] ?? null,
                             nin: $data['nin'] ?? null,
+                            hasNin: $data['has_nin'] ?? false,
                             guardianName: $data['guardian_name'] ?? null,
                             guardianPhone: $data['guardian_phone'] ?? null,
                             address: $data['address'] ?? null,

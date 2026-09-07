@@ -26,7 +26,7 @@ class CategoryData extends Data
             name: $category->name,
             description: $category->description,
             user_id: $category->user_id,
-            items: Lazy::create(fn() => ItemData::collect($category->items)),
+            items: Lazy::create(fn () => ItemData::collect($category->items)),
         );
     }
 

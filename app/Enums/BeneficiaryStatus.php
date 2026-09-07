@@ -10,7 +10,7 @@ enum BeneficiaryStatus: string
 
     public function label(): string
     {
-        return match($this) {
+        return match ($this) {
             self::PENDING => 'Pending',
             self::APPROVED => 'Approved',
             self::REJECTED => 'Rejected',
@@ -19,7 +19,7 @@ enum BeneficiaryStatus: string
 
     public function color(): string
     {
-        return match($this) {
+        return match ($this) {
             self::PENDING => 'warning',
             self::APPROVED => 'success',
             self::REJECTED => 'danger',
@@ -28,7 +28,7 @@ enum BeneficiaryStatus: string
 
     public function icon(): string
     {
-        return match($this) {
+        return match ($this) {
             self::PENDING => 'heroicon-o-clock',
             self::APPROVED => 'heroicon-o-check-circle',
             self::REJECTED => 'heroicon-o-x-circle',

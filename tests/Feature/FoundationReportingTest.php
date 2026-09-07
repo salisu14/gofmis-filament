@@ -294,7 +294,6 @@ test('thermal report contains widow loan repayment values', function () {
         'company' => app(\App\Services\Company\CompanyInformationService::class)->reportHeader(),
     ])->render();
 
-    dump($view);
     expect($view)->toContain('Hauwa Ibrahim')
         ->toContain('WRL REPAYMENT RECEIPT')
         ->toContain('WID-KCZ-001')
@@ -374,7 +373,7 @@ test('orphan dossier and WRL thermal report use canonical Company Information br
 
     expect($thermalView)
         ->toContain('CUSTOM FOUNDATION NAME') // thermal report uses uppercase in header
-        ->toContain('Custom Foundation Name - WRL Program') // thermal report footer
+        ->toContain('Custom Foundation Name - Welfare Department - WRL Program') // thermal report footer
         ->toContain('123 Foundation Way')
         ->toContain('08012345678')
         ->toContain('contact@customfoundation.org')
@@ -411,7 +410,6 @@ test('populated orphan dossier renders canonical welfare, sponsorship, guardian 
     \App\Models\WelfarePackageItem::create([
         'welfare_package_id' => $welfarePackage->id,
         'item_id' => $item->id,
-        'category_id' => $category->id,
         'quantity_per_family' => 3,
     ]);
     $beneficiary = \App\Models\WelfareBeneficiary::create([

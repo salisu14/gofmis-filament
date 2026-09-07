@@ -15,7 +15,7 @@ class LoginAction
         $user = User::where('email', $data->email)->first();
 
         // Check if the user exists and the password is correct
-        if (!$user || !Hash::check($data->password, $user->password)) {
+        if (! $user || ! Hash::check($data->password, $user->password)) {
             throw ValidationException::withMessages([
                 'email' => __('Invalid login credentials.'),
             ]);

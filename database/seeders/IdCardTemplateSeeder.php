@@ -14,7 +14,7 @@ class IdCardTemplateSeeder extends Seeder
     public function run(): void
     {
         IdCardTemplate::create([
-            'id'   => Str::uuid(),
+            'id' => Str::uuid(),
             'name' => 'Standard Widow Card',
             'type' => 'widow',
             'layout_config' => [
@@ -28,7 +28,7 @@ class IdCardTemplateSeeder extends Seeder
         ]);
 
         IdCardTemplate::create([
-            'id'   => Str::uuid(),
+            'id' => Str::uuid(),
             'name' => 'Standard Orphan Card',
             'type' => 'orphan',
             'layout_config' => [

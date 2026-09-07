@@ -15,12 +15,12 @@ class ImprestSeeder extends Seeder
     {
         $custodian = User::factory()->create([
             'id' => (string) Str::uuid(),
-            'name' => 'GOF Fund Custodian'
+            'name' => 'GOF Fund Custodian',
         ]);
 
         $supervisor = User::factory()->create([
             'id' => (string) Str::uuid(),
-            'name' => 'Fund Supervisor'
+            'name' => 'Fund Supervisor',
         ]);
 
         $fund = ImprestFund::factory()->create([
@@ -31,7 +31,7 @@ class ImprestSeeder extends Seeder
         ]);
 
         // ✅ Create transactions
-        $prefix = 'VCH-' . now()->format('Ymd');
+        $prefix = 'VCH-'.now()->format('Ymd');
         $counter = 1;
 
         ImprestTransaction::factory()
@@ -45,7 +45,7 @@ class ImprestSeeder extends Seeder
                 $transaction->deceased_id = null;
 
                 // ✅ GUARANTEED UNIQUE
-                $transaction->voucher_no = $prefix . '-' . str_pad($counter++, 4, '0', STR_PAD_LEFT);
+                $transaction->voucher_no = $prefix.'-'.str_pad($counter++, 4, '0', STR_PAD_LEFT);
 
                 $transaction->save();
 
@@ -71,7 +71,7 @@ class ImprestSeeder extends Seeder
                 $transaction->custodian_id = $custodian->id;
                 $transaction->deceased_id = null;
 
-                $transaction->voucher_no = $prefix . '-' . str_pad($counter++, 4, '0', STR_PAD_LEFT);
+                $transaction->voucher_no = $prefix.'-'.str_pad($counter++, 4, '0', STR_PAD_LEFT);
 
                 $transaction->save();
             });

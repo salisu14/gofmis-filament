@@ -23,7 +23,7 @@ class RejectWidowLoanAction
                     ->schema([
                         View::make('filament.components.approval-flow-info')
                             ->viewData(fn (WidowLoan $record) => [
-                                'flow'        => $record->approvalFlow,
+                                'flow' => $record->approvalFlow,
                                 'currentStep' => $record->getCurrentApprovalStep(),
                             ]),
                         Textarea::make('reason')
@@ -48,8 +48,7 @@ class RejectWidowLoanAction
                     ->body("Widow loan for {$record->widow->full_name} has been rejected.")
                     ->send();
             })
-            ->visible(fn (WidowLoan $record) =>
-                $record->isAwaitingApproval()
+            ->visible(fn (WidowLoan $record) => $record->isAwaitingApproval()
                 && (
                     auth()->user()->hasAnyRole(['super_admin', 'admin'])
                     || auth()->user()->can('reject_widow_loans')

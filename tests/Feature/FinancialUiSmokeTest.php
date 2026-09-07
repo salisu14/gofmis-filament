@@ -1,6 +1,5 @@
 <?php
 
-use App\Filament\Imprest\Resources\ImprestFundResource\Pages\ListImprestFunds;
 use App\Filament\Resources\BankAccounts\Pages\EditBankAccount;
 use App\Filament\Resources\BankAccounts\Pages\ListBankAccounts;
 use App\Filament\Resources\EducationFeeInvoices\Pages\ListEducationFeeInvoices;
@@ -76,13 +75,8 @@ test('bank account resource list and edit pages render successfully', function (
     ])->assertSuccessful();
 });
 
-test('imprest fund resource list page renders successfully', function () {
-    \Filament\Facades\Filament::setCurrentPanel(
-        \Filament\Facades\Filament::getPanel('imprest')
-    );
-
-    Livewire::test(ListImprestFunds::class)
-        ->assertSuccessful();
+test('imprest module is intentionally deactivated', function () {
+    expect(\Filament\Facades\Filament::getPanel('imprest'))->toBeNull();
 });
 
 test('education fee invoice resource list page renders successfully', function () {

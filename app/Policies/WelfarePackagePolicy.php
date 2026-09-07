@@ -12,26 +12,38 @@ class WelfarePackagePolicy
 
     public function viewAny(User $user): bool
     {
-        return $user->hasAnyRole(['super_admin', 'admin']) || $user->managesZone();
+        return $user->isDemoObserver() || $user->hasAnyRole(['super_admin', 'admin']) || $user->managesZone();
     }
 
     public function view(User $user, WelfarePackage $package): bool
     {
-        return $user->hasAnyRole(['super_admin', 'admin']) || $user->managesZone();
+        return $user->isDemoObserver() || $user->hasAnyRole(['super_admin', 'admin']) || $user->managesZone();
     }
 
     public function create(User $user): bool
     {
+        if ($user->isDemoObserver()) {
+            return false;
+        }
+
         return $user->hasAnyRole(['super_admin', 'admin']);
     }
 
     public function update(User $user, WelfarePackage $package): bool
     {
+        if ($user->isDemoObserver()) {
+            return false;
+        }
+
         return $user->hasAnyRole(['super_admin', 'admin']) && $package->isCompositionEditable();
     }
 
     public function delete(User $user, WelfarePackage $package): bool
     {
+        if ($user->isDemoObserver()) {
+            return false;
+        }
+
         return $user->hasAnyRole(['super_admin', 'admin'])
             && $package->isDraft()
             && ! $package->hasNominations();

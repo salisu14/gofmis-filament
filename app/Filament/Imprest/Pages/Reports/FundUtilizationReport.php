@@ -25,9 +25,13 @@ class FundUtilizationReport extends Page implements HasForms, HasTable
     use InteractsWithTable;
 
     protected static string|null|\BackedEnum $navigationIcon = 'heroicon-o-chart-bar';
+
     protected static string|null|\UnitEnum $navigationGroup = 'Reports';
+
     protected static ?string $navigationLabel = 'Fund Utilization';
+
     protected static ?int $navigationSort = 1;
+
     public ?array $data = [];
 
     protected string $view = 'filament.imprest.pages.reports.fund-utilization';
@@ -75,7 +79,7 @@ class FundUtilizationReport extends Page implements HasForms, HasTable
         return $table
             ->query(
                 \App\Models\ImprestTransaction::query()
-                    ->when($fundId, fn($q) => $q->where('fund_id', $fundId))
+                    ->when($fundId, fn ($q) => $q->where('fund_id', $fundId))
                     ->whereBetween('date', [$start, $end])
                     ->where('status', 'active')
                     ->with('fund')
@@ -148,7 +152,7 @@ class FundUtilizationReport extends Page implements HasForms, HasTable
         $filename = 'FUR-'.($fund?->location ? str($fund->location)->slug() : 'all-funds').'-'.now()->format('Ymd-His').'.pdf';
 
         return response()->streamDownload(
-            fn () => print($pdf->output()),
+            fn () => print ($pdf->output()),
             $filename,
             ['Content-Type' => 'application/pdf']
         );
@@ -156,11 +160,12 @@ class FundUtilizationReport extends Page implements HasForms, HasTable
 
     protected function getSummaryData(): ?array
     {
-        if (!isset($this->data['fund_id'])) {
+        if (! isset($this->data['fund_id'])) {
             return null;
         }
 
         $service = app(ImprestReconciliationServiceInterface::class);
+
         return $service->getReconciliationReport(
             $this->data['fund_id'],
             $this->data['start_date'],
@@ -171,7 +176,7 @@ class FundUtilizationReport extends Page implements HasForms, HasTable
     private function reportQuery(?string $fundId, string $start, string $end): \Illuminate\Database\Eloquent\Builder
     {
         return ImprestTransaction::query()
-            ->when($fundId, fn($q) => $q->where('fund_id', $fundId))
+            ->when($fundId, fn ($q) => $q->where('fund_id', $fundId))
             ->whereBetween('date', [$start, $end])
             ->where('status', 'active');
     }

@@ -9,7 +9,7 @@ class DisburseWidowLoanAction
 {
     public function execute(WidowLoan $loan): void
     {
-        $service = new WidowLoanService();
+        $service = new WidowLoanService;
         $service->disburseLoan($loan);
     }
 }

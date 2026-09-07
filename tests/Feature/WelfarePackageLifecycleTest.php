@@ -53,7 +53,6 @@ if (! function_exists('makeDraftPackage')) {
             \App\Models\WelfarePackageItem::create([
                 'welfare_package_id' => $pkg->id,
                 'item_id' => $item->id,
-                'category_id' => $category->id,
                 'quantity_per_family' => 1,
             ]);
         }
@@ -117,7 +116,6 @@ if (! function_exists('makeClosedPackageWithItems')) {
         \App\Models\WelfarePackageItem::create([
             'welfare_package_id' => $pkg->id,
             'item_id' => $item->id,
-            'category_id' => $category->id,
             'quantity_per_family' => 1,
         ]);
 

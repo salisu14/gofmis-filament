@@ -1,4 +1,5 @@
 <?php
+
 // app/Enums/ProjectType.php
 
 namespace App\Enums;
@@ -17,7 +18,7 @@ enum ProjectType: string
 
     public function label(): string
     {
-        return match($this) {
+        return match ($this) {
             self::HOUSE => 'Family House',
             self::SCHOOL => 'School Building',
             self::OTHER => 'Other',
@@ -32,7 +33,7 @@ enum ProjectType: string
 
     public function icon(): string
     {
-        return match($this) {
+        return match ($this) {
             self::HOUSE => 'heroicon-m-home',
             self::SCHOOL => 'heroicon-m-academic-cap',
             self::OTHER, self::SKILL_CENTER => 'heroicon-m-wrench',

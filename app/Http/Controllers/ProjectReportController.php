@@ -12,6 +12,8 @@ class ProjectReportController extends Controller
 {
     public function exportPdf(Request $request, CompanyInformationService $companyService)
     {
+        \App\Services\Security\DemoReadOnlyGuard::ensureCanExportSensitiveData();
+
         if (! auth()->user()->isAdmin() && ! auth()->user()->isSuperAdmin() && ! auth()->user()->can('view_projects')) {
             abort(403);
         }

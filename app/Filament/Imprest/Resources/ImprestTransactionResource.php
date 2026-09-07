@@ -81,7 +81,19 @@ class ImprestTransactionResource extends Resource
 
     public static function canCreate(): bool
     {
-        // A8: Non-destructively disable new Out-of-Pocket / Imprest transaction creation
+        // B-07: Operationally deactivate new Out-of-Pocket / Imprest transaction creation
+        return false;
+    }
+
+    public static function canEdit($record): bool
+    {
+        // B-07: Operationally deactivate editing Imprest transactions
+        return false;
+    }
+
+    public static function canDelete($record): bool
+    {
+        // B-07: Operationally deactivate deleting Imprest transactions
         return false;
     }
 

@@ -42,7 +42,7 @@ class EducationVerificationInfolist
                     ->schema([
                         TextEntry::make('status')
                             ->badge()
-                            ->color(fn ($state) => match($state) {
+                            ->color(fn ($state) => match ($state) {
                                 'approved' => 'success',
                                 'rejected' => 'danger',
                                 'under_review' => 'info',

@@ -150,9 +150,25 @@
             </p>
         </td>
         <td class="text-right" style="width: 40%; vertical-align: bottom;">
-            <div style="border-top: 1px solid #111827; width: 180px; margin-left: auto; padding-top: 5px;">
-                <p class="text-2xs" style="font-weight: bold; text-transform: uppercase; letter-spacing: 1px; color: #111827;">Authorized Signature</p>
-                <p class="text-2xs" style="color: #9ca3af;">Finance &amp; Empowerment Dept.</p>
+            @php
+                $signatory = $company['signatory'] ?? [
+                    'name' => $company['signatory_name'] ?? null,
+                    'title' => $company['signatory_title'] ?? null,
+                    'signature_data_uri' => $company['signature_data_uri'] ?? null,
+                ];
+            @endphp
+            <div style="width: 180px; margin-left: auto; text-align: center;">
+                @if(!empty($signatory['signature_data_uri']))
+                    <img src="{{ $signatory['signature_data_uri'] }}" style="max-height: 45px; max-width: 150px; object-fit: contain; margin-bottom: 2px; display: inline-block;" alt="Signature">
+                @endif
+                <div style="border-top: 1px solid #111827; padding-top: 5px;">
+                    <p class="text-2xs" style="font-weight: bold; text-transform: uppercase; letter-spacing: 1px; color: #111827;">
+                        {{ $signatory['name'] ?: 'Authorized Signature' }}
+                    </p>
+                    <p class="text-2xs" style="color: #6b7280;">
+                        {{ $signatory['title'] ?: 'Welfare Department' }}
+                    </p>
+                </div>
             </div>
         </td>
     </tr>

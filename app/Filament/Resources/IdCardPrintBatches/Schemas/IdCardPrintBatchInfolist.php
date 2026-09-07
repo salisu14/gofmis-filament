@@ -19,14 +19,14 @@ class IdCardPrintBatchInfolist
                         TextEntry::make('batch_name'),
                         TextEntry::make('type')
                             ->badge()
-                            ->color(fn(string $state): string => match ($state) {
+                            ->color(fn (string $state): string => match ($state) {
                                 'widow' => 'warning',
                                 'orphan' => 'success',
                                 'mixed' => 'info',
                             }),
                         TextEntry::make('status')
                             ->badge()
-                            ->color(fn(string $state): string => match ($state) {
+                            ->color(fn (string $state): string => match ($state) {
                                 'pending' => 'gray',
                                 'processing' => 'warning',
                                 'completed' => 'success',
@@ -42,7 +42,7 @@ class IdCardPrintBatchInfolist
                             ->label('Processed'),
                         TextEntry::make('progressPercentage')
                             ->label('Completion %')
-                            ->state(fn (IdCardPrintBatch $record): string => $record->progressPercentage() . '%'),
+                            ->state(fn (IdCardPrintBatch $record): string => $record->progressPercentage().'%'),
                         TextEntry::make('started_at')
                             ->dateTime('F j, Y H:i:s')
                             ->placeholder('Not started'),
@@ -55,7 +55,7 @@ class IdCardPrintBatchInfolist
                     ->collapsible()
                     ->schema([
                         TextEntry::make('filters')
-                            ->formatStateUsing(fn($state) => json_encode($state, JSON_PRETTY_PRINT))
+                            ->formatStateUsing(fn ($state) => json_encode($state, JSON_PRETTY_PRINT))
                             ->markdown()
                             ->extraAttributes(['class' => 'font-mono text-sm']),
                     ]),
@@ -64,7 +64,7 @@ class IdCardPrintBatchInfolist
                     ->collapsible()
                     ->schema([
                         TextEntry::make('range')
-                            ->formatStateUsing(fn($state) => $state ? json_encode($state, JSON_PRETTY_PRINT) : 'All eligible beneficiaries')
+                            ->formatStateUsing(fn ($state) => $state ? json_encode($state, JSON_PRETTY_PRINT) : 'All eligible beneficiaries')
                             ->markdown()
                             ->extraAttributes(['class' => 'font-mono text-sm']),
                     ]),

@@ -27,8 +27,8 @@ class CreateImprestTransaction extends CreateRecord
             itemId: $data['item_id'] ?? null,
             serviceDescription: $data['service_description'] ?? null,
             itemService: $data['item_service'] ?? null,
-            quantity: (float)$data['quantity'],
-            unitPrice: (float)$data['unit_price'],
+            quantity: (float) $data['quantity'],
+            unitPrice: (float) $data['unit_price'],
             category: TransactionCategory::from($data['category']),
             paymentMethod: PaymentMethod::from($data['payment_method']),
             receiptAttached: $data['receipt_attached'] ?? false,
@@ -48,6 +48,7 @@ class CreateImprestTransaction extends CreateRecord
 
             if ($another) {
                 $this->form->fill();
+
                 return;
             }
 

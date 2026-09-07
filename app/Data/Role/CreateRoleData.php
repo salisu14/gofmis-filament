@@ -7,6 +7,7 @@ use Spatie\LaravelData\Data;
 class CreateRoleData extends Data
 {
     public string $name;
+
     public array $permissions;
 
     public static function rules(): array
@@ -17,5 +18,4 @@ class CreateRoleData extends Data
             'permissions.*' => ['string', 'exists:permissions,name'],
         ];
     }
-
 }

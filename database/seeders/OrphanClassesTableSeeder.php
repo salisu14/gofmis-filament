@@ -2,10 +2,10 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
 use App\Models\OrphanClass;
-use Illuminate\Support\Str;
 use App\Models\User;
+use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
 
 class OrphanClassesTableSeeder extends Seeder
 {
@@ -23,9 +23,9 @@ class OrphanClassesTableSeeder extends Seeder
         $now = now();
 
         $classes = collect($classNames)->map(fn ($name) => [
-            'id'         => Str::uuid(),
-            'name'       => $name,
-            'user_id'    => $user?->id,
+            'id' => Str::uuid(),
+            'name' => $name,
+            'user_id' => $user?->id,
             'created_at' => $now,
             'updated_at' => $now,
         ])->toArray();

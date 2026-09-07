@@ -69,9 +69,9 @@ class OrphanInfolist
                             ->boolean(),
                         TextEntry::make('birth_certificate_path')
                             ->label('Certificate Link')
-                            ->url(fn ($record) => $record->birth_certificate_path ? asset('storage/'.$record->birth_certificate_path) : null)
+                            ->url(fn ($record) => $record->birth_certificate_path ? route('orphans.birth-certificate.preview', ['orphan' => $record]) : null)
                             ->openUrlInNewTab()
-                            ->visible(fn ($record) => $record->has_birth_cert && $record->birth_certificate_path)
+                            ->visible(fn ($record) => filled($record->birth_certificate_path) && (\Illuminate\Support\Facades\Storage::disk('local')->exists($record->birth_certificate_path) || \Illuminate\Support\Facades\Storage::disk('public')->exists($record->birth_certificate_path)))
                             ->placeholder('No file uploaded')
                             ->icon('heroicon-m-link'),
                     ])->columns(3),

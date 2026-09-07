@@ -55,6 +55,7 @@ class AdminPanelProvider extends PanelProvider
                 Dashboard::class,
                 \App\Filament\Pages\Reports\PrescriptionReport::class,
                 \App\Filament\Pages\StockAvailability::class,
+                \App\Filament\Pages\ConsolidatedFinancialReport::class,
             ])
             ->authGuard('web')
             ->resources([
@@ -65,6 +66,10 @@ class AdminPanelProvider extends PanelProvider
                 \App\Http\Middleware\EnsureActiveUser::class,
                 \App\Http\Middleware\EnsureMfaVerified::class,
             ])
+            ->renderHook(
+                'panels::body.start',
+                fn () => auth()->user()?->isDemoObserver() ? view('filament.components.demo-mode-banner') : ''
+            )
             ->navigation(function (NavigationBuilder $builder): NavigationBuilder {
                 $user = auth()->user();
 
@@ -77,22 +82,48 @@ class AdminPanelProvider extends PanelProvider
                             ->isActiveWhen(fn () => request()->is('admin')),
                     ]);
 
-                // Finance (admin + super-admin)
-                if ($user?->can('view_finances')) {
-                    $builder = $builder->group(
-                        NavigationGroup::make('Finance')
-                            ->items([
-                                NavigationItem::make('Bank Accounts')
-                                    ->icon('heroicon-o-document-currency-dollar')
-                                    ->url('/admin/bank-accounts')
-                                    ->isActiveWhen(fn () => request()->is('admin/bank-accounts*')),
+                // Finance (admin + super-admin + report access)
+                $hasFinanceGroupAccess = $user?->can('view_finances')
+                    || $user?->can('finance.consolidated_report.view')
+                    || $user?->isAdmin()
+                    || $user?->isSuperAdmin()
+                    || $user?->isDemoObserver();
 
-                                NavigationItem::make('Transactions')
-                                    ->icon('heroicon-o-document-text')
-                                    ->url('/admin/transactions')
-                                    ->isActiveWhen(fn () => request()->is('admin/transactions*')),
-                            ])
-                    );
+                if ($hasFinanceGroupAccess) {
+                    $financeItems = [];
+
+                    if ($user?->can('view_finances') || $user?->isAdmin() || $user?->isSuperAdmin()) {
+                        $financeItems[] = NavigationItem::make('Bank Accounts')
+                            ->icon('heroicon-o-document-currency-dollar')
+                            ->url('/admin/bank-accounts')
+                            ->isActiveWhen(fn () => request()->is('admin/bank-accounts*'));
+
+                        $financeItems[] = NavigationItem::make('Transactions')
+                            ->icon('heroicon-o-document-text')
+                            ->url('/admin/transactions')
+                            ->isActiveWhen(fn () => request()->is('admin/transactions*'));
+                    }
+
+                    if (\App\Filament\Resources\OutOfPocketExpenditures\OutOfPocketExpenditureResource::canAccess()) {
+                        $financeItems[] = NavigationItem::make('Out of Pocket Expenditures')
+                            ->icon('heroicon-o-receipt-percent')
+                            ->url('/admin/out-of-pocket-expenditures')
+                            ->isActiveWhen(fn () => request()->is('admin/out-of-pocket-expenditures*'));
+                    }
+
+                    if (\App\Filament\Pages\ConsolidatedFinancialReport::canAccess()) {
+                        $financeItems[] = NavigationItem::make('Consolidated Financial Report')
+                            ->icon('heroicon-o-document-chart-bar')
+                            ->url('/admin/consolidated-financial-report')
+                            ->isActiveWhen(fn () => request()->is('admin/consolidated-financial-report*'));
+                    }
+
+                    if (! empty($financeItems)) {
+                        $builder = $builder->group(
+                            NavigationGroup::make('Finance')
+                                ->items($financeItems)
+                        );
+                    }
                 }
 
                 // Beneficiary Registration Module (admin + super-admin)
@@ -156,36 +187,52 @@ class AdminPanelProvider extends PanelProvider
                 }
 
                 // Education Module (admin + super-admin + verifier)
-                if ($user?->can('view_education_interventions')) {
-                    $builder = $builder->group(
-                        NavigationGroup::make('Education')
-                            ->items([
-                                NavigationItem::make('Institution')
-                                    ->icon('heroicon-o-building-library')
-                                    ->url('/admin/institutions')
-                                    ->isActiveWhen(fn () => request()->is('admin/institutions*')),
+                $hasEducationAccess = $user?->can('view_education_interventions');
+                $hasAnalyticsAccess = $user?->can('orphan_education.analytics.view');
 
-                                NavigationItem::make('Orphan Classes')
-                                    ->icon('heroicon-o-building-office')
-                                    ->url('/admin/orphan-classes')
-                                    ->isActiveWhen(fn () => request()->is('admin/orphan-classes*')),
+                if ($hasEducationAccess || $hasAnalyticsAccess) {
+                    $educationItems = [];
 
-                                NavigationItem::make('Orphan Education')
-                                    ->icon('heroicon-o-academic-cap')
-                                    ->url('/admin/orphan-education')
-                                    ->isActiveWhen(fn () => request()->is('admin/orphan-education*')),
+                    if ($hasEducationAccess) {
+                        $educationItems[] = NavigationItem::make('Institution')
+                            ->icon('heroicon-o-building-library')
+                            ->url('/admin/institutions')
+                            ->isActiveWhen(fn () => request()->is('admin/institutions*'));
 
-                                NavigationItem::make('Vocational Skills')
-                                    ->icon('heroicon-o-presentation-chart-line')
-                                    ->url('/admin/vocational-skills')
-                                    ->isActiveWhen(fn () => request()->is('admin/vocational-skills*')),
+                        $educationItems[] = NavigationItem::make('Orphan Classes')
+                            ->icon('heroicon-o-building-office')
+                            ->url('/admin/orphan-classes')
+                            ->isActiveWhen(fn () => request()->is('admin/orphan-classes*'));
 
-                                NavigationItem::make('Education Fee Invoices')
-                                    ->icon('heroicon-o-banknotes')
-                                    ->url('/admin/education-fee-invoices')
-                                    ->isActiveWhen(fn () => request()->is('admin/education-fee-invoices*')),
-                            ])
-                    );
+                        $educationItems[] = NavigationItem::make('Orphan Education')
+                            ->icon('heroicon-o-academic-cap')
+                            ->url('/admin/orphan-education')
+                            ->isActiveWhen(fn () => request()->is('admin/orphan-education*'));
+
+                        $educationItems[] = NavigationItem::make('Vocational Skills')
+                            ->icon('heroicon-o-presentation-chart-line')
+                            ->url('/admin/vocational-skills')
+                            ->isActiveWhen(fn () => request()->is('admin/vocational-skills*'));
+
+                        $educationItems[] = NavigationItem::make('Education Fee Invoices')
+                            ->icon('heroicon-o-banknotes')
+                            ->url('/admin/education-fee-invoices')
+                            ->isActiveWhen(fn () => request()->is('admin/education-fee-invoices*'));
+                    }
+
+                    if ($hasAnalyticsAccess) {
+                        $educationItems[] = NavigationItem::make('Education Analytics')
+                            ->icon('heroicon-o-chart-bar')
+                            ->url('/admin/education-analytics')
+                            ->isActiveWhen(fn () => request()->is('admin/education-analytics*'));
+                    }
+
+                    if (! empty($educationItems)) {
+                        $builder = $builder->group(
+                            NavigationGroup::make('Education')
+                                ->items($educationItems)
+                        );
+                    }
                 }
 
                 // Interventions (admin + super-admin)
@@ -363,7 +410,7 @@ class AdminPanelProvider extends PanelProvider
                 }
 
                 // Auth/Settings (super-admin ONLY)
-                if ($user?->isSuperAdmin() || $user?->isAdmin()) {
+                if ($user?->isSuperAdmin() || $user?->isAdmin() || $user?->isDemoObserver()) {
                     $builder = $builder->group(
                         NavigationGroup::make('Security')
                             ->collapsible()

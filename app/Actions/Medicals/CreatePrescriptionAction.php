@@ -15,8 +15,8 @@ class CreatePrescriptionAction
     {
         return DB::transaction(function () use ($data) {
             // 1. Validate that the patient exists (simple check)
-            if (!class_exists($data->prescribable_type)) {
-                throw new \InvalidArgumentException("Invalid patient type.");
+            if (! class_exists($data->prescribable_type)) {
+                throw new \InvalidArgumentException('Invalid patient type.');
             }
 
             // 2. Create Prescription
@@ -33,7 +33,7 @@ class CreatePrescriptionAction
             ]);
 
             // 3. Attach Medications
-            if (!empty($data->medication_ids)) {
+            if (! empty($data->medication_ids)) {
                 $prescription->medications()->attach($data->medication_ids);
             }
 

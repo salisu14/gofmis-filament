@@ -23,6 +23,7 @@ class Widow extends Model
         'last_name',
         'middle_name',
         'nin',
+        'has_nin',
         'reg_no',
         'skills',
         'address',
@@ -37,6 +38,7 @@ class Widow extends Model
     ];
 
     protected $casts = [
+        'has_nin' => 'boolean',
         'is_eligible' => 'boolean',
         'is_married' => 'boolean',
         'married_at' => 'datetime',
@@ -233,7 +235,7 @@ class Widow extends Model
         return $this->hasMany(WidowLoan::class);
     }
 
-    public function canApplyForLoan(): bool
+    public function canApplyForLoan(int|string|null $ignoreLoanId = null): bool
     {
         if ($this->is_married) {
             return false;
@@ -246,6 +248,7 @@ class Widow extends Model
         // Block if there is any loan that is active (DRAFT, PENDING, APPROVED, DISBURSED, DEFAULTED)
         $hasActiveLoan = $this->widowLoans()
             ->whereIn('status', array_column(\App\Enums\WidowLoanStatus::activeStatuses(), 'value'))
+            ->when($ignoreLoanId, fn ($q) => $q->where('id', '!=', $ignoreLoanId))
             ->exists();
         if ($hasActiveLoan) {
             return false;
@@ -255,6 +258,7 @@ class Widow extends Model
         $hasDeniedWriteOff = $this->widowLoans()
             ->where('status', \App\Enums\WidowLoanStatus::WRITTEN_OFF->value)
             ->where('reapplication_allowed', false)
+            ->when($ignoreLoanId, fn ($q) => $q->where('id', '!=', $ignoreLoanId))
             ->exists();
         if ($hasDeniedWriteOff) {
             return false;
@@ -280,7 +284,7 @@ class Widow extends Model
         static::addGlobalScope('zone', function ($query) {
             $user = auth()->user();
 
-            if (! $user || $user->hasAnyRole(['admin', 'super_admin'])) {
+            if (! $user || $user->hasAnyRole(['admin', 'super_admin']) || $user->isDemoObserver()) {
                 return;
             }
 
@@ -302,6 +306,16 @@ class Widow extends Model
                 $model->middle_name,
                 $model->last_name,
             ])));
+        });
+
+        static::saving(function ($model) {
+            if ($model->has_nin === null) {
+                $model->has_nin = filled($model->nin);
+            }
+
+            if (! $model->has_nin) {
+                $model->nin = null;
+            }
         });
 
         static::created(function (Widow $widow) {
@@ -350,5 +364,10 @@ class Widow extends Model
         }
 
         Storage::disk('public')->delete($path);
+    }
+
+    public function fingerprints(): \Illuminate\Database\Eloquent\Relations\MorphMany
+    {
+        return $this->morphMany(BeneficiaryFingerprint::class, 'beneficiary');
     }
 }

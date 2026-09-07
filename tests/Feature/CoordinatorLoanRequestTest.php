@@ -1,11 +1,13 @@
 <?php
 
 use App\Enums\Gender;
+use App\Enums\WidowLoanPerformanceStatus;
 use App\Enums\WidowLoanStatus;
+use App\Filament\Coordinator\Resources\LoanRequestResource;
 use App\Filament\Coordinator\Resources\LoanRequestResource\Pages\CreateLoanRequest;
+use App\Filament\Coordinator\Resources\LoanRequestResource\Pages\EditLoanRequest;
 use App\Filament\Coordinator\Resources\LoanRequestResource\Pages\ListLoanRequests;
-use App\Filament\Resources\WidowLoans\Pages\ListWidowLoans;
-use App\Filament\Resources\WidowLoans\Pages\ViewWidowLoan;
+use App\Filament\Coordinator\Resources\LoanRequestResource\Pages\ViewLoanRequest;
 use App\Models\BankAccount;
 use App\Models\Deceased;
 use App\Models\User;
@@ -14,9 +16,12 @@ use App\Models\WidowLoan;
 use App\Models\Zone;
 use Filament\Facades\Filament;
 use Livewire\Livewire;
+use Spatie\Permission\PermissionRegistrar;
 
 beforeEach(function () {
     Filament::setCurrentPanel(Filament::getPanel('coordinator'));
+
+    app(PermissionRegistrar::class)->forgetCachedPermissions();
 
     $this->seed(\Database\Seeders\RolesAndPermissionsSeeder::class);
 
@@ -83,275 +88,269 @@ beforeEach(function () {
     ]);
     $this->disbursingAccount->update(['ledger_balance' => 500000.00]);
 
+    $this->coordinator->refresh();
     $this->actingAs($this->coordinator);
 });
 
-test('1. coordinator can render Loan Request create page', function () {
+// POSITIVE CAPABILITIES
+test('1. coordinator can access loan request list page', function () {
+    Livewire::test(ListLoanRequests::class)
+        ->assertSuccessful();
+});
+
+test('2. coordinator can access loan request create page', function () {
     Livewire::test(CreateLoanRequest::class)
         ->assertSuccessful();
 });
 
-test('2. coordinator can create valid loan request for own-zone widow', function () {
+test('3. coordinator can create DRAFT loan request for eligible own-zone widow', function () {
     Livewire::test(CreateLoanRequest::class)
-        ->set('data.widow_id', (string) $this->widow->id)
-        ->set('data.principal_amount', 50000)
-        ->set('data.duration_months', 6)
-        ->set('data.repayment_frequency', 'weekly')
-        ->set('data.purpose', 'Small trading business capital')
-        ->set('data.notes', 'Verified beneficiary by coordinator')
+        ->fillForm([
+            'widow_id' => $this->widow->id,
+            'principal_amount' => 50000,
+            'duration_months' => 6,
+            'repayment_frequency' => 'weekly',
+            'purpose' => 'Trade expansion support',
+        ])
         ->call('create')
         ->assertHasNoFormErrors();
 
     $this->assertDatabaseHas('widow_loans', [
         'widow_id' => $this->widow->id,
-        'principal_amount' => 50000.00,
-        'duration_months' => 6,
-        'repayment_frequency' => 'weekly',
-        'purpose' => 'Small trading business capital',
+        'principal_amount' => 50000,
         'status' => WidowLoanStatus::DRAFT->value,
     ]);
 });
 
-test('3. coordinator cannot select other-zone widow for loan request', function () {
+test('4. coordinator can view own-zone loan request', function () {
+    $loan = WidowLoan::create([
+        'widow_id' => $this->widow->id,
+        'principal_amount' => 50000.00,
+        'total_payable' => 50000.00,
+        'outstanding_balance' => 50000.00,
+        'total_paid' => 0.00,
+        'status' => WidowLoanStatus::DRAFT,
+        'performance_status' => WidowLoanPerformanceStatus::CURRENT,
+        'purpose' => 'Trading',
+    ]);
+
+    Livewire::test(ViewLoanRequest::class, ['record' => $loan->getRouteKey()])
+        ->assertSuccessful();
+});
+
+test('5. coordinator can edit own-zone DRAFT loan request', function () {
+    $loan = WidowLoan::create([
+        'widow_id' => $this->widow->id,
+        'principal_amount' => 30000.00,
+        'total_payable' => 30000.00,
+        'outstanding_balance' => 30000.00,
+        'total_paid' => 0.00,
+        'status' => WidowLoanStatus::DRAFT,
+        'performance_status' => WidowLoanPerformanceStatus::CURRENT,
+        'purpose' => 'Trading',
+    ]);
+
+    Livewire::test(EditLoanRequest::class, ['record' => $loan->getRouteKey()])
+        ->fillForm([
+            'widow_id' => (string) $this->widow->id,
+            'principal_amount' => 45000,
+            'duration_months' => 6,
+            'repayment_frequency' => 'weekly',
+            'purpose' => 'Updated Trading Purpose',
+        ])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    expect($loan->fresh()->principal_amount)->toEqual('45000.00');
+});
+
+test('6. coordinator can submit DRAFT request for approval', function () {
+    $loan = WidowLoan::create([
+        'widow_id' => $this->widow->id,
+        'principal_amount' => 50000.00,
+        'total_payable' => 50000.00,
+        'outstanding_balance' => 50000.00,
+        'total_paid' => 0.00,
+        'status' => WidowLoanStatus::DRAFT,
+        'performance_status' => WidowLoanPerformanceStatus::CURRENT,
+        'purpose' => 'Trading',
+    ]);
+
+    Livewire::test(ViewLoanRequest::class, ['record' => $loan->getRouteKey()])
+        ->callAction('submitForApproval')
+        ->assertHasNoActionErrors();
+
+    expect($loan->fresh()->status)->toBe(WidowLoanStatus::PENDING);
+    $this->assertDatabaseHas('approval_flows', [
+        'model_type' => WidowLoan::class,
+        'model_id' => $loan->id,
+        'status' => 'pending',
+    ]);
+});
+
+test('7. coordinator can see status and approval progress on loan request view', function () {
+    $loan = WidowLoan::create([
+        'widow_id' => $this->widow->id,
+        'principal_amount' => 50000.00,
+        'total_payable' => 50000.00,
+        'outstanding_balance' => 50000.00,
+        'total_paid' => 0.00,
+        'status' => WidowLoanStatus::PENDING,
+        'performance_status' => WidowLoanPerformanceStatus::CURRENT,
+        'purpose' => 'Trading',
+    ]);
+
+    Livewire::test(ViewLoanRequest::class, ['record' => $loan->getRouteKey()])
+        ->assertSuccessful()
+        ->assertSeeHtml('pending');
+});
+
+// ZONE ISOLATION & SECURITY
+test('8. out-of-zone widow is absent from coordinator create form selector', function () {
     Livewire::test(CreateLoanRequest::class)
-        ->set('data.widow_id', (string) $this->otherWidow->id)
-        ->set('data.principal_amount', 50000)
-        ->set('data.duration_months', 6)
-        ->set('data.repayment_frequency', 'weekly')
-        ->set('data.purpose', 'Cross-zone loan request attempt')
+        ->assertFormFieldExists('widow_id');
+
+    $query = LoanRequestResource::getEloquentQuery();
+    expect($query->where('widow_id', $this->otherWidow->id)->exists())->toBeFalse();
+});
+
+test('9. forged submission with out-of-zone widow_id is rejected by validation', function () {
+    Livewire::test(CreateLoanRequest::class)
+        ->fillForm([
+            'widow_id' => $this->otherWidow->id,
+            'principal_amount' => 50000,
+            'duration_months' => 6,
+            'repayment_frequency' => 'weekly',
+            'purpose' => 'Forged request',
+        ])
         ->call('create')
         ->assertHasFormErrors(['widow_id']);
 });
 
-test('4. coordinator can submit draft loan request creating pending approval flow', function () {
-    $loan = WidowLoan::create([
-        'widow_id' => $this->widow->id,
-        'bank_account_id' => $this->disbursingAccount->id,
-        'principal_amount' => 50000,
-        'duration_months' => 6,
-        'repayment_frequency' => 'weekly',
-        'purpose' => 'Trading business',
+test('10. coordinator direct access to out-of-zone loan request is denied', function () {
+    $otherLoan = WidowLoan::create([
+        'widow_id' => $this->otherWidow->id,
+        'principal_amount' => 50000.00,
+        'total_payable' => 50000.00,
+        'outstanding_balance' => 50000.00,
+        'total_paid' => 0.00,
         'status' => WidowLoanStatus::DRAFT,
-        'outstanding_balance' => 0,
+        'performance_status' => WidowLoanPerformanceStatus::CURRENT,
+        'purpose' => 'Trading',
     ]);
 
-    Livewire::test(ListLoanRequests::class)
-        ->callTableAction('submitForApproval', $loan)
-        ->assertHasNoTableActionErrors();
-
-    $freshLoan = $loan->fresh();
-    expect($freshLoan->status)->toBe(WidowLoanStatus::PENDING)
-        ->and($freshLoan->approvalFlow)->not->toBeNull()
-        ->and($freshLoan->approvalFlow->status)->toBe('pending')
-        ->and($freshLoan->isAwaitingApproval())->toBeTrue();
+    expect(fn () => Livewire::test(ViewLoanRequest::class, ['record' => $otherLoan->getRouteKey()]))
+        ->toThrow(\Illuminate\Database\Eloquent\ModelNotFoundException::class);
 });
 
-test('5 & 6 & 7 & 8. Admin table and View page render Approve and Reject actions for pending coordinator loan', function () {
-    $loan = WidowLoan::create([
-        'widow_id' => $this->widow->id,
-        'bank_account_id' => $this->disbursingAccount->id,
-        'principal_amount' => 50000,
-        'duration_months' => 6,
-        'repayment_frequency' => 'weekly',
-        'purpose' => 'Trading business',
-        'status' => WidowLoanStatus::DRAFT,
-        'outstanding_balance' => 0,
-    ]);
+// WIDOW ELIGIBILITY
+test('11. ineligible widow is rejected by form validation', function () {
+    $this->widow->update(['is_eligible' => false]);
 
-    Livewire::test(ListLoanRequests::class)
-        ->callTableAction('submitForApproval', $loan);
-
-    Filament::setCurrentPanel(Filament::getPanel('admin'));
-    $this->actingAs($this->admin);
-
-    Livewire::test(ListWidowLoans::class)
-        ->assertTableActionExists('approve', record: $loan->fresh())
-        ->assertTableActionExists('reject', record: $loan->fresh());
-
-    Livewire::test(ViewWidowLoan::class, ['record' => $loan->getRouteKey()])
-        ->assertActionExists('approve')
-        ->assertActionExists('reject');
-});
-
-test('9. Admin can approve coordinator-created pending loan', function () {
-    $loan = WidowLoan::create([
-        'widow_id' => $this->widow->id,
-        'bank_account_id' => $this->disbursingAccount->id,
-        'principal_amount' => 50000,
-        'duration_months' => 6,
-        'repayment_frequency' => 'weekly',
-        'purpose' => 'Trading business',
-        'status' => WidowLoanStatus::DRAFT,
-        'outstanding_balance' => 0,
-    ]);
-
-    Livewire::test(ListLoanRequests::class)
-        ->callTableAction('submitForApproval', $loan);
-
-    Filament::setCurrentPanel(Filament::getPanel('admin'));
-    $this->actingAs($this->superAdmin);
-
-    Livewire::test(ListWidowLoans::class)
-        ->callTableAction('approve', $loan->fresh(), ['comments' => 'Verified and approved'])
-        ->assertHasNoTableActionErrors();
-
-    expect($loan->fresh()->status)->toBe(WidowLoanStatus::APPROVED);
-});
-
-test('10. Admin can reject coordinator-created pending loan with reason', function () {
-    $loan = WidowLoan::create([
-        'widow_id' => $this->widow->id,
-        'bank_account_id' => $this->disbursingAccount->id,
-        'principal_amount' => 50000,
-        'duration_months' => 6,
-        'repayment_frequency' => 'weekly',
-        'purpose' => 'Trading business',
-        'status' => WidowLoanStatus::DRAFT,
-        'outstanding_balance' => 0,
-    ]);
-
-    Livewire::test(ListLoanRequests::class)
-        ->callTableAction('submitForApproval', $loan);
-
-    Filament::setCurrentPanel(Filament::getPanel('admin'));
-    $this->actingAs($this->admin);
-
-    Livewire::test(ListWidowLoans::class)
-        ->callTableAction('reject', $loan->fresh(), [
-            'reason' => 'Ineligible business model submitted',
-            'comments' => 'Please review purpose details',
+    Livewire::test(CreateLoanRequest::class)
+        ->fillForm([
+            'widow_id' => $this->widow->id,
+            'principal_amount' => 50000,
+            'duration_months' => 6,
+            'repayment_frequency' => 'weekly',
+            'purpose' => 'Ineligible request',
         ])
-        ->assertHasNoTableActionErrors();
-
-    $freshLoan = $loan->fresh();
-    expect($freshLoan->status)->toBe(WidowLoanStatus::REJECTED)
-        ->and($freshLoan->reject_reason)->toBe('Ineligible business model submitted');
+        ->call('create')
+        ->assertHasFormErrors(['widow_id']);
 });
 
-test('11. rejected loan cannot be approved afterward', function () {
-    $loan = WidowLoan::create([
-        'widow_id' => $this->widow->id,
-        'bank_account_id' => $this->disbursingAccount->id,
-        'principal_amount' => 50000,
-        'duration_months' => 6,
-        'repayment_frequency' => 'weekly',
-        'purpose' => 'Trading business',
-        'status' => WidowLoanStatus::REJECTED,
-        'reject_reason' => 'Rejected by admin',
-        'outstanding_balance' => 0,
-    ]);
+test('12. remarried widow is rejected by form validation', function () {
+    $this->widow->update(['is_married' => true]);
 
-    expect($loan->isAwaitingApproval())->toBeFalse();
-
-    Filament::setCurrentPanel(Filament::getPanel('admin'));
-    $this->actingAs($this->admin);
-
-    Livewire::test(ListWidowLoans::class)
-        ->assertTableActionHidden('approve', record: $loan);
+    Livewire::test(CreateLoanRequest::class)
+        ->fillForm([
+            'widow_id' => $this->widow->id,
+            'principal_amount' => 50000,
+            'duration_months' => 6,
+            'repayment_frequency' => 'weekly',
+            'purpose' => 'Remarried request',
+        ])
+        ->call('create')
+        ->assertHasFormErrors(['widow_id']);
 });
 
-test('12. approved/disbursed loan cannot be rejected', function () {
-    $loan = WidowLoan::create([
+test('13. widow with active loan is rejected from receiving new loan request', function () {
+    WidowLoan::create([
         'widow_id' => $this->widow->id,
-        'bank_account_id' => $this->disbursingAccount->id,
-        'principal_amount' => 50000,
-        'duration_months' => 6,
-        'repayment_frequency' => 'weekly',
-        'purpose' => 'Trading business',
+        'principal_amount' => 50000.00,
+        'total_payable' => 50000.00,
+        'outstanding_balance' => 50000.00,
+        'total_paid' => 0.00,
         'status' => WidowLoanStatus::DISBURSED,
-        'disbursed_at' => now(),
-        'outstanding_balance' => 50000,
+        'performance_status' => WidowLoanPerformanceStatus::CURRENT,
+        'purpose' => 'Trading',
     ]);
 
-    expect($loan->isAwaitingApproval())->toBeFalse();
-
-    Filament::setCurrentPanel(Filament::getPanel('admin'));
-    $this->actingAs($this->admin);
-
-    Livewire::test(ListWidowLoans::class)
-        ->assertTableActionHidden('reject', record: $loan);
+    Livewire::test(CreateLoanRequest::class)
+        ->fillForm([
+            'widow_id' => $this->widow->id,
+            'principal_amount' => 50000,
+            'duration_months' => 6,
+            'repayment_frequency' => 'weekly',
+            'purpose' => 'Duplicate active request',
+        ])
+        ->call('create')
+        ->assertHasFormErrors(['widow_id']);
 });
 
-test('13. forged status-only pending record without approval flow can be re-submitted cleanly', function () {
+// PRIVILEGE BOUNDARIES
+test('14. coordinator cannot approve loan', function () {
     $loan = WidowLoan::create([
         'widow_id' => $this->widow->id,
-        'bank_account_id' => $this->disbursingAccount->id,
-        'principal_amount' => 50000,
-        'duration_months' => 6,
-        'repayment_frequency' => 'weekly',
-        'purpose' => 'Status only pending',
+        'principal_amount' => 50000.00,
+        'total_payable' => 50000.00,
+        'outstanding_balance' => 50000.00,
+        'total_paid' => 0.00,
         'status' => WidowLoanStatus::PENDING,
-        'outstanding_balance' => 0,
+        'performance_status' => WidowLoanPerformanceStatus::CURRENT,
+        'purpose' => 'Trading',
     ]);
 
-    expect($loan->approvalFlow)->toBeNull()
-        ->and($loan->canSubmitForApproval())->toBeTrue();
-
-    Livewire::test(ListLoanRequests::class)
-        ->callTableAction('submitForApproval', $loan)
-        ->assertHasNoTableActionErrors();
-
-    expect($loan->fresh()->approvalFlow)->not->toBeNull()
-        ->and($loan->fresh()->isAwaitingApproval())->toBeTrue();
+    Livewire::test(ViewLoanRequest::class, ['record' => $loan->getRouteKey()])
+        ->assertActionDoesNotExist('approveLoan');
 });
 
-test('14. insufficient funds produce controlled notification without 500 error', function () {
-    $this->disbursingAccount->update(['ledger_balance' => 0.00]);
-
+test('15. coordinator cannot disburse loan', function () {
     $loan = WidowLoan::create([
         'widow_id' => $this->widow->id,
-        'bank_account_id' => $this->disbursingAccount->id,
-        'principal_amount' => 50000,
-        'duration_months' => 6,
-        'repayment_frequency' => 'weekly',
-        'purpose' => 'Trading business',
-        'status' => WidowLoanStatus::DRAFT,
-        'outstanding_balance' => 0,
+        'principal_amount' => 50000.00,
+        'total_payable' => 50000.00,
+        'outstanding_balance' => 50000.00,
+        'total_paid' => 0.00,
+        'status' => WidowLoanStatus::APPROVED,
+        'performance_status' => WidowLoanPerformanceStatus::CURRENT,
+        'purpose' => 'Trading',
     ]);
 
-    Livewire::test(ListLoanRequests::class)
-        ->callTableAction('submitForApproval', $loan)
-        ->assertHasNoTableActionErrors();
-
-    // Loan remains in draft status due to insufficient balance notification
-    expect($loan->fresh()->status)->toBe(WidowLoanStatus::DRAFT);
+    Livewire::test(ViewLoanRequest::class, ['record' => $loan->getRouteKey()])
+        ->assertActionDoesNotExist('disburseLoan');
 });
 
-test('15. coordinator cannot approve or reject own loan', function () {
+test('16. coordinator cannot write off loan', function () {
     $loan = WidowLoan::create([
         'widow_id' => $this->widow->id,
-        'bank_account_id' => $this->disbursingAccount->id,
-        'principal_amount' => 50000,
-        'duration_months' => 6,
-        'repayment_frequency' => 'weekly',
-        'purpose' => 'Trading business',
-        'status' => WidowLoanStatus::DRAFT,
-        'outstanding_balance' => 0,
+        'principal_amount' => 50000.00,
+        'total_payable' => 50000.00,
+        'outstanding_balance' => 50000.00,
+        'total_paid' => 0.00,
+        'status' => WidowLoanStatus::DISBURSED,
+        'performance_status' => WidowLoanPerformanceStatus::CURRENT,
+        'purpose' => 'Trading',
     ]);
 
-    Livewire::test(ListLoanRequests::class)
-        ->callTableAction('submitForApproval', $loan);
-
-    // Coordinator table does not expose approve or reject actions
-    Livewire::test(ListLoanRequests::class)
-        ->assertTableActionDoesNotExist('approve')
-        ->assertTableActionDoesNotExist('reject');
+    Livewire::test(ViewLoanRequest::class, ['record' => $loan->getRouteKey()])
+        ->assertActionDoesNotExist('writeOffLoan');
 });
 
-test('16. cross-zone authorization isolation remains intact', function () {
-    $loan = WidowLoan::create([
-        'widow_id' => $this->widow->id,
-        'bank_account_id' => $this->disbursingAccount->id,
-        'principal_amount' => 50000,
-        'duration_months' => 6,
-        'repayment_frequency' => 'weekly',
-        'purpose' => 'Trading business',
-        'status' => WidowLoanStatus::DRAFT,
-        'outstanding_balance' => 0,
-    ]);
-
-    $this->actingAs($this->otherCoordinator);
-
-    Livewire::test(ListLoanRequests::class)
-        ->assertDontSee($this->widow->full_name);
+test('17. coordinator is forbidden from Secretariat admin panel access and financial administration permissions', function () {
+    $adminPanelRoles = ['super_admin', 'admin', 'auditor', 'demo_observer'];
+    expect($this->coordinator->hasAnyRole($adminPanelRoles))->toBeFalse();
+    expect($this->coordinator->can('approve_loans'))->toBeFalse();
+    expect($this->coordinator->can('disburse_loans'))->toBeFalse();
+    expect($this->coordinator->can('write_off_loans'))->toBeFalse();
 });

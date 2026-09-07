@@ -22,6 +22,7 @@ class VocationalSkillRelationManager extends RelationManager
      * to show which orphans have this skill.
      */
     protected static string $relationship = 'orphanSkills';
+
     protected static ?string $relatedResource = VocationalSkillResource::class;
 
     protected static ?string $recordTitleAttribute = 'full_name';
@@ -75,7 +76,7 @@ class VocationalSkillRelationManager extends RelationManager
                 AttachAction::make()
                     ->label('Attach Student')
                     ->preloadRecordSelect()
-                    ->schema(fn(AttachAction $action): array => [
+                    ->schema(fn (AttachAction $action): array => [
                         $action->getRecordSelect(),
                         TextInput::make('specify')
                             ->label('Specific Proficiency')

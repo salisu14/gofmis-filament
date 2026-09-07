@@ -13,6 +13,7 @@ use Filament\Tables\Table;
 class TransactionsRelationManager extends RelationManager
 {
     protected static string $relationship = 'transactions';
+
     protected static ?string $title = 'Transaction History';
 
     public function form(Schema $schema): Schema
@@ -30,7 +31,7 @@ class TransactionsRelationManager extends RelationManager
                 Tables\Columns\TextColumn::make('voucher_no')
                     ->searchable()
                     ->badge()
-                    ->color(fn($record) => match ($record->status) {
+                    ->color(fn ($record) => match ($record->status) {
                         'active' => 'success',
                         'pending' => 'warning',
                         'voided' => 'danger',
@@ -78,11 +79,11 @@ class TransactionsRelationManager extends RelationManager
             ])
             ->headerActions([
                 CreateAction::make()
-                    ->url(fn() => ImprestTransactionResource::getUrl('create', ['fund_id' => $this->getOwnerRecord()->id])),
+                    ->url(fn () => ImprestTransactionResource::getUrl('create', ['fund_id' => $this->getOwnerRecord()->id])),
             ])
             ->recordActions([
                 ViewAction::make()
-                    ->url(fn($record) => ImprestTransactionResource::getUrl('view', ['record' => $record])),
+                    ->url(fn ($record) => ImprestTransactionResource::getUrl('view', ['record' => $record])),
             ])
             ->defaultSort('date', 'desc');
     }

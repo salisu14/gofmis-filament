@@ -63,7 +63,6 @@ class WelfarePackage extends Model
         return $this->hasMany(WelfareBeneficiary::class);
     }
 
-
     public function deceased()
     {
         return $this->hasManyThrough(

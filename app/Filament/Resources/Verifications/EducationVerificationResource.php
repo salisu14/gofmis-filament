@@ -14,13 +14,19 @@ use Illuminate\Database\Eloquent\Builder;
 class EducationVerificationResource extends Resource
 {
     protected static ?string $model = InterventionRequest::class;
+
     protected static string|null|\BackedEnum $navigationIcon = 'heroicon-o-academic-cap';
+
     protected static ?string $navigationLabel = 'Education Verification';
 
     protected static ?string $slug = 'education-verification';
+
     protected static ?string $modelLabel = 'Education Request';
+
     protected static ?string $pluralModelLabel = 'Education Requests';
+
     protected static string|null|\UnitEnum $navigationGroup = 'Verifications';
+
     protected static ?int $navigationSort = 1;
 
     /**
@@ -65,6 +71,7 @@ class EducationVerificationResource extends Resource
 
         return $query;
     }
+
     public static function form(Schema $schema): Schema
     {
         return EducationVerificationForm::configure($schema);

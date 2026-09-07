@@ -12,7 +12,7 @@ class WidowPolicy
 
     public function viewAny(User $user): bool
     {
-        if ($user->hasRole('super_admin')) {
+        if ($user->isDemoObserver() || $user->hasRole('super_admin')) {
             return true;
         }
 
@@ -21,7 +21,7 @@ class WidowPolicy
 
     public function view(User $user, Widow $widow): bool
     {
-        if ($user->hasRole('super_admin')) {
+        if ($user->isDemoObserver() || $user->hasRole('super_admin')) {
             return true;
         }
 
@@ -30,6 +30,10 @@ class WidowPolicy
 
     public function create(User $user): bool
     {
+        if ($user->isDemoObserver()) {
+            return false;
+        }
+
         if ($user->hasRole('super_admin')) {
             return true;
         }
@@ -39,6 +43,10 @@ class WidowPolicy
 
     public function update(User $user, Widow $widow): bool
     {
+        if ($user->isDemoObserver()) {
+            return false;
+        }
+
         if ($user->hasRole('super_admin')) {
             return true;
         }
@@ -48,6 +56,10 @@ class WidowPolicy
 
     public function delete(User $user, Widow $widow): bool
     {
+        if ($user->isDemoObserver()) {
+            return false;
+        }
+
         if ($user->hasRole('super_admin')) {
             return true;
         }
@@ -57,11 +69,19 @@ class WidowPolicy
 
     public function restore(User $user, Widow $widow): bool
     {
+        if ($user->isDemoObserver()) {
+            return false;
+        }
+
         return $user->hasRole('super_admin');
     }
 
     public function forceDelete(User $user, Widow $widow): bool
     {
+        if ($user->isDemoObserver()) {
+            return false;
+        }
+
         return $user->hasRole('super_admin');
     }
 }

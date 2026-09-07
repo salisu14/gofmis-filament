@@ -4,8 +4,8 @@ namespace App\Models;
 
 use App\Enums\Gender;
 use App\Enums\OrphanStatus;
-use App\Models\Scopes\EligibleOrphanScope;
 use App\Models\Concerns\HasProfilePhoto;
+use App\Models\Scopes\EligibleOrphanScope;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -28,6 +28,7 @@ class Orphan extends Model
         'full_name',
         'gender',
         'nin',
+        'has_nin',
         'reg_no',
         'birth_date',
         'address',
@@ -50,6 +51,7 @@ class Orphan extends Model
         'birth_date' => 'date',
         'is_eligible' => 'boolean',
         'is_married' => 'boolean',
+        'has_nin' => 'boolean',
         'has_birth_cert' => 'boolean',
         'married_at' => 'datetime',
     ];
@@ -326,7 +328,7 @@ class Orphan extends Model
         static::addGlobalScope('zone', function ($query) {
             $user = auth()->user();
 
-            if (! $user || $user->hasAnyRole(['admin', 'super_admin'])) {
+            if (! $user || $user->hasAnyRole(['admin', 'super_admin']) || $user->isDemoObserver()) {
                 return;
             }
 
@@ -357,6 +359,14 @@ class Orphan extends Model
         static::deleting($preventDelete);
 
         static::saving(function ($model) {
+            if ($model->has_nin === null) {
+                $model->has_nin = filled($model->nin);
+            }
+
+            if (! $model->has_nin) {
+                $model->nin = null;
+            }
+
             if ($model->birth_date) {
                 $model->age = \Carbon\Carbon::parse($model->birth_date)->age;
             }
@@ -458,5 +468,10 @@ class Orphan extends Model
             'MARRIAGE' => 'Archived: female orphan is married.',
             default => $reason,
         };
+    }
+
+    public function fingerprints(): \Illuminate\Database\Eloquent\Relations\MorphMany
+    {
+        return $this->morphMany(BeneficiaryFingerprint::class, 'beneficiary');
     }
 }

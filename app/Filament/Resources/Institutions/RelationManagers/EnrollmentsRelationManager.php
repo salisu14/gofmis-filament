@@ -2,7 +2,6 @@
 
 namespace App\Filament\Resources\Institutions\RelationManagers;
 
-use App\Filament\Resources\Institutions\InstitutionResource;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
@@ -13,8 +12,8 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Resources\RelationManagers\RelationManager;
-use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
@@ -29,7 +28,6 @@ class EnrollmentsRelationManager extends RelationManager
 
     // Fixed: Changed to 'class_level' to match the database column
     protected static ?string $recordTitleAttribute = 'class_level';
-    protected static ?string $relatedResource = InstitutionResource::class;
 
     protected static ?string $title = 'Student Roster';
 
@@ -133,7 +131,7 @@ class EnrollmentsRelationManager extends RelationManager
                 TextColumn::make('school_fee')
                     ->label('Fee Rate')
                     ->money('NGN')
-                    ->description(fn($record) => "Per {$record->fee_frequency}"),
+                    ->description(fn ($record) => "Per {$record->fee_frequency}"),
 
                 IconColumn::make('is_current')
                     ->label('Active')
@@ -151,7 +149,7 @@ class EnrollmentsRelationManager extends RelationManager
                     ->label('Current Students Only'),
 
                 SelectFilter::make('class_level')
-                    ->options(fn() => \App\Models\OrphanEducation::query()->distinct()->pluck('class_level', 'class_level')->toArray()),
+                    ->options(fn () => \App\Models\OrphanEducation::query()->distinct()->pluck('class_level', 'class_level')->toArray()),
             ])
             ->headerActions([
                 CreateAction::make()

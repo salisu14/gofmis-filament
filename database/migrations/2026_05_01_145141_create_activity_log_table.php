@@ -36,7 +36,7 @@ return new class extends Migration
 
             $table->timestamps();
 
-//            $table->index('log_name');
+            //            $table->index('log_name');
             $table->index('batch_uuid');
         });
     }

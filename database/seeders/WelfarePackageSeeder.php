@@ -55,10 +55,10 @@ class WelfarePackageSeeder extends Seeder
                 Deceased::create([
                     'first_name' => "DeceasedFirst $i",
                     'last_name' => "DeceasedLast $i",
-                    'nin' => '123456789' . str_pad($i, 2, '0', STR_PAD_LEFT),
-                    'reg_no' => 'DEC-' . str_pad($i, 5, '0', STR_PAD_LEFT),
+                    'nin' => '123456789'.str_pad($i, 2, '0', STR_PAD_LEFT),
+                    'reg_no' => 'DEC-'.str_pad($i, 5, '0', STR_PAD_LEFT),
                     'guardian_name' => "Guardian $i",
-                    'guardian_phone' => '080123456' . str_pad($i, 2, '0', STR_PAD_LEFT),
+                    'guardian_phone' => '080123456'.str_pad($i, 2, '0', STR_PAD_LEFT),
                     'vulnerability_status' => 'A',
                     'date_registered' => now(),
                     'zone_id' => $zone?->id,
@@ -81,7 +81,6 @@ class WelfarePackageSeeder extends Seeder
                 WelfarePackageItem::create([
                     'welfare_package_id' => $package->id,
                     'item_id' => $item->id,
-                    'category_id' => $categories->random()->id,
                     'quantity_per_family' => rand(1, 5),
                 ]);
             }

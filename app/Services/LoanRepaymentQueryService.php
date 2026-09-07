@@ -12,7 +12,7 @@ class LoanRepaymentQueryService
     /**
      * Get paginated repayments with search filtering.
      */
-    public function getPaginatedRepayments(string $search = null, int $perPage = 10): LengthAwarePaginator
+    public function getPaginatedRepayments(?string $search = null, int $perPage = 10): LengthAwarePaginator
     {
         $query = Repayment::with(['loan', 'widow', 'user'])
             ->whereHas('loan', function (Builder $q) {

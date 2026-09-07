@@ -1,4 +1,5 @@
 <?php
+
 // app/Services/Deceased/ZoneTransferService.php
 
 namespace App\Services\Deceased;
@@ -12,11 +13,12 @@ class ZoneTransferService
     /**
      * Transfer a deceased person's family to a new zone.
      *
-     * @param Deceased $deceased The deceased record (family head)
-     * @param string $toZoneId UUID of the destination zone
-     * @param string|null $reason Reason for the transfer
-     * @param string|null $performedBy UUID of user performing the transfer (defaults to auth user)
+     * @param  Deceased  $deceased  The deceased record (family head)
+     * @param  string  $toZoneId  UUID of the destination zone
+     * @param  string|null  $reason  Reason for the transfer
+     * @param  string|null  $performedBy  UUID of user performing the transfer (defaults to auth user)
      * @return ZoneTransfer The created transfer record
+     *
      * @throws \InvalidArgumentException If transferring to same zone
      */
     public function transfer(
@@ -43,9 +45,9 @@ class ZoneTransferService
             // Create transfer history record
             $transfer = $deceased->zoneTransfers()->create([
                 'from_zone_id' => $fromZoneId,
-                'to_zone_id'   => $toZoneId,
-                'moved_by'     => $performedBy ?? auth()->id(),
-                'reason'       => $reason,
+                'to_zone_id' => $toZoneId,
+                'moved_by' => $performedBy ?? auth()->id(),
+                'reason' => $reason,
             ]);
 
             // Optional: trigger event

@@ -10,7 +10,7 @@ enum Gender: string
     public function getLabel(): string
     {
         return match ($this) {
-            self::MALE   => 'Male',
+            self::MALE => 'Male',
             self::FEMALE => 'Female',
         };
     }
@@ -18,7 +18,7 @@ enum Gender: string
     public function getColor(): string
     {
         return match ($this) {
-            self::MALE   => 'info',    // Blue
+            self::MALE => 'info',    // Blue
             self::FEMALE => 'danger',  // Pink/Red tint
         };
     }
@@ -26,7 +26,7 @@ enum Gender: string
     public function getIcon(): ?string
     {
         return match ($this) {
-            self::MALE   => 'heroicon-o-user',
+            self::MALE => 'heroicon-o-user',
             self::FEMALE => 'heroicon-o-user-group',
         };
     }

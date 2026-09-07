@@ -28,12 +28,12 @@ class GenerateIdCardPdfJob implements ShouldQueue
     public function handle(IdCardPDFService $pdfService): void
     {
         $pdf = $pdfService->generateSingle($this->idCard);
-        
-        $filename = 'id-cards/pdfs/' . $this->idCard->card_number . '.pdf';
+
+        $filename = 'id-cards/pdfs/'.$this->idCard->card_number.'.pdf';
         Storage::disk('public')->put($filename, $pdf->output());
-        
+
         $this->idCard->update([
-            'pdf_path' => $filename
+            'pdf_path' => $filename,
         ]);
     }
 }

@@ -80,6 +80,7 @@ class HealthcareMedicalReferralDocumentTest extends TestCase
 
         $this->deceasedZoneA = Deceased::factory()->create([
             'zone_id' => $this->zoneA->id,
+            'guardian_name' => 'O\'Reilly & Sons',
             'first_name' => 'Abba',
             'last_name' => 'Sani',
             'reg_no' => 'DEC-ZA-10',
@@ -167,7 +168,7 @@ class HealthcareMedicalReferralDocumentTest extends TestCase
         $this->assertStringContainsString('ORP-ZA-10', $orphanHtml);
         $this->assertStringContainsString('Male', $orphanHtml);
         $this->assertStringContainsString('Zone Alpha', $orphanHtml);
-        $this->assertStringContainsString($this->deceasedZoneA->guardian_name, $orphanHtml);
+        $this->assertStringContainsString(e($this->deceasedZoneA->guardian_name), $orphanHtml);
         $this->assertStringContainsString('Severe lower right quadrant abdominal pain', $orphanHtml);
         $this->assertStringContainsString('Acute Appendicitis', $orphanHtml);
         $this->assertStringContainsString('Garko Orphans Foundation', $orphanHtml);

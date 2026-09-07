@@ -19,8 +19,8 @@ class CreateImprestReconciliation extends CreateRecord
         $dto = new ReconcileFundDto(
             fundId: $data['fund_id'],
             reconciliationDate: \Carbon\Carbon::parse($data['reconciliation_date']),
-            cashOnHand: (float)$data['cash_on_hand'],
-            receiptsTotal: (float)($data['receipts_total'] ?? 0),
+            cashOnHand: (float) $data['cash_on_hand'],
+            receiptsTotal: (float) ($data['receipts_total'] ?? 0),
             auditorId: auth()->id(),
             custodianId: $data['custodian_id'],
             notes: $data['notes'] ?? null,
@@ -39,7 +39,7 @@ class CreateImprestReconciliation extends CreateRecord
             Notification::make()
                 ->title($title)
                 ->$color()
-                ->body("Variance severity: " . ucfirst($severity))
+                ->body('Variance severity: '.ucfirst($severity))
                 ->send();
 
             $this->redirect($this->getResource()::getUrl('view', ['record' => $reconciliation]));

@@ -16,6 +16,8 @@ class WidowLoanRepaymentController extends Controller
      */
     public function downloadReceipt(Request $request, WidowLoanRepayment $repayment)
     {
+        \App\Services\Security\DemoReadOnlyGuard::ensureCanExportSensitiveData();
+
         $this->authorizeLoanAccess($repayment->widowLoan);
 
         $repayment->load(['widowLoan.widow.deceased.zone', 'transaction']);
@@ -42,6 +44,8 @@ class WidowLoanRepaymentController extends Controller
      */
     public function downloadStatement(WidowLoan $loan)
     {
+        \App\Services\Security\DemoReadOnlyGuard::ensureCanExportSensitiveData();
+
         $this->authorizeLoanAccess($loan);
 
         if (! $loan->repayments()->exists()) {
@@ -65,6 +69,8 @@ class WidowLoanRepaymentController extends Controller
      */
     public function downloadThermalReceipt(Request $request, WidowLoanRepayment $repayment)
     {
+        \App\Services\Security\DemoReadOnlyGuard::ensureCanExportSensitiveData();
+
         $loan = $repayment->widowLoan()->withoutGlobalScopes()->first();
 
         if (! $loan) {
@@ -103,6 +109,8 @@ class WidowLoanRepaymentController extends Controller
      */
     public function downloadWeeklyReport(Request $request)
     {
+        \App\Services\Security\DemoReadOnlyGuard::ensureCanExportSensitiveData();
+
         $user = $request->user();
 
         if (! $user) {

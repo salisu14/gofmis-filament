@@ -64,7 +64,6 @@ beforeEach(function () {
     WelfarePackageItem::create([
         'welfare_package_id' => $this->package->id,
         'item_id' => $this->item->id,
-        'category_id' => $this->category->id,
         'quantity_per_family' => 1,
     ]);
 });
@@ -268,7 +267,7 @@ test('8. open package with nominations cannot modify composition', function () {
     expect($this->admin->can('update', $this->package->fresh()))->toBeFalse();
 
     expect(fn () => app(\App\Services\WelfarePackageService::class)->syncItems($this->package->fresh(), [
-        ['item_id' => $this->item->id, 'category_id' => $this->category->id, 'quantity_per_family' => 2],
+        ['item_id' => $this->item->id, 'quantity_per_family' => 2],
     ]))->toThrow(RuntimeException::class);
 });
 

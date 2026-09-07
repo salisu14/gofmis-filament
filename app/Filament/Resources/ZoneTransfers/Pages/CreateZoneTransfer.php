@@ -1,4 +1,5 @@
 <?php
+
 // app/Filament/Resources/ZoneTransfers/Pages/CreateZoneTransfer.php
 
 namespace App\Filament\Resources\ZoneTransfers\Pages;
@@ -16,8 +17,7 @@ class CreateZoneTransfer extends CreateRecord
     /**
      * Handle the record creation using the service.
      *
-     * @param array $data Form data from Filament
-     * @return \Illuminate\Database\Eloquent\Model
+     * @param  array  $data  Form data from Filament
      */
     protected function handleRecordCreation(array $data): \Illuminate\Database\Eloquent\Model
     {

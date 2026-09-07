@@ -2,9 +2,9 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
 use App\Models\Permission;
 use App\Models\Role;
+use Illuminate\Database\Seeder;
 
 class ApprovalPermissionsSeeder extends Seeder
 {
@@ -34,7 +34,7 @@ class ApprovalPermissionsSeeder extends Seeder
 
         $loanOfficer = Role::findOrCreate('loan_officer');
         $loanOfficer->givePermissionTo(['view_approval_flows', 'submit_widow_loans']);
-        
+
         $admin = Role::findOrCreate('admin');
         $admin->givePermissionTo($permissions);
     }

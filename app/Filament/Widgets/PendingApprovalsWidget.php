@@ -1,4 +1,5 @@
 <?php
+
 // app/Filament/Widgets/PendingApprovalsWidget.php
 
 namespace App\Filament\Widgets;
@@ -42,11 +43,11 @@ class PendingApprovalsWidget extends BaseWidget
         return [
             TextColumn::make('model_type')
                 ->label('Type')
-                ->formatStateUsing(fn($state) => str($state)->afterLast('\\')->singular())
+                ->formatStateUsing(fn ($state) => str($state)->afterLast('\\')->singular())
                 ->sortable(),
             TextColumn::make('current_step')
                 ->label('Step')
-                ->formatStateUsing(fn($state, $record) => "{$state} / {$record->total_steps}")
+                ->formatStateUsing(fn ($state, $record) => "{$state} / {$record->total_steps}")
                 ->sortable(),
             TextColumn::make('status')
                 ->badge()
@@ -69,7 +70,7 @@ class PendingApprovalsWidget extends BaseWidget
                 ->label('View')
                 ->icon('heroicon-o-eye')
                 ->color('primary')
-                ->url(fn(ApprovalFlow $record) => ApprovalFlowResource::getUrl('index', [
+                ->url(fn (ApprovalFlow $record) => ApprovalFlowResource::getUrl('index', [
                     'activeTab' => 'details',
                     'record' => $record->id,
                 ])),

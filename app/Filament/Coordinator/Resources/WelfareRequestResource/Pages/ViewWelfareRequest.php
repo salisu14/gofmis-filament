@@ -1,4 +1,5 @@
 <?php
+
 // app/Filament\Coordinator\Resources\WelfareRequestResource/Pages/ViewWelfareRequest.php
 
 namespace App\Filament\Coordinator\Resources\WelfareRequestResource\Pages;
@@ -15,7 +16,7 @@ class ViewWelfareRequest extends ViewRecord
     {
         return [
             Actions\EditAction::make()
-                ->visible(fn($record) => $record->status === \App\Enums\BeneficiaryStatus::PENDING),
+                ->visible(fn ($record) => $record->status === \App\Enums\BeneficiaryStatus::PENDING),
         ];
     }
 }

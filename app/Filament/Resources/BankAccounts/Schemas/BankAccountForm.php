@@ -42,27 +42,52 @@ class BankAccountForm
                                     ->whereNull('parent_bank_account_id')
                                     ->when($record, fn ($query) => $query->whereKeyNot($record->getKey()))
                                     ->pluck('account_name', 'id'))
+                                ->default(fn () => BankAccount::whereNull('parent_bank_account_id')->where('usage', BankAccount::USAGE_GENERAL)->value('id'))
                                 ->searchable()
                                 ->preload()
                                 ->live()
                                 ->afterStateUpdated(function (?string $state, Set $set): void {
-                                    if (blank($state)) {
-                                        $set('usage', BankAccount::USAGE_GENERAL);
-                                    } else {
+                                    if (filled($state)) {
                                         $set('opening_balance', 0);
+                                        // If they select a parent, they cannot be 'general'
+                                        $set('usage', null);
+                                    } else {
+                                        $set('usage', BankAccount::USAGE_GENERAL);
                                     }
                                 })
-                                ->helperText('Leave empty for a parent/operating account. Select a parent to make this a dedicated child account.'),
+                                ->helperText('Leave empty to create the Main Treasury account. Select the Main account to create a dedicated subaccount.'),
 
                             Select::make('usage')
                                 ->label('Account Usage')
                                 ->options(BankAccount::usageOptions())
-                                ->default(BankAccount::USAGE_GENERAL)
+                                ->default(fn (callable $get) => filled($get('parent_bank_account_id')) ? null : BankAccount::USAGE_GENERAL)
                                 ->required()
                                 ->native(false)
-                                ->disabled(fn (callable $get): bool => blank($get('parent_bank_account_id')))
+                                ->live()
+                                ->disabled(function (?Model $record): bool {
+                                    return $record && $record->hasTransactions();
+                                })
+                                ->rules([
+                                    function (callable $get) {
+                                        return function (string $attribute, $value, \Closure $fail) use ($get) {
+                                            $isParentNull = blank($get('parent_bank_account_id'));
+                                            if ($isParentNull && $value !== BankAccount::USAGE_GENERAL) {
+                                                $fail('The Main Account must have General usage.');
+                                            }
+                                            if (! $isParentNull && $value === BankAccount::USAGE_GENERAL) {
+                                                $fail('A dedicated subaccount cannot have General usage.');
+                                            }
+                                        };
+                                    },
+                                ])
                                 ->dehydrated()
-                                ->helperText('Child accounts are reserved for a specific workflow. Parent accounts always remain general.'),
+                                ->helperText(function (?Model $record): string {
+                                    if ($record && $record->hasTransactions()) {
+                                        return 'Account usage cannot be modified because this bank account has historical transactions.';
+                                    }
+
+                                    return 'Select the canonical usage for this account to determine which workflows it can fund.';
+                                }),
                         ]),
 
                         Select::make('user_id')
@@ -107,8 +132,8 @@ class BankAccountForm
 
                         Placeholder::make('available_balance')
                             ->label('Available for Disbursement')
-                            ->content(fn($record) => $record
-                                ? '₦ ' . number_format($record->ledger_balance - $record->reserved_balance, 2)
+                            ->content(fn ($record) => $record
+                                ? '₦ '.number_format($record->ledger_balance - $record->reserved_balance, 2)
                                 : '₦ 0.00'
                             )
                             ->extraAttributes(['class' => 'text-2xl font-bold text-primary-600']),

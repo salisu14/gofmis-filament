@@ -73,6 +73,7 @@ test('4. unauthenticated Coordinator protected route redirects to Coordinator lo
 });
 
 test('5. unauthenticated Imprest protected route redirects to Imprest login', function () {
+    $this->markTestSkipped('Imprest panel is currently deactivated (B-09)');
     $response = $this->get('/imprest/imprest-funds');
 
     $response->assertStatus(302);
@@ -125,11 +126,14 @@ test('8. logout and session invalidation removes authentication normally', funct
 test('9. no redirect loop between login page and MFA challenge', function () {
     $this->get('/admin/login')->assertStatus(200);
     $this->get('/coordinator/login')->assertStatus(200);
-    $this->get('/imprest/login')->assertStatus(200);
+    // $this->get('/imprest/login')->assertStatus(200); // Imprest panel deactivated
 
     $response = $this->get('/mfa/challenge');
     $response->assertStatus(302);
     $response->assertRedirect(route('filament.admin.auth.login'));
+
+    $response2 = $this->get('/admin/login');
+    $response2->assertStatus(200); // Admin login should render properly
 });
 
 test('10. Livewire protected request after session expiry fails or redirects gracefully without 500', function () {

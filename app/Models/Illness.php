@@ -1,4 +1,5 @@
 <?php
+
 // app/Models/Illness.php
 
 namespace App\Models;
@@ -14,6 +15,7 @@ class Illness extends Model
     use HasUuids, SoftDeletes;
 
     protected $keyType = 'string';
+
     public $incrementing = false;
 
     protected $fillable = ['name', 'category', 'description'];

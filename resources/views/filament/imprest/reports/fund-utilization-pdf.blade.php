@@ -133,7 +133,7 @@
 </table>
 
 <div class="footer">
-    This report is generated from approved imprest transactions only. Voided and pending transactions are excluded.
+    Garko Orphans Foundation — Welfare Department — Imprest Fund Utilization Report. Generated from approved imprest transactions only.
 </div>
 </body>
 </html>

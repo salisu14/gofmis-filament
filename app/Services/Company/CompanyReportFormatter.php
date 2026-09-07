@@ -15,23 +15,30 @@ class CompanyReportFormatter
         $addressLines = $this->addressLines($company);
 
         return [
-            'name'            => $company->display_name,
-            'display_name'    => $company->display_name,
-            'trading_name'    => $company->trading_name ?: $company->company_name,
-            'legal_name'      => $company->company_name,
-            'address_lines'   => $addressLines,
-            'address'         => implode(', ', $addressLines),
-            'phone'           => $company->phone_no,
-            'mobile'          => $company->mobile_no,
-            'email'           => $company->email,
-            'website'         => $company->website,
-            'logo_url'        => $company->logo_url,
-            'logo_path'       => $logoPath,
-            'logo_abs_path'   => $logoAbsolutePath,
-            'logo_data_uri'   => $this->buildDataUri($logoPath) ?? $this->buildDataUriFromAbsolutePath($logoAbsolutePath),
-            'tax_no'          => $company->tax_registration_no,
+            'name' => $company->display_name,
+            'display_name' => $company->display_name,
+            'trading_name' => $company->trading_name ?: $company->company_name,
+            'legal_name' => $company->company_name,
+            'address_lines' => $addressLines,
+            'address' => implode(', ', $addressLines),
+            'phone' => $company->phone_no,
+            'mobile' => $company->mobile_no,
+            'email' => $company->email,
+            'website' => $company->website,
+            'logo_url' => $company->logo_url,
+            'logo_path' => $logoPath,
+            'logo_abs_path' => $logoAbsolutePath,
+            'logo_data_uri' => $this->buildDataUri($logoPath) ?? $this->buildDataUriFromAbsolutePath($logoAbsolutePath),
+            'tax_no' => $company->tax_registration_no,
             'registration_no' => $company->registration_no,
-            'footer'          => $this->invoiceFooter($company),
+            'department' => 'Welfare Department',
+            'signatory' => app(\App\Services\ReportSignatoryResolverService::class)->resolveReportSignatory(),
+            'signatory_name' => $company->report_signatory_name,
+            'signatory_title' => $company->report_signatory_title,
+            'signature_path' => $company->report_signature_path,
+            'signature_url' => null,
+            'signature_data_uri' => app(\App\Services\ReportSignatoryResolverService::class)->buildPrivateSignatureDataUri($company->report_signature_path),
+            'footer' => $this->invoiceFooter($company),
         ];
     }
 
@@ -39,6 +46,7 @@ class CompanyReportFormatter
     {
         $parts = array_filter([
             $company->display_name,
+            'Welfare Department',
             $company->phone_no ? "Tel: {$company->phone_no}" : null,
             $company->email,
             $company->tax_registration_no ? "Tax No: {$company->tax_registration_no}" : null,
@@ -73,14 +81,14 @@ class CompanyReportFormatter
             return null;
         }
 
-        $mime     = Storage::disk('public')->mimeType($path) ?: 'application/octet-stream';
+        $mime = Storage::disk('public')->mimeType($path) ?: 'application/octet-stream';
         $contents = @file_get_contents($absolutePath);
 
         if ($contents === false) {
             return null;
         }
 
-        return 'data:' . $mime . ';base64,' . base64_encode($contents);
+        return 'data:'.$mime.';base64,'.base64_encode($contents);
     }
 
     private function fallbackLogoPath(): ?string
@@ -135,6 +143,6 @@ class CompanyReportFormatter
 
         $mime = mime_content_type($path) ?: 'application/octet-stream';
 
-        return 'data:' . $mime . ';base64,' . base64_encode($contents);
+        return 'data:'.$mime.';base64,'.base64_encode($contents);
     }
 }

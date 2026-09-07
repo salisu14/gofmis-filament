@@ -18,9 +18,14 @@ class OrphanEducation extends Model
     protected $fillable = [
         'reference',
         'orphan_id',
+        'previous_enrollment_id',
         'institution_id',
         'orphan_class_id',
         'class_level',
+        'academic_session',
+        'progression_decision',
+        'progression_reason',
+        'recorded_by_id',
         'school_fee',
         'fee_frequency',
         'is_fee_supported',
@@ -37,11 +42,22 @@ class OrphanEducation extends Model
         'support_amount' => 'decimal:2',
         'started_at' => 'date',
         'ended_at' => 'date',
+        'progression_decision' => \App\Enums\AcademicProgressionDecision::class,
     ];
 
     public function orphan(): BelongsTo
     {
         return $this->belongsTo(Orphan::class);
+    }
+
+    public function previousEnrollment(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'previous_enrollment_id');
+    }
+
+    public function successorEnrollment(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(self::class, 'previous_enrollment_id');
     }
 
     public function orphanClass(): BelongsTo
@@ -52,6 +68,11 @@ class OrphanEducation extends Model
     public function institution(): BelongsTo
     {
         return $this->belongsTo(Institution::class);
+    }
+
+    public function recordedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'recorded_by_id');
     }
 
     public function invoices(): HasMany
@@ -100,12 +121,12 @@ class OrphanEducation extends Model
         });
     }
 
-//    protected static function booted(): void
-//    {
-//        static::creating(function (OrphanEducation $education): void {
-//            $education->reference ??= static::generateReference();
-//        });
-//    }
+    //    protected static function booted(): void
+    //    {
+    //        static::creating(function (OrphanEducation $education): void {
+    //            $education->reference ??= static::generateReference();
+    //        });
+    //    }
 
     public static function generateReference(): string
     {

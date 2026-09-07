@@ -71,7 +71,8 @@ class WelfarePackageInfolist
                             ->label('Collection Rate')
                             ->state(function ($record) {
                                 $rate = self::getStats($record)['collection_rate'] ?? 0;
-                                return $rate . '%';
+
+                                return $rate.'%';
                             })
                             ->color(fn ($state) => (float) $state > 75 ? 'success' : 'warning'),
                     ])
@@ -103,15 +104,15 @@ class WelfarePackageInfolist
 
         return $cache[$package->id];
     }
-//    protected static function getStats($record): array
-//    {
-//        static $cache = [];
-//
-//        if (!isset($cache[$record->id])) {
-//            $cache[$record->id] = app(WelfarePackageService::class)
-//                ->getPackageStatistics($record);
-//        }
-//
-//        return $cache[$record->id];
-//    }
+    //    protected static function getStats($record): array
+    //    {
+    //        static $cache = [];
+    //
+    //        if (!isset($cache[$record->id])) {
+    //            $cache[$record->id] = app(WelfarePackageService::class)
+    //                ->getPackageStatistics($record);
+    //        }
+    //
+    //        return $cache[$record->id];
+    //    }
 }

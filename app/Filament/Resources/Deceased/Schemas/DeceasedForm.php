@@ -21,6 +21,7 @@ use Filament\Schemas\Components\Group;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Schema;
+use Illuminate\Support\Str;
 
 class DeceasedForm
 {
@@ -48,11 +49,28 @@ class DeceasedForm
                                 ])->columns(3),
 
                                 Group::make()->schema([
+                                    Toggle::make('has_nin')
+                                        ->label('Has NIN?')
+                                        ->helperText('Enable if this beneficiary has a valid 11-digit National Identification Number.')
+                                        ->live()
+                                        ->default(false)
+                                        ->inline(false)
+                                        ->afterStateUpdated(function ($state, $set) {
+                                            if (! $state) {
+                                                $set('nin', null);
+                                            }
+                                        })
+                                        ->columnSpanFull(),
+
                                     TextInput::make('nin')
                                         ->label('NIN')
-                                        ->minLength(11)
-                                        ->maxLength(11)
-                                        ->placeholder('National Identification Number'),
+                                        ->string()
+                                        ->regex('/^[0-9]{11}$/')
+                                        ->unique(ignoreRecord: true)
+                                        ->required(fn ($get) => $get('has_nin'))
+                                        ->visible(fn ($get) => $get('has_nin'))
+                                        ->placeholder('National Identification Number')
+                                        ->helperText('Enter the complete 11-digit National Identification Number.'),
 
                                     TextInput::make('reg_no')
                                         ->label('Registration Number')
@@ -118,7 +136,7 @@ class DeceasedForm
                                                 $set('death_place', $val);
                                             } elseif (str_starts_with($val, 'Other — ')) {
                                                 $set('death_place', 'Other');
-                                                $set('death_place_other', substr($val, 8));
+                                                $set('death_place_other', Str::after($val, 'Other — '));
                                             } else {
                                                 $set('death_place', 'Other');
                                                 $set('death_place_other', $val);
@@ -148,7 +166,7 @@ class DeceasedForm
                                                 $set('death_cause', $val);
                                             } elseif (str_starts_with($val, 'Other — ')) {
                                                 $set('death_cause', 'Other');
-                                                $set('death_cause_other', substr($val, 8));
+                                                $set('death_cause_other', Str::after($val, 'Other — '));
                                             } else {
                                                 $set('death_cause', 'Other');
                                                 $set('death_cause_other', $val);

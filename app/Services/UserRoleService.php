@@ -33,9 +33,7 @@ class UserRoleService
         }
 
         // Fetch target roles to resolve
-        $rolesToSync = Role::whereIn('uuid', $roleIdsOrNames)
-            ->orWhereIn('name', $roleIdsOrNames)
-            ->get();
+        $rolesToSync = Role::findByIdentifiers($roleIdsOrNames);
 
         // 2. Validate privilege escalation
         foreach ($rolesToSync as $role) {

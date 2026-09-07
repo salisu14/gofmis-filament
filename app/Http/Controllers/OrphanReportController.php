@@ -4,11 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\Orphan;
 use App\Models\WelfareBeneficiary;
-use App\Services\Company\CompanyInformationService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Facades\Storage;
 
 class OrphanReportController extends Controller
 {
@@ -19,6 +17,8 @@ class OrphanReportController extends Controller
      */
     public function download(Request $request, Orphan $orphan)
     {
+        \App\Services\Security\DemoReadOnlyGuard::ensureCanExportSensitiveData();
+
         Gate::authorize('view', $orphan);
 
         $user = auth()->user();

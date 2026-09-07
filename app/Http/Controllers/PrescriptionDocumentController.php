@@ -10,6 +10,8 @@ class PrescriptionDocumentController extends Controller
 {
     public function preview(Prescription $prescription): Response
     {
+        \App\Services\Security\DemoReadOnlyGuard::ensureCanExportSensitiveData();
+
         $this->authorizeAccess($prescription);
 
         $prescription->load([
@@ -32,6 +34,8 @@ class PrescriptionDocumentController extends Controller
 
     public function download(Prescription $prescription): Response
     {
+        \App\Services\Security\DemoReadOnlyGuard::ensureCanExportSensitiveData();
+
         $this->authorizeAccess($prescription);
 
         $prescription->load([
@@ -57,6 +61,8 @@ class PrescriptionDocumentController extends Controller
 
     public function referralPreview(Prescription $prescription): Response
     {
+        \App\Services\Security\DemoReadOnlyGuard::ensureCanExportSensitiveData();
+
         $this->authorizeAccess($prescription);
 
         $prescription->load([
@@ -79,6 +85,8 @@ class PrescriptionDocumentController extends Controller
 
     public function referralDownload(Prescription $prescription): Response
     {
+        \App\Services\Security\DemoReadOnlyGuard::ensureCanExportSensitiveData();
+
         $this->authorizeAccess($prescription);
 
         $prescription->load([

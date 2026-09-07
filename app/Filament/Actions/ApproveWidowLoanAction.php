@@ -26,7 +26,7 @@ class ApproveWidowLoanAction
                     ->schema([
                         View::make('filament.components.approval-flow-info')
                             ->viewData(fn (WidowLoan $record) => [
-                                'flow'        => $record->approvalFlow,
+                                'flow' => $record->approvalFlow,
                                 'currentStep' => $record->getCurrentApprovalStep(),
                             ]),
                         Textarea::make('comments')
@@ -42,10 +42,9 @@ class ApproveWidowLoanAction
                             ->minValue(1)
                             ->maxValue(fn (WidowLoan $record) => (float) $record->principal_amount)
                             ->default(fn (WidowLoan $record) => (float) $record->principal_amount)
-                            ->helperText(fn (WidowLoan $record) =>
-                                'Current request: ₦' . number_format((float) $record->principal_amount, 2)
-                                . ' | Available for this loan: ₦'
-                                . number_format(app(WidowLoanService::class)->availableForLoanApproval($record), 2)
+                            ->helperText(fn (WidowLoan $record) => 'Current request: ₦'.number_format((float) $record->principal_amount, 2)
+                                .' | Available for this loan: ₦'
+                                .number_format(app(WidowLoanService::class)->availableForLoanApproval($record), 2)
                             )
                             ->visible(fn () => auth()->user()?->hasRole('super_admin')),
 
@@ -53,8 +52,7 @@ class ApproveWidowLoanAction
                             ->label('Amount Adjustment Note')
                             ->rows(3)
                             ->placeholder('State why this loan amount is being reduced.')
-                            ->required(fn (callable $get, WidowLoan $record): bool =>
-                                auth()->user()?->hasRole('super_admin')
+                            ->required(fn (callable $get, WidowLoan $record): bool => auth()->user()?->hasRole('super_admin')
                                 && filled($get('adjusted_principal_amount'))
                                 && (float) $get('adjusted_principal_amount') !== (float) $record->principal_amount
                             )

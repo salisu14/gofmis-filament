@@ -13,6 +13,7 @@ class RecordRepaymentData extends Data
         public ?string $receiptNumber = null,
         public ?string $notes = null
     ) {}
+
     public static function rules(): array
     {
         return [

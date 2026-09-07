@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Contracts\Biometrics\FingerprintDeviceClientInterface;
+use App\Services\Biometrics\MockFingerprintDeviceClient;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 
@@ -12,6 +14,20 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        $this->app->bind(FingerprintDeviceClientInterface::class, function () {
+            $client = (string) config('biometrics.client', 'http');
+
+            return match ($client) {
+                'mock' => new MockFingerprintDeviceClient,
+                'http' => new \App\Services\Biometrics\HttpBiometricBridgeClient,
+                default => throw new \RuntimeException(
+                    "Unsupported BIOMETRICS_CLIENT [{$client}]. Expected 'mock' or 'http'."
+                ),
+            };
+        });
+
+        $this->app->singleton(\App\Services\Biometrics\BiometricTemplateCipher::class);
+
         // In register() method:
         $this->app->bind(
             \App\Repositories\Contracts\Imprest\ImprestTransactionRepositoryInterface::class,
@@ -60,6 +76,18 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(\App\Models\Orphan::class, \App\Policies\OrphanPolicy::class);
 
         Gate::before(function ($user, $ability, $arguments = []) {
+            if ($user instanceof \App\Models\User && $user->isDemoObserver()) {
+                if (in_array($ability, ['export', 'export_reports', 'export-reports', 'download'], true) || str_starts_with($ability, 'export') || str_starts_with($ability, 'download')) {
+                    return false;
+                }
+
+                if (in_array($ability, ['viewAny', 'view', 'view-any'], true) || str_starts_with($ability, 'view')) {
+                    return true;
+                }
+
+                return false;
+            }
+
             // For security models (User, Role, Permission) and protected models (Orphan), ALWAYS fall back to policy to enforce invariants.
             $target = is_array($arguments) ? reset($arguments) : $arguments;
             if ($target) {

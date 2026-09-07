@@ -13,7 +13,9 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class ImprestFund extends Model
 {
     use HasFactory, HasUuids, SoftDeletes;
+
     public $incrementing = false;
+
     protected $keyType = 'string';
 
     protected $fillable = [
@@ -84,6 +86,7 @@ class ImprestFund extends Model
     public function isLowBalance(): bool
     {
         $threshold = $this->authorized_amount * 0.20;
+
         return $this->current_balance < $threshold;
     }
 
