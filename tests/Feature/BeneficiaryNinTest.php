@@ -118,6 +118,8 @@ it('allows multiple NULL nin values and keeps non-null unique rows divergent', f
         ]);
     }
 
+    expect(Orphan::whereNull('nin')->count())->toBe(3);
+
     // A second non-null row colliding on the same NIN must be rejected by the
     // database unique index.
     expect(fn () => Orphan::create([
@@ -131,8 +133,6 @@ it('allows multiple NULL nin values and keeps non-null unique rows divergent', f
         'nin' => '12345678901',
         'has_nin' => true,
     ]))->toThrow(\Illuminate\Database\QueryException::class);
-
-    expect(Orphan::whereNull('nin')->count())->toBe(3);
 });
 
 it('has_nin and nin are persisted through the deceased create action', function () {

@@ -267,8 +267,7 @@ class UserForm
                                         }
 
                                         if ($record && $record->isProtectedSystemAccount()) {
-                                            $selectedRoleNames = \App\Models\Role::whereIn('uuid', (array) $value)
-                                                ->orWhereIn('name', (array) $value)
+                                            $selectedRoleNames = \App\Models\Role::findByIdentifiers((array) $value)
                                                 ->pluck('name')
                                                 ->toArray();
 
@@ -299,7 +298,7 @@ class UserForm
                                         }
 
                                         foreach ((array) $value as $roleId) {
-                                            $role = \App\Models\Role::where('uuid', $roleId)->orWhere('name', $roleId)->first();
+                                            $role = \App\Models\Role::findByIdentifier($roleId);
                                             if ($role) {
                                                 if ($role->name === 'super_admin' && ! $actor->isSuperAdmin()) {
                                                     $fail('Unauthorized: Only super administrators can assign the Super Admin role.');
@@ -315,7 +314,7 @@ class UserForm
                                         }
 
                                         if ($record && $record->isSuperAdmin()) {
-                                            $selectedRoleNames = \App\Models\Role::whereIn('uuid', (array) $value)->pluck('name')->toArray();
+                                            $selectedRoleNames = \App\Models\Role::findByIdentifiers((array) $value)->pluck('name')->toArray();
                                             if (! in_array('super_admin', $selectedRoleNames, true)) {
                                                 if (\App\Models\User::getActiveSuperAdminCount() <= 1) {
                                                     $fail('Unauthorized: Cannot remove the Super Admin role from the last active Super Admin.');

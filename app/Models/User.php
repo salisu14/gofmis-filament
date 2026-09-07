@@ -432,7 +432,7 @@ class User extends Authenticatable implements FilamentUser, HasAppAuthentication
                     return $r->name;
                 }
                 if (is_string($r)) {
-                    $roleObj = Role::where('uuid', $r)->orWhere('name', $r)->first();
+                    $roleObj = Role::findByIdentifier($r);
 
                     return $roleObj ? $roleObj->name : $r;
                 }
@@ -450,7 +450,7 @@ class User extends Authenticatable implements FilamentUser, HasAppAuthentication
                 return $role;
             }
 
-            return \App\Models\Role::where('uuid', $role)->orWhere('name', $role)->first();
+            return \App\Models\Role::findByIdentifier($role);
         })->filter();
 
         // Invariant: The last active Super Admin cannot lose the super_admin role
@@ -509,7 +509,7 @@ class User extends Authenticatable implements FilamentUser, HasAppAuthentication
 
         $resolved = ($role instanceof \Spatie\Permission\Models\Role)
             ? $role
-            : \App\Models\Role::where('uuid', $role)->orWhere('name', $role)->first();
+            : \App\Models\Role::findByIdentifier($role);
 
         // Invariant: The last active Super Admin cannot lose the super_admin role
         if ($resolved && $resolved->name === 'super_admin' && $this->isSuperAdmin()) {
