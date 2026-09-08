@@ -12,6 +12,6 @@ class PermissionsTableSeeder extends Seeder
      */
     public function run()
     {
-        $this->callWith(RolesAndPermissionsSeeder::class, ['preserveExistingPermissions' => true]);
+        app(RolesAndPermissionsSeeder::class)->runPreservingExistingPermissions();
     }
 }

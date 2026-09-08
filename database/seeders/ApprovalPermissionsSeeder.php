@@ -16,6 +16,6 @@ class ApprovalPermissionsSeeder extends Seeder
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
         // Delegate to canonical RBAC seeder
-        $this->callWith(RolesAndPermissionsSeeder::class, ['preserveExistingPermissions' => true]);
+        app(RolesAndPermissionsSeeder::class)->runPreservingExistingPermissions();
     }
 }

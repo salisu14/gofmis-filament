@@ -8,7 +8,17 @@ use Illuminate\Database\Seeder;
 
 class RolesAndPermissionsSeeder extends Seeder
 {
-    public function run(bool $preserveExistingPermissions = false): void
+    public function run(): void
+    {
+        $this->reconcile(false);
+    }
+
+    public function runPreservingExistingPermissions(): void
+    {
+        $this->reconcile(true);
+    }
+
+    private function reconcile(bool $preserveExistingPermissions): void
     {
         // Reset cached roles and permissions
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
@@ -180,18 +190,16 @@ class RolesAndPermissionsSeeder extends Seeder
 
             // Zones & Projects
             'view_zones',
-            'view_projects', 'create_projects',
+            'view_projects', 'create_projects', 'edit_projects',
 
             // Interventions (Requests)
             'create_education_interventions',
-            'create_healthcare_interventions',
             'create_welfare_interventions',
 
             // Loans (Requests)
-            'create_loans', 'view_loans',
+            'create_loans', 'view_loans', 'edit_loans',
 
-            // ID Cards & Biometrics (Field Ops)
-            'view_id_cards',
+            // Biometrics (Field Ops); ID-card downloads use the controller zone check.
             'biometrics.view', 'biometrics.enroll',
 
             // Reports
@@ -299,6 +307,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'imprest.transactions.view', 'imprest.funds.view',
             'imprest_view_transactions', 'imprest_view_funds',
             'view_reports', 'view_id_cards', 'admin_dashboard_access',
+            'biometrics.view', 'orphan_education.analytics.view',
         ]);
     }
 }

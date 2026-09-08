@@ -142,7 +142,8 @@ test('ID card permissions exist and intended roles receive them', function () {
     expect($adminRole->hasPermissionTo('view_id_cards'))->toBeTrue();
     expect($adminRole->hasPermissionTo('id_cards.create'))->toBeTrue();
 
-    expect($coordinatorRole->hasPermissionTo('view_id_cards'))->toBeTrue();
+    // This permission bypasses the ID-card download controller's zone check.
+    expect($coordinatorRole->hasPermissionTo('view_id_cards'))->toBeFalse();
     expect($coordinatorRole->hasPermissionTo('id_cards.create'))->toBeFalse();
 });
 
@@ -234,7 +235,7 @@ test('mechanical source inventory has no active named permission missing from ca
     $inventory = \Tests\Support\AuthorizationPermissionInventory::scan();
     expect($inventory['unresolved'])->toBe([]);
     $this->seed(RolesAndPermissionsSeeder::class);
-    $canonical = Permission::where('guard_name', 'web')->orderBy('name')->pluck('name')->all();
+    $canonical = Permission::where('guard_name', 'web')->pluck('name')->sort()->values()->all();
     expect($canonical)->toBe(\Tests\Support\AuthorizationPermissionInventory::canonicalPermissions());
     expect(array_values(array_diff(array_keys($inventory['permissions']), $canonical)))->toBe([]);
     // Policy methods are dispatch targets, not new Spatie permissions.
@@ -306,9 +307,9 @@ test('auditor cannot reconcile or mutate funds and coordinator has only explicit
         expect(preg_match('/(^view_|^export_|^imprest_view_|\.(view|export)$)/', $permission->name))->toBe(1);
     }
     $expected = ['view_deceased', 'create_deceased', 'edit_deceased', 'view_orphans', 'create_orphans', 'edit_orphans',
-        'view_widows', 'create_widows', 'edit_widows', 'view_zones', 'view_projects', 'create_projects',
-        'create_education_interventions', 'create_healthcare_interventions', 'create_welfare_interventions',
-        'create_loans', 'view_loans', 'view_id_cards', 'biometrics.view', 'biometrics.enroll', 'view_reports'];
+        'view_widows', 'create_widows', 'edit_widows', 'view_zones', 'view_projects', 'create_projects', 'edit_projects',
+        'create_education_interventions', 'create_welfare_interventions',
+        'create_loans', 'view_loans', 'edit_loans', 'biometrics.view', 'biometrics.enroll', 'view_reports'];
     sort($expected);
     expect(rbacRoleMatrix()['coordinator'])->toBe($expected);
 });
@@ -446,5 +447,23 @@ test('other operational role grants are unchanged by the admin boundary correcti
     $expected = json_decode(file_get_contents(base_path('tests/Fixtures/rbac-operational-role-grants.json')), true, flags: JSON_THROW_ON_ERROR);
     foreach ($expected as $role => $permissions) {
         expect(rbacRoleMatrix()[$role])->toBe($permissions);
+    }
+});
+
+test('canonical seeder entrypoint has no framework-incompatible parameters', function () {
+    expect((new \ReflectionMethod(RolesAndPermissionsSeeder::class, 'run'))->getNumberOfParameters())->toBe(0);
+    $this->artisan('db:seed', ['--class' => RolesAndPermissionsSeeder::class, '--force' => true])->assertSuccessful();
+    expect(Role::findByName('demo_observer')->hasPermissionTo('biometrics.view'))->toBeTrue();
+});
+
+test('demo observer restored dotted read grants do not include mutation or export grants', function () {
+    $this->seed(RolesAndPermissionsSeeder::class);
+    $role = Role::findByName('demo_observer');
+    foreach (['biometrics.view', 'orphan_education.analytics.view'] as $permission) {
+        expect($role->hasPermissionTo($permission))->toBeTrue();
+    }
+    foreach (['biometrics.enroll', 'biometrics.verify', 'biometrics.identify', 'biometrics.override',
+        'orphan_education.analytics.export', 'orphan_education.override_academic_progression'] as $permission) {
+        expect($role->hasPermissionTo($permission))->toBeFalse();
     }
 });

@@ -16,6 +16,6 @@ class ImprestPermissionSeeder extends Seeder
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
         // Delegate to the canonical RBAC seeder to ensure safe, complete, and non-destructive seeding
-        $this->callWith(RolesAndPermissionsSeeder::class, ['preserveExistingPermissions' => true]);
+        app(RolesAndPermissionsSeeder::class)->runPreservingExistingPermissions();
     }
 }
