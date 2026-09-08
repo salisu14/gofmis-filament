@@ -2,18 +2,16 @@
 
 namespace Database\Seeders;
 
-use App\Models\Role;
 use Illuminate\Database\Seeder;
 
 class RolesTableSeeder extends Seeder
 {
+    /**
+     * Compatibility entry point: adds the full canonical RBAC definitions only.
+     * Existing grants, users and organizational data are preserved.
+     */
     public function run()
     {
-        foreach (['super_admin', 'admin', 'coordinator'] as $role) {
-            Role::firstOrCreate([
-                'name' => $role,
-                'guard_name' => 'web',
-            ]);
-        }
+        $this->callWith(RolesAndPermissionsSeeder::class, ['preserveExistingPermissions' => true]);
     }
 }

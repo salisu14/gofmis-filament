@@ -10,27 +10,16 @@ class DatabaseSeeder extends Seeder
     use WithoutModelEvents;
 
     /**
-     * Seed the application's database.
+     * Seed the application's database with safe reference and RBAC seeders.
      */
     public function run(): void
     {
+        // Accounts, geography, staff-owned catalogues and financial setup are
+        // explicit organizational setup, never automatic deployment data.
         $this->call([
-            StatesTableSeeder::class,
-            CitiesTableSeeder::class,
-            TownsTableSeeder::class,
-            ZonesTableSeeder::class,
-            PermissionsTableSeeder::class,
-            RolesTableSeeder::class,
-            UsersTableSeeder::class,
-            // ImprestSeeder::class, // DEACTIVATED: Operational deactivation per B-07
-            BankAccountsTableSeeder::class,
-            ImprestPermissionSeeder::class,
+            RolesAndPermissionsSeeder::class,
             IllnessSeeder::class,
-            MedicationsTableSeeder::class,
-            EducationVerifierRoleSeeder::class,
             IdCardTemplateSeeder::class,
-            OrphanClassesTableSeeder::class,
-            WelfarePackageSeeder::class,
             InterventionTypeSeeder::class,
         ]);
     }

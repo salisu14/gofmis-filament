@@ -1,0 +1,81 @@
+{
+    "auditor": [
+        "biometrics.view",
+        "export_reports",
+        "finance.consolidated_report.export",
+        "finance.consolidated_report.view",
+        "imprest.funds.view",
+        "imprest.transactions.view",
+        "imprest_view_funds",
+        "imprest_view_transactions",
+        "orphan_education.analytics.export",
+        "orphan_education.analytics.view",
+        "out_of_pocket_expenditure.view",
+        "view_id_cards",
+        "view_loans",
+        "view_projects",
+        "view_repayments",
+        "view_reports"
+    ],
+    "coordinator": [
+        "biometrics.enroll",
+        "biometrics.view",
+        "create_deceased",
+        "create_education_interventions",
+        "create_healthcare_interventions",
+        "create_loans",
+        "create_orphans",
+        "create_projects",
+        "create_welfare_interventions",
+        "create_widows",
+        "edit_deceased",
+        "edit_orphans",
+        "edit_widows",
+        "view_deceased",
+        "view_id_cards",
+        "view_loans",
+        "view_orphans",
+        "view_projects",
+        "view_reports",
+        "view_widows",
+        "view_zones"
+    ],
+    "custodian": [
+        "disburse_loans",
+        "disburse_widow_loans",
+        "imprest.funds.view",
+        "imprest.transactions.create",
+        "imprest.transactions.edit",
+        "imprest.transactions.view",
+        "imprest_create_transactions",
+        "imprest_edit_transactions",
+        "imprest_view_funds",
+        "imprest_view_transactions",
+        "view_loans",
+        "view_repayments"
+    ],
+    "director": [
+        "approve_widow_loans",
+        "export_reports",
+        "finance.consolidated_report.view",
+        "reject_widow_loans",
+        "view_approval_flows",
+        "view_reports"
+    ],
+    "finance_manager": [
+        "approve_widow_loans",
+        "finance.consolidated_report.export",
+        "finance.consolidated_report.view",
+        "out_of_pocket_expenditure.approve",
+        "out_of_pocket_expenditure.view",
+        "reject_widow_loans",
+        "view_approval_flows"
+    ],
+    "loan_officer": [
+        "create_loans",
+        "edit_loans",
+        "submit_widow_loans",
+        "view_approval_flows",
+        "view_loans"
+    ]
+}

@@ -2,85 +2,20 @@
 
 namespace Database\Seeders;
 
-use App\Models\Permission;
-use App\Models\Role;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Str;
 
 class ImprestPermissionSeeder extends Seeder
 {
+    /**
+     * Compatibility entry point: adds the full canonical RBAC definitions only.
+     * Existing grants, users and organizational data are preserved.
+     */
     public function run(): void
     {
         // Reset cached roles and permissions
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
-        $permissions = [
-            // Transactions
-            'imprest.transactions.view',
-            'imprest.transactions.create',
-            'imprest.transactions.edit',
-            'imprest.transactions.approve',
-            'imprest.transactions.void',
-
-            // Funds
-            'imprest.funds.view',
-            'imprest.funds.create',
-            'imprest.funds.edit',
-            'imprest.funds.reconcile',
-            'imprest.funds.replenish',
-
-            // Global
-            'imprest.manage_all',
-            'imprest.bypass_custodian_check',
-        ];
-
-        foreach ($permissions as $permissionName) {
-            Permission::firstOrCreate(
-                ['name' => $permissionName, 'guard_name' => 'web'],
-                ['uuid' => Str::uuid()->toString()]
-            );
-        }
-
-        // Create roles with explicit UUIDs
-        $roleData = [
-            ['name' => 'super_admin', 'guard_name' => 'web', 'uuid' => Str::uuid()->toString()],
-            ['name' => 'admin', 'guard_name' => 'web', 'uuid' => Str::uuid()->toString()],
-            ['name' => 'custodian', 'guard_name' => 'web', 'uuid' => Str::uuid()->toString()],
-            ['name' => 'auditor', 'guard_name' => 'web', 'uuid' => Str::uuid()->toString()],
-        ];
-
-        foreach ($roleData as $data) {
-            Role::firstOrCreate(
-                ['name' => $data['name'], 'guard_name' => $data['guard_name']],
-                ['uuid' => $data['uuid']]
-            );
-        }
-
-        // Fetch created roles
-        $superAdmin = Role::findByName('super_admin', 'web');
-        $admin = Role::findByName('admin', 'web');
-        $custodian = Role::findByName('custodian', 'web');
-        $auditor = Role::findByName('auditor', 'web');
-
-        // Assign all permissions to super_admin
-        $superAdmin->syncPermissions(Permission::all());
-
-        // Assign admin permissions (read-only for historical auditing)
-        $admin->syncPermissions([
-            'imprest.transactions.view',
-            'imprest.funds.view',
-        ]);
-
-        // Assign custodian permissions (read-only)
-        $custodian->syncPermissions([
-            'imprest.transactions.view',
-            'imprest.funds.view',
-        ]);
-
-        // Assign auditor permissions (read-only)
-        $auditor->syncPermissions([
-            'imprest.transactions.view',
-            'imprest.funds.view',
-        ]);
+        // Delegate to the canonical RBAC seeder to ensure safe, complete, and non-destructive seeding
+        $this->callWith(RolesAndPermissionsSeeder::class, ['preserveExistingPermissions' => true]);
     }
 }
