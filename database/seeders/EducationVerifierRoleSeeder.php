@@ -1,44 +1,21 @@
 <?php
 
-// database/seeders/EducationVerifierRoleSeeder.php
-
 namespace Database\Seeders;
 
-use App\Models\Permission;
-use App\Models\Role;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Str;
 
 class EducationVerifierRoleSeeder extends Seeder
 {
+    /**
+     * Compatibility entry point: adds the full canonical RBAC definitions only.
+     * Existing grants, users and organizational data are preserved.
+     */
     public function run(): void
     {
-        // Create the role
-        $role = Role::firstOrCreate([
-            'uuid' => Str::uuid(),
-            'name' => 'education-verifier',
-            'guard_name' => 'web',
-        ]);
+        // Reset cached roles and permissions
+        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
-        // Define permissions
-        $permissions = [
-            'view education verifications',
-            'edit education verifications',
-            'approve education requests',
-            'reject education requests',
-        ];
-
-        foreach ($permissions as $permissionName) {
-            $permission = Permission::firstOrCreate([
-                'uuid' => Str::uuid(),
-                'name' => $permissionName,
-                'guard_name' => 'web',
-            ]);
-            $role->givePermissionTo($permission);
-        }
-
-        // Optional: Assign to an existing user
-        // $user = \App\Models\User::where('email', 'verifier@example.com')->first();
-        // if ($user) $user->assignRole('education-verifier');
+        // Delegate to canonical RBAC seeder
+        app(RolesAndPermissionsSeeder::class)->runPreservingExistingPermissions();
     }
 }

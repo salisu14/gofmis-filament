@@ -4,7 +4,6 @@ namespace Database\Seeders;
 
 use App\Models\IdCardTemplate;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Str;
 
 class IdCardTemplateSeeder extends Seeder
 {
@@ -13,10 +12,10 @@ class IdCardTemplateSeeder extends Seeder
      */
     public function run(): void
     {
-        IdCardTemplate::create([
-            'id' => Str::uuid(),
+        IdCardTemplate::firstOrCreate([
             'name' => 'Standard Widow Card',
             'type' => 'widow',
+        ], [
             'layout_config' => [
                 'primary_color' => '#8B4513',
                 'secondary_color' => '#FFF8F0',
@@ -27,10 +26,10 @@ class IdCardTemplateSeeder extends Seeder
             'is_active' => true,
         ]);
 
-        IdCardTemplate::create([
-            'id' => Str::uuid(),
+        IdCardTemplate::firstOrCreate([
             'name' => 'Standard Orphan Card',
             'type' => 'orphan',
+        ], [
             'layout_config' => [
                 'primary_color' => '#1E90FF',
                 'secondary_color' => '#F0F8FF',
