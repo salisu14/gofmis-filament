@@ -192,6 +192,29 @@ test('super admin behavior remains consistent with Gate::before and protected mo
     expect(Gate::forUser($superAdmin)->denies('delete', $superAdmin))->toBeTrue();
 });
 
+function resetApplicationTablesForPristineBootstrap(): void
+{
+    $tables = array_values(array_filter(
+        \Illuminate\Support\Facades\Schema::getTableListing(schemaQualified: false),
+        fn (string $table) => $table !== 'migrations'
+    ));
+
+    if (empty($tables)) {
+        return;
+    }
+
+    if (\Illuminate\Support\Facades\DB::getDriverName() === 'pgsql') {
+        $quotedTables = array_map(fn (string $table) => '"'.str_replace('"', '""', $table).'"', $tables);
+        \Illuminate\Support\Facades\DB::statement('TRUNCATE TABLE '.implode(', ', $quotedTables).' RESTART IDENTITY CASCADE');
+    } else {
+        \Illuminate\Support\Facades\Schema::withoutForeignKeyConstraints(function () use ($tables) {
+            foreach ($tables as $table) {
+                \Illuminate\Support\Facades\DB::table($table)->delete();
+            }
+        });
+    }
+}
+
 function rbacRoleMatrix(): array
 {
     return Role::with('permissions')->orderBy('name')->get()->mapWithKeys(fn (Role $role) => [
@@ -200,6 +223,14 @@ function rbacRoleMatrix(): array
 }
 
 test('pristine deployment bootstrap contains only system reference and RBAC rows', function () {
+    // Pre-populate singleton and parent/child FK references to verify FK-safe isolation reset.
+    $this->seed(RolesAndPermissionsSeeder::class);
+    \App\Models\CompanyInformation::instance();
+    $user = User::factory()->create();
+    $user->assignRole('admin');
+
+    resetApplicationTablesForPristineBootstrap();
+
     expect(User::count())->toBe(0);
     $this->seed(DatabaseSeeder::class);
 
