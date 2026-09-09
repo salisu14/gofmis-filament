@@ -12,6 +12,7 @@ use App\Models\Widow;
 use App\Models\WidowLoan;
 use App\Models\WidowLoanRepayment;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 
 class WidowLoanService
 {
@@ -25,6 +26,8 @@ class WidowLoanService
      */
     public function createLoan(CreateWidowLoanData $data): WidowLoan
     {
+        Validator::make($data->toArray(), CreateWidowLoanData::rules())->validate();
+
         $widow = Widow::findOrFail($data->widowId);
 
         if (! $widow->canApplyForLoan()) {
@@ -38,10 +41,13 @@ class WidowLoanService
                 'disbursement_bank_id' => $data->disbursementBankId,
                 'repayment_bank_id' => $data->repaymentBankId,
                 'principal_amount' => $data->principalAmount,
-                'total_payable' => $data->principalAmount, // No interest by default
+                'total_payable' => $data->principalAmount, // Principal-only product
+                'total_paid' => 0,
+                'fully_repaid' => false,
                 'duration_months' => $data->durationMonths,
                 'repayment_frequency' => $data->repaymentFrequency ?? 'weekly',
                 'purpose' => $data->purpose,
+                'loan_agreement_url' => $data->loanAgreementUrl,
                 'status' => WidowLoanStatus::DRAFT,
                 'outstanding_balance' => $data->principalAmount,
             ]);

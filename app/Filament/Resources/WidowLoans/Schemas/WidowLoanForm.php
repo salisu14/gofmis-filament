@@ -157,6 +157,7 @@ class WidowLoanForm
                         Grid::make(2)->schema([
                             TextInput::make('principal_amount')
                                 ->numeric()
+                                ->minValue(1)
                                 ->prefix('₦')
                                 ->required()
                                 ->live(onBlur: true)
@@ -177,6 +178,7 @@ class WidowLoanForm
 
                         Grid::make(3)->schema([
                             TextInput::make('duration_months')
+                                ->minValue(1)
                                 ->label('Duration (Months)')
                                 ->helperText('Number of months for the loan term.')
                                 ->numeric()
