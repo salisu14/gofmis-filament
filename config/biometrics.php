@@ -81,9 +81,9 @@ return [
     | isolated from APP_KEY so that rotating APP_KEY does not silently redefine
     | the biometric cipher boundary.
     |
-    | BIOMETRICS_ENCRYPTION_KEY: a base64-encoded 32-byte key, generated the
-    | same way as an APP_KEY (e.g. `bin\base32` / `php artisan key:generate`).
-    | It must be 32 bytes after base64 decoding (aes-256-cbc). It is validated
+    | BIOMETRICS_ENCRYPTION_KEY: Laravel-style base64:<Base64-encoded-32-byte-key>.
+    | Canonical unprefixed Base64 is also supported for backward compatibility.
+    | The decoded key must be exactly 32 bytes (aes-256-cbc). It is validated
     | at runtime by BiometricTemplateCipher; encrypting with a missing or
     | invalid key fails closed rather than silently falling back to APP_KEY.
     |

@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Services\Biometrics\BiometricTemplateCipher;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
@@ -202,7 +203,7 @@ class SystemHealthCheckCommand extends Command
 
     protected function checkBiometricKey(): array
     {
-        $rawKey = env('BIOMETRICS_ENCRYPTION_KEY');
+        $rawKey = config('biometrics.encryption.key');
 
         if (blank($rawKey)) {
             return [
@@ -212,16 +213,11 @@ class SystemHealthCheckCommand extends Command
             ];
         }
 
-        if (str_starts_with($rawKey, 'base64:')) {
-            $rawKey = substr($rawKey, 7);
-        }
-
-        $decoded = base64_decode($rawKey, true);
-        if ($decoded === false || strlen($decoded) !== 32) {
+        if (! app(BiometricTemplateCipher::class)->isKeyAvailable()) {
             return [
                 'category' => 'Biometric Encryption Key',
                 'status' => 'ERROR',
-                'message' => 'BIOMETRICS_ENCRYPTION_KEY is set but invalid (must be base64-encoded 32-byte key).',
+                'message' => 'BIOMETRICS_ENCRYPTION_KEY is set but unusable (requires a valid Base64-encoded 32-byte key and supported cipher).',
             ];
         }
 

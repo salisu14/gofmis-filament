@@ -40,10 +40,11 @@ class BiometricTemplateCipher
 
     /**
      * Whether the configured dedicated biometric key is usable for NEW writes.
+     * Validation only: never constructs or caches runtime encryption state.
      */
     public function isKeyAvailable(): bool
     {
-        return $this->encrypter() !== null;
+        return $this->decodeConfiguredKey() !== null;
     }
 
     /**
@@ -137,24 +138,42 @@ class BiometricTemplateCipher
             return $this->encrypter;
         }
 
-        $base64Key = (string) config('biometrics.encryption.key', '');
+        $decoded = $this->decodeConfiguredKey();
 
-        if ($base64Key === '') {
-            return null;
-        }
-
-        $decoded = base64_decode($base64Key, true);
-        if ($decoded === false) {
-            return null;
-        }
-
-        // The cipher requires a 32-byte key.
-        if (strlen($decoded) !== 32) {
+        if ($decoded === null) {
             return null;
         }
 
         $this->encrypter = new Encrypter($decoded, config('biometrics.encryption.cipher', 'aes-256-cbc'));
 
         return $this->encrypter;
+    }
+
+    /** Decode and validate configuration without constructing an encrypter. */
+    private function decodeConfiguredKey(): ?string
+    {
+        $encoded = config('biometrics.encryption.key');
+
+        if (! is_string($encoded) || $encoded === '') {
+            return null;
+        }
+
+        // Preserve bare Base64 compatibility; strip only the exact Laravel prefix.
+        if (str_starts_with($encoded, 'base64:')) {
+            $encoded = substr($encoded, 7);
+        }
+
+        $decoded = base64_decode($encoded, true);
+
+        // Require canonical Base64: reject whitespace, bad padding and extra prefixes.
+        if ($decoded === false || strlen($decoded) !== 32 || base64_encode($decoded) !== $encoded) {
+            return null;
+        }
+
+        if (! Encrypter::supported($decoded, config('biometrics.encryption.cipher', 'aes-256-cbc'))) {
+            return null;
+        }
+
+        return $decoded;
     }
 }
