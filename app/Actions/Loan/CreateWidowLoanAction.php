@@ -3,10 +3,10 @@
 namespace App\Actions\Loan;
 
 use App\Data\Loan\CreateWidowLoanData;
-use App\Enums\WidowLoanStatus;
 use App\Exceptions\InsufficientBankBalanceException;
 use App\Models\BankAccount;
 use App\Models\WidowLoan;
+use App\Services\WidowLoanService;
 use Exception;
 
 class CreateWidowLoanAction
@@ -33,14 +33,6 @@ class CreateWidowLoanAction
             throw new InsufficientBankBalanceException('Insufficient funds in the selected bank account.');
         }
 
-        // 2. Create the Loan
-        return WidowLoan::create([
-            'widow_id' => $data->widowId,
-            'bank_account_id' => $data->bankAccountId,
-            'principal_amount' => $data->principalAmount,
-            'duration_months' => $data->durationMonths,
-            'purpose' => $data->purpose,
-            'status' => WidowLoanStatus::DRAFT,
-        ]);
+        return app(WidowLoanService::class)->createLoan($data);
     }
 }

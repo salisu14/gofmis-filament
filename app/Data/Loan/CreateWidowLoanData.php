@@ -15,6 +15,7 @@ class CreateWidowLoanData extends Data
         public ?string $disbursementBankId = null,
         public ?string $repaymentBankId = null,
         public ?string $repaymentFrequency = 'weekly',
+        public ?string $loanAgreementUrl = null,
     ) {}
 
     public static function rules(): array
