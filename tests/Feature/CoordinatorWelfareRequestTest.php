@@ -14,7 +14,7 @@ use App\Models\Zone;
 use Filament\Facades\Filament;
 use Livewire\Livewire;
 
-uses(Tests\TestCase::class, Illuminate\Foundation\Testing\RefreshDatabase::class);
+uses(Illuminate\Foundation\Testing\RefreshDatabase::class);
 
 beforeEach(function () {
     app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
