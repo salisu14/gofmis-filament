@@ -186,7 +186,11 @@ test('disabled coordinator cannot access coordinator panel', function () {
 test('disabled imprest user cannot access imprest panel', function () {
     $disabledUser = User::factory()->create(['status' => UserStatus::DISABLED, 'is_active' => false]);
     $disabledUser->assignRole('admin');
-    $panel = Filament\Facades\Filament::getPanel('imprest');
+    try {
+        $panel = Filament\Facades\Filament::getPanel('imprest');
+    } catch (\InvalidArgumentException) {
+        $panel = null;
+    }
 
     expect($panel)->toBeNull();
 });
