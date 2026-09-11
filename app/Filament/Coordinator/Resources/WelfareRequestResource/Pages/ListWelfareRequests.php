@@ -26,6 +26,7 @@ class ListWelfareRequests extends ListRecords
                 ->label('Nominate Beneficiaries')
                 ->icon('heroicon-o-user-plus')
                 ->color('primary')
+                ->visible(fn () => WelfareRequestResource::canCreate())
                 ->form([
                     Select::make('welfare_package_id')
                         ->label('Open Welfare Package / Campaign')

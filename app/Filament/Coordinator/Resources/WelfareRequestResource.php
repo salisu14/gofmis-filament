@@ -65,12 +65,27 @@ class WelfareRequestResource extends Resource
         return $query->whereHas('deceased', fn (Builder $q) => $q->where('zone_id', $zoneId));
     }
 
+    public static function canViewAny(): bool
+    {
+        $user = auth()->user();
+        if (! $user) {
+            return false;
+        }
+
+        return $user->isDemoObserver() ||
+            $user->hasAnyRole(['admin', 'super_admin']) ||
+            ($user->can('view_welfare_interventions') && $user->managesZone());
+    }
+
     public static function canCreate(): bool
     {
         $user = auth()->user();
+        if (! $user || $user->isDemoObserver()) {
+            return false;
+        }
 
-        return $user?->hasAnyRole(['admin', 'super_admin'])
-            || $user?->managesZone();
+        return $user->hasAnyRole(['admin', 'super_admin']) ||
+            ($user->can('create_welfare_interventions') && $user->managesZone());
     }
 
     public static function canView($record): bool
@@ -78,6 +93,26 @@ class WelfareRequestResource extends Resource
         $user = auth()->user();
 
         if (! $user) {
+            return false;
+        }
+
+        if ($user->isDemoObserver() || $user->hasAnyRole(['admin', 'super_admin'])) {
+            return true;
+        }
+
+        $zoneId = $record->deceased()->withoutGlobalScopes()->value('zone_id');
+
+        if (! $zoneId) {
+            return false;
+        }
+
+        return $user->can('view_welfare_interventions') && $user->managesZone($zoneId);
+    }
+
+    public static function canEdit($record): bool
+    {
+        $user = auth()->user();
+        if (! $user || $user->isDemoObserver()) {
             return false;
         }
 
@@ -91,24 +126,9 @@ class WelfareRequestResource extends Resource
             return false;
         }
 
-        return $user->managesZone($zoneId);
-    }
-
-    public static function canEdit($record): bool
-    {
-        $user = auth()->user();
-        if ($user?->hasAnyRole(['admin', 'super_admin'])) {
-            return true;
-        }
-
-        $zoneId = $record->deceased()->withoutGlobalScopes()->value('zone_id');
-
-        if (! $zoneId) {
-            return false;
-        }
-
         return $record->status === BeneficiaryStatus::PENDING &&
-            $user?->managesZone($zoneId);
+            $user->can('edit_welfare_interventions') &&
+            $user->managesZone($zoneId);
     }
 
     public static function canDelete($record): bool

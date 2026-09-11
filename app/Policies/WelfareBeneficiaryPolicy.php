@@ -12,7 +12,9 @@ class WelfareBeneficiaryPolicy
 
     public function viewAny(User $user): bool
     {
-        return $user->isDemoObserver() || $user->hasAnyRole(['super_admin', 'admin']) || $user->managesZone();
+        return $user->isDemoObserver() ||
+            $user->hasAnyRole(['super_admin', 'admin']) ||
+            ($user->can('view_welfare_interventions') && $user->managesZone());
     }
 
     public function view(User $user, WelfareBeneficiary $beneficiary): bool
@@ -21,7 +23,7 @@ class WelfareBeneficiaryPolicy
 
         return $user->isDemoObserver() ||
             $user->hasAnyRole(['super_admin', 'admin']) ||
-            ($zoneId && $user->managesZone($zoneId));
+            ($user->can('view_welfare_interventions') && $zoneId && $user->managesZone($zoneId));
     }
 
     public function create(User $user): bool
@@ -30,7 +32,8 @@ class WelfareBeneficiaryPolicy
             return false;
         }
 
-        return $user->hasAnyRole(['super_admin', 'admin']) || $user->managesZone();
+        return $user->hasAnyRole(['super_admin', 'admin']) ||
+            ($user->can('create_welfare_interventions') && $user->managesZone());
     }
 
     public function suggest(User $user): bool
@@ -39,7 +42,29 @@ class WelfareBeneficiaryPolicy
             return false;
         }
 
-        return $user->managesZone();
+        return $user->hasAnyRole(['super_admin', 'admin']) ||
+            ($user->can('create_welfare_interventions') && $user->managesZone());
+    }
+
+    public function update(User $user, WelfareBeneficiary $beneficiary): bool
+    {
+        if ($user->isDemoObserver()) {
+            return false;
+        }
+
+        if (! $beneficiary->isPending()) {
+            return false;
+        }
+
+        if ($user->hasAnyRole(['super_admin', 'admin'])) {
+            return true;
+        }
+
+        $zoneId = $beneficiary->deceased()->withoutGlobalScopes()->value('zone_id');
+
+        return $zoneId &&
+            $user->can('edit_welfare_interventions') &&
+            $user->managesZone($zoneId);
     }
 
     public function approve(User $user, WelfareBeneficiary $beneficiary): bool

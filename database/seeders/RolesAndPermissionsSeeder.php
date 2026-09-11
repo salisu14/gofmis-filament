@@ -194,6 +194,7 @@ class RolesAndPermissionsSeeder extends Seeder
 
             // Interventions (Requests)
             'create_education_interventions',
+            'view_welfare_interventions',
             'create_welfare_interventions',
 
             // Loans (Requests)
