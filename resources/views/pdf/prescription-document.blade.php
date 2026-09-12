@@ -59,9 +59,11 @@
         </tr>
         <tr>
             <td class="label">Issuing Staff:</td>
-            <td class="value">{{ $prescription->user?->name ?? 'N/A' }}</td>
+            <td class="value" colspan="3">{{ $prescription->user?->name ?? 'N/A' }}</td>
+        </tr>
+        <tr>
             <td class="label">Clinical Notes:</td>
-            <td class="value">{{ $prescription->note ?? 'None' }}</td>
+            <td class="value" colspan="3" style="word-wrap: break-word; overflow-wrap: break-word;">{{ $prescription->note ?? 'None' }}</td>
         </tr>
     </table>
 

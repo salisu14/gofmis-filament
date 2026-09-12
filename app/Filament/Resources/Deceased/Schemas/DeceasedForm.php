@@ -251,7 +251,7 @@ class DeceasedForm
 
                                 Textarea::make('address')
                                     ->label('Family Contact Address')
-                                    ->rows(2)
+                                    ->rows(3)
                                     ->columnSpanFull(),
 
                                 Group::make()->schema([

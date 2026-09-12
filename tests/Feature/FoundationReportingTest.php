@@ -489,3 +489,30 @@ test('populated orphan dossier renders canonical welfare, sponsorship, guardian 
         ->toContain('45,000.00')
         ->toContain('Term two school fees');
 });
+
+test('orphan dossier report download sanitizes filename containing slashes and enforces zone authorization', function () {
+    // 1. Assign registration number containing slashes
+    $this->orphanA->update(['reg_no' => 'GOF/2026/0004']);
+
+    // 2. Admin can download dossier with safe filename
+    $response = $this->actingAs($this->admin)
+        ->get(route('orphans.report.download', $this->orphanA));
+
+    $response->assertOk();
+    $response->assertHeader('content-disposition', 'attachment; filename=Orphan-Report-GOF-2026-0004.pdf');
+
+    // 3. Database reg_no remains untouched
+    expect($this->orphanA->fresh()->reg_no)->toBe('GOF/2026/0004');
+
+    // 4. Coordinator from same zone can download dossier
+    $coordResponse = $this->actingAs($this->coordinatorA)
+        ->get(route('orphans.report.download', $this->orphanA));
+
+    $coordResponse->assertOk();
+
+    // 5. Coordinator from different zone is rejected with 403
+    $crossZoneResponse = $this->actingAs($this->coordinatorB)
+        ->get(route('orphans.report.download', $this->orphanA));
+
+    expect(in_array($crossZoneResponse->status(), [403, 404]))->toBeTrue();
+});

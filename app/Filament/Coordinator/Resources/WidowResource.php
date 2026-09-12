@@ -220,6 +220,7 @@ class WidowResource extends Resource
                             Forms\Components\Textarea::make('address')
                                 ->placeholder('Current residential address...')
                                 ->rows(3)
+                                ->columnSpanFull()
                                 ->required(),
 
                             Forms\Components\FileUpload::make('picture_url')
@@ -341,7 +342,8 @@ class WidowResource extends Resource
                         Textarea::make('notes')
                             ->label('Notes')
                             ->placeholder('Optional notes about the remarriage...')
-                            ->rows(2),
+                            ->rows(4)
+                            ->columnSpanFull(),
                     ])
                     ->action(function ($record, array $data) {
                         $record->markAsMarried(
@@ -389,7 +391,8 @@ class WidowResource extends Resource
                         Textarea::make('notes')
                             ->label('Notes')
                             ->placeholder('Optional notes about the divorce/reactivation...')
-                            ->rows(2),
+                            ->rows(4)
+                            ->columnSpanFull(),
                     ])
                     ->action(function ($record, array $data) {
                         $record->reactivateAfterDivorce(

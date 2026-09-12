@@ -131,6 +131,9 @@
         .info-value {
             font-size: 11px;
             color: #111827;
+            word-wrap: break-word;
+            word-break: break-word;
+            overflow-wrap: break-word;
         }
 
         .data-table {
@@ -153,6 +156,9 @@
             border: 1px solid #e5e7eb;
             font-size: 10px;
             vertical-align: top;
+            word-wrap: break-word;
+            word-break: break-word;
+            overflow-wrap: break-word;
         }
         .empty-text {
             font-size: 10px;

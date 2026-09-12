@@ -66,7 +66,7 @@ class InterventionRequestForm
 
                         Textarea::make('notes')
                             ->label('Request Justification / Notes')
-                            ->rows(3)
+                            ->rows(5)
                             ->columnSpanFull()
                             ->placeholder('Explain why this intervention is needed...'),
 
@@ -133,7 +133,7 @@ class InterventionRequestForm
 
                         Textarea::make('verification_notes')
                             ->label('Verification Notes')
-                            ->rows(2)
+                            ->rows(4)
                             ->columnSpanFull()
                             ->disabled(),
 
@@ -181,7 +181,7 @@ class InterventionRequestForm
 
                         Textarea::make('rejection_reason')
                             ->label('Rejection Reason')
-                            ->rows(2)
+                            ->rows(4)
                             ->columnSpanFull()
                             ->disabled()
                             ->visible(fn ($get) => $get('status') === 'rejected'),

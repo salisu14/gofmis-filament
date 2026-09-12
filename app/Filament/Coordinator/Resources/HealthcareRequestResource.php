@@ -136,7 +136,7 @@ class HealthcareRequestResource extends Resource
 
                         Textarea::make('treatment_notes')
                             ->label('Treatment Notes')
-                            ->rows(3)
+                            ->rows(4)
                             ->disabled()
                             ->dehydrated()
                             ->columnSpanFull(),
@@ -373,7 +373,7 @@ class HealthcareRequestResource extends Resource
                     ->schema([
                         Textarea::make('note')
                             ->label('Clinical Notes & Dosage Instructions')
-                            ->rows(4)
+                            ->rows(5)
                             ->disabled(fn ($record) => $record?->isTreated())
                             ->placeholder('Enter dosage instructions, frequency, duration, or additional observations...')
                             ->columnSpanFull(),
