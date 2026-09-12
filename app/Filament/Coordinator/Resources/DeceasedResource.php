@@ -14,6 +14,7 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Filters\SelectFilter;
@@ -58,7 +59,6 @@ class DeceasedResource extends Resource
             return true;
         }
 
-        // Coordinator: capability = create_deceased permission AND own-zone scope.
         return $user?->isCoordinator()
             && $user->can('create_deceased')
             && $user->managesZone();
@@ -74,10 +74,7 @@ class DeceasedResource extends Resource
             return true;
         }
 
-        // Record's own zone_id is a direct column (no global-scope ambiguity).
-        return $user->isCoordinator()
-            && $user->can('edit_deceased')
-            && $user->managesZone($record->zone_id);
+        return $user->managesZone($record->zone_id);
     }
 
     public static function canDelete($record): bool
@@ -116,11 +113,10 @@ class DeceasedResource extends Resource
                         Grid::make(3)->schema([
                             Forms\Components\Toggle::make('has_nin')
                                 ->label('Has NIN?')
+                                ->default(false)
                                 ->helperText('Enable if this beneficiary has a valid 11-digit National Identification Number.')
                                 ->live()
-                                ->default(false)
-                                ->inline(false)
-                                ->afterStateUpdated(function ($state, $set) {
+                                ->afterStateUpdated(function (Set $set, bool $state): void {
                                     if (! $state) {
                                         $set('nin', null);
                                     }
@@ -128,13 +124,12 @@ class DeceasedResource extends Resource
 
                             Forms\Components\TextInput::make('nin')
                                 ->label('NIN')
-                                ->string()
-                                ->regex('/^[0-9]{11}$/')
-                                ->unique(ignoreRecord: true)
-                                ->required(fn (Get $get) => (bool) $get('has_nin'))
                                 ->visible(fn (Get $get) => (bool) $get('has_nin'))
-                                ->placeholder('11-digit identity number')
-                                ->helperText('Enter the complete 11-digit National Identification Number.'),
+                                ->required(fn (Get $get) => (bool) $get('has_nin'))
+                                ->length(11)
+                                ->regex('/^\d{11}$/')
+                                ->unique(ignoreRecord: true)
+                                ->placeholder('11-digit identity number'),
 
                             Forms\Components\TextInput::make('reg_no')
                                 ->label('Registration Number')
@@ -163,7 +158,7 @@ class DeceasedResource extends Resource
                         Grid::make(3)->schema([
                             Forms\Components\DatePicker::make('date_registered')
                                 ->label('Date Registered')
-                                ->default(now())
+                                ->default(now()->toDateString())
                                 ->maxDate('today')
                                 ->required()
                                 ->native(false),
@@ -189,7 +184,7 @@ class DeceasedResource extends Resource
                                         $set('death_place', $val);
                                     } elseif (str_starts_with($val, 'Other — ')) {
                                         $set('death_place', 'Other');
-                                        $set('death_place_other', \Illuminate\Support\Str::after($val, 'Other — '));
+                                        $set('death_place_other', substr($val, 8));
                                     } else {
                                         $set('death_place', 'Other');
                                         $set('death_place_other', $val);
@@ -219,7 +214,7 @@ class DeceasedResource extends Resource
                                         $set('death_cause', $val);
                                     } elseif (str_starts_with($val, 'Other — ')) {
                                         $set('death_cause', 'Other');
-                                        $set('death_cause_other', \Illuminate\Support\Str::after($val, 'Other — '));
+                                        $set('death_cause_other', substr($val, 8));
                                     } else {
                                         $set('death_cause', 'Other');
                                         $set('death_cause_other', $val);
@@ -408,14 +403,6 @@ class DeceasedResource extends Resource
                     DeleteBulkAction::make(),
                 ]),
             ]);
-    }
-
-    public static function getRelations(): array
-    {
-        return [
-            \App\Filament\Resources\Deceased\RelationManagers\WidowsRelationManager::class,
-            \App\Filament\Resources\Deceased\RelationManagers\OrphansRelationManager::class,
-        ];
     }
 
     public static function getPages(): array

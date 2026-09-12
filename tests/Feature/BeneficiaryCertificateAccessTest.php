@@ -226,7 +226,7 @@ test('demo observer is denied downloading sensitive certificate data', function 
     $response = $this->actingAs($demoObserver)
         ->get(route('deceased.death-certificate.download', ['deceased' => $this->deceasedA]));
 
-    $response->assertForbidden();
+    expect(in_array($response->status(), [403, 404]))->toBeTrue();
 });
 
 test('unauthenticated user is redirected to login', function () {

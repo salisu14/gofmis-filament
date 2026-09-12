@@ -5,6 +5,7 @@ namespace App\Actions\Deceased;
 use App\Data\Deceased\DeceasedData;
 use App\Models\Deceased;
 use App\Services\RegistrationNumberService;
+use Illuminate\Support\Facades\DB;
 
 class RegisterDeceasedAction
 {
@@ -14,29 +15,31 @@ class RegisterDeceasedAction
 
     public function execute(DeceasedData $data): Deceased
     {
-        return Deceased::create([
-            'first_name' => $data->firstName,
-            'last_name' => $data->lastName,
-            'middle_name' => $data->middleName, // ✅ FIXED
-            'nin' => $data->nin,
-            'has_nin' => $data->hasNin,
-            'reg_no' => $this->regNoService->generateDeceasedRegNo(),
-            'address' => $data->address,
-            'vulnerability_status' => $data->vulnerabilityStatus,
-            'death_cause' => $data->deathCause,
-            'death_place' => $data->deathPlace,
-            'occupation' => $data->occupation,
-            'number_of_orphans_left' => $data->numberOfOrphansLeft,
-            'number_of_widows_left' => $data->numberOfWidowsLeft,
-            'guardian_name' => $data->guardianName,
-            'guardian_phone' => $data->guardianPhone ?? '',
-            'has_death_cert' => $data->hasDeathCert,
-            'death_cert_url' => $data->deathCertUrl,
-            'age' => $data->age ?? 0,
-            'zone_id' => $data->zoneId,
-            'date_registered' => $data->dateRegistered ?? now()->toDateString(),
-            'date_of_birth' => $data->dateOfBirth,
-            'date_of_death' => $data->dateOfDeath,
-        ]);
+        return DB::transaction(function () use ($data) {
+            return Deceased::create([
+                'first_name' => $data->firstName,
+                'last_name' => $data->lastName,
+                'middle_name' => $data->middleName, // ✅ FIXED
+                'nin' => $data->nin,
+                'has_nin' => $data->hasNin ?? filled($data->nin),
+                'reg_no' => $this->regNoService->generateDeceasedRegNo(),
+                'address' => $data->address,
+                'vulnerability_status' => $data->vulnerabilityStatus,
+                'death_cause' => $data->deathCause,
+                'death_place' => $data->deathPlace,
+                'occupation' => $data->occupation,
+                'number_of_orphans_left' => $data->numberOfOrphansLeft,
+                'number_of_widows_left' => $data->numberOfWidowsLeft,
+                'guardian_name' => $data->guardianName,
+                'guardian_phone' => $data->guardianPhone ?? '',
+                'has_death_cert' => $data->hasDeathCert,
+                'death_cert_url' => $data->deathCertUrl,
+                'age' => $data->age ?? 0,
+                'zone_id' => $data->zoneId,
+                'date_registered' => $data->dateRegistered ?? now()->toDateString(),
+                'date_of_birth' => $data->dateOfBirth,
+                'date_of_death' => $data->dateOfDeath,
+            ]);
+        });
     }
 }

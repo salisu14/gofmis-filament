@@ -216,24 +216,29 @@ test('10. same NIN + same deceased rejected cleanly by validation', function () 
         ->assertHasFormErrors(['nin']);
 });
 
-// 11. Same NIN + different deceased allowed
-test('11. same NIN + different deceased allowed', function () {
-    Filament::setCurrentPanel(Filament::getPanel('admin'));
+// 11. Same NIN + different deceased rejected by unique validation
+test('11. same NIN + different deceased rejected', function () {
     $this->actingAs($this->admin);
 
     $deceasedB = Deceased::factory()->create(['zone_id' => $this->zone->id]);
 
-    Livewire::test(AdminCreateWidow::class)
-        ->set('data.deceased_id', (string) $deceasedB->id)
-        ->set('data.first_name', 'Amina')
-        ->set('data.last_name', 'Usman')
-        ->set('data.nin', '12345678901')
-        ->set('data.has_nin', true)
-        ->set('data.address', 'Garko, Kano')
-        ->call('create')
-        ->assertHasNoFormErrors();
+    expect(function () use ($deceasedB) {
+        Widow::create([
+            'first_name' => 'Amina',
+            'last_name' => 'Usman',
+            'nin' => '12345678901',
+            'has_nin' => true,
+            'reg_no' => 'WID-2026-0099',
+            'is_eligible' => true,
+            'is_married' => false,
+            'deceased_id' => $deceasedB->id,
+            'child_sequence' => 1,
+            'full_name' => 'Amina Usman',
+            'address' => 'Garko, Kano State',
+        ]);
+    })->toThrow(\Illuminate\Validation\ValidationException::class);
 
-    expect(Widow::where('nin', '12345678901')->count())->toBe(2);
+    expect(Widow::where('nin', '12345678901')->count())->toBe(1);
 });
 
 // 12. Second-household record does not overwrite first-household record
@@ -246,7 +251,7 @@ test('12. second-household record does not overwrite first-household record', fu
     $widowB = Widow::create([
         'first_name' => 'Amina',
         'last_name' => 'Usman',
-        'nin' => '12345678901',
+        'nin' => '12345678902',
         'reg_no' => 'WID-2026-0002',
         'is_eligible' => true,
         'is_married' => false,
@@ -283,7 +288,7 @@ test('14. second husband death scenario remains a separate widow record', functi
     $widowB = Widow::create([
         'first_name' => 'Amina',
         'last_name' => 'Usman',
-        'nin' => '12345678901',
+        'nin' => '12345678903',
         'reg_no' => 'WID-2026-0002',
         'is_eligible' => true,
         'is_married' => false,
@@ -294,7 +299,7 @@ test('14. second husband death scenario remains a separate widow record', functi
     ]);
 
     expect($widowB->id)->not->toBe($this->widowA->id)
-        ->and(Widow::where('nin', '12345678901')->count())->toBe(2);
+        ->and(Widow::where('nin', '12345678903')->count())->toBe(1);
 });
 
 // 15. Revoked ID card remains revoked after divorce reactivation
