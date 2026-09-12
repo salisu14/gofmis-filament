@@ -698,3 +698,263 @@ it('Coordinator edit preserves coordinator zone and does not alter zone assignme
     expect($deceased->first_name)->toBe('EditUpdated');
     expect($deceased->zone_id)->toBe($this->zone->id);
 });
+
+// PART 3 SCENARIO 1: date_registered = yesterday succeeds
+it('allows coordinator to create deceased with yesterday date_registered', function () {
+    $this->actingAs($this->coordinator);
+    $yesterday = \Carbon\Carbon::yesterday()->toDateString();
+
+    Livewire::test(CoordinatorCreateDeceased::class)
+        ->fillForm([
+            'first_name' => 'Yusuf',
+            'last_name' => 'Balarabe',
+            'has_nin' => false,
+            'vulnerability_status' => VulnerabilityStatus::A->value,
+            'date_registered' => $yesterday,
+            'date_of_death' => \Carbon\Carbon::yesterday()->subDay()->toDateString(),
+            'guardian_name' => 'Guardian Name',
+            'guardian_phone' => '07012345678',
+            'number_of_widows_left' => 0,
+            'number_of_orphans_left' => 0,
+        ])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    $this->assertDatabaseHas('deceased', [
+        'first_name' => 'Yusuf',
+        'last_name' => 'Balarabe',
+        'zone_id' => $this->zone->id,
+    ]);
+});
+
+// PART 3 SCENARIO 2: date_registered = today succeeds
+it('allows coordinator to create deceased with today date_registered', function () {
+    $this->actingAs($this->coordinator);
+    $today = \Carbon\Carbon::today()->toDateString();
+
+    Livewire::test(CoordinatorCreateDeceased::class)
+        ->fillForm([
+            'first_name' => 'Aminu',
+            'last_name' => 'Kano',
+            'has_nin' => false,
+            'vulnerability_status' => VulnerabilityStatus::B->value,
+            'date_registered' => $today,
+            'date_of_death' => \Carbon\Carbon::yesterday()->toDateString(),
+            'guardian_name' => 'Caregiver',
+            'guardian_phone' => '07012345678',
+            'number_of_widows_left' => 1,
+            'number_of_orphans_left' => 2,
+        ])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    $this->assertDatabaseHas('deceased', [
+        'first_name' => 'Aminu',
+        'last_name' => 'Kano',
+        'zone_id' => $this->zone->id,
+    ]);
+});
+
+// PART 3 SCENARIO 3: date_registered = tomorrow is rejected
+it('rejects coordinator creating deceased with future date_registered', function () {
+    $this->actingAs($this->coordinator);
+    $tomorrow = \Carbon\Carbon::tomorrow()->toDateString();
+
+    Livewire::test(CoordinatorCreateDeceased::class)
+        ->fillForm([
+            'first_name' => 'Future',
+            'last_name' => 'Person',
+            'has_nin' => false,
+            'vulnerability_status' => VulnerabilityStatus::B->value,
+            'date_registered' => $tomorrow,
+            'date_of_death' => \Carbon\Carbon::today()->toDateString(),
+            'guardian_name' => 'Caregiver',
+            'guardian_phone' => '07012345678',
+            'number_of_widows_left' => 0,
+            'number_of_orphans_left' => 0,
+        ])
+        ->call('create')
+        ->assertHasFormErrors(['date_registered']);
+
+    $this->assertDatabaseMissing('deceased', [
+        'first_name' => 'Future',
+        'last_name' => 'Person',
+    ]);
+});
+
+// PART 3 SCENARIO 4: existing registration numbers with gap/non-sequential state create succeeds with unique reg_no
+it('generates unique reg_no when existing non-sequential reg_no exists', function () {
+    $this->actingAs($this->coordinator);
+    $year = \Carbon\Carbon::now()->year;
+
+    // Manually create record GOF/YYYY/0002
+    Deceased::withoutGlobalScopes()->create([
+        'first_name' => 'Existing',
+        'last_name' => 'Record',
+        'reg_no' => "GOF/{$year}/0002",
+        'vulnerability_status' => VulnerabilityStatus::B->value,
+        'guardian_name' => 'Guardian',
+        'guardian_phone' => '07012345678',
+        'zone_id' => $this->zone->id,
+        'date_registered' => \Carbon\Carbon::today()->toDateString(),
+        'date_of_death' => \Carbon\Carbon::yesterday()->toDateString(),
+        'number_of_widows_left' => 0,
+        'number_of_orphans_left' => 0,
+    ]);
+
+    Livewire::test(CoordinatorCreateDeceased::class)
+        ->fillForm([
+            'first_name' => 'New',
+            'last_name' => 'Beneficiary',
+            'has_nin' => false,
+            'vulnerability_status' => VulnerabilityStatus::A->value,
+            'date_registered' => \Carbon\Carbon::today()->toDateString(),
+            'date_of_death' => \Carbon\Carbon::yesterday()->toDateString(),
+            'guardian_name' => 'Guardian Name',
+            'guardian_phone' => '07012345678',
+            'number_of_widows_left' => 0,
+            'number_of_orphans_left' => 0,
+        ])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    $this->assertDatabaseHas('deceased', [
+        'first_name' => 'New',
+        'last_name' => 'Beneficiary',
+        'reg_no' => "GOF/{$year}/0003",
+    ]);
+});
+
+// PART 3 SCENARIO 5: Has NIN ON with valid 11-digit NIN
+it('allows coordinator to create deceased with valid NIN', function () {
+    $this->actingAs($this->coordinator);
+    $nin = '98765432101';
+
+    Livewire::test(CoordinatorCreateDeceased::class)
+        ->fillForm([
+            'first_name' => 'Fatima',
+            'last_name' => 'Usman',
+            'has_nin' => true,
+            'nin' => $nin,
+            'vulnerability_status' => VulnerabilityStatus::C->value,
+            'date_registered' => \Carbon\Carbon::today()->toDateString(),
+            'date_of_death' => \Carbon\Carbon::yesterday()->toDateString(),
+            'guardian_name' => 'Guardian Name',
+            'guardian_phone' => '07012345678',
+            'number_of_widows_left' => 0,
+            'number_of_orphans_left' => 0,
+        ])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    $this->assertDatabaseHas('deceased', [
+        'first_name' => 'Fatima',
+        'nin' => $nin,
+        'has_nin' => true,
+    ]);
+});
+
+// PART 3 SCENARIO 6: Has NIN OFF succeeds without NIN
+it('allows coordinator to create deceased without NIN when has_nin is false', function () {
+    $this->actingAs($this->coordinator);
+    Livewire::test(CoordinatorCreateDeceased::class)
+        ->fillForm([
+            'first_name' => 'Zainab',
+            'last_name' => 'Garba',
+            'has_nin' => false,
+            'nin' => null,
+            'vulnerability_status' => VulnerabilityStatus::B->value,
+            'date_registered' => \Carbon\Carbon::today()->toDateString(),
+            'date_of_death' => \Carbon\Carbon::yesterday()->toDateString(),
+            'guardian_name' => 'Guardian Name',
+            'guardian_phone' => '07012345678',
+            'number_of_widows_left' => 0,
+            'number_of_orphans_left' => 0,
+        ])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    $this->assertDatabaseHas('deceased', [
+        'first_name' => 'Zainab',
+        'nin' => null,
+        'has_nin' => false,
+    ]);
+});
+
+// RegistrationNumberService unit tests covering cases A-G
+it('RegistrationNumberService generates monotonic non-colliding registration numbers across all edge cases', function () {
+    $service = app(\App\Services\RegistrationNumberService::class);
+    $year = \Carbon\Carbon::now()->year;
+    $prevYear = $year - 1;
+
+    // A. Empty database sequence
+    expect($service->generateDeceasedRegNo())->toBe("GOF/{$year}/0001");
+
+    // F & G. Previous-year high sequence does NOT contaminate current-year sequence
+    Deceased::withoutGlobalScopes()->create([
+        'first_name' => 'OldYear',
+        'last_name' => 'Deceased',
+        'reg_no' => "GOF/{$prevYear}/9999",
+        'vulnerability_status' => VulnerabilityStatus::B->value,
+        'guardian_name' => 'Guardian',
+        'guardian_phone' => '07012345678',
+        'zone_id' => $this->zone->id,
+        'date_registered' => \Carbon\Carbon::today()->toDateString(),
+        'date_of_death' => \Carbon\Carbon::yesterday()->toDateString(),
+        'number_of_widows_left' => 0,
+        'number_of_orphans_left' => 0,
+    ]);
+
+    expect($service->generateDeceasedRegNo())->toBe("GOF/{$year}/0001");
+
+    // B & C. Existing non-sequential gap numbers GOF/YYYY/0001 and GOF/YYYY/0003
+    Deceased::withoutGlobalScopes()->create([
+        'first_name' => 'Deceased',
+        'last_name' => 'One',
+        'reg_no' => "GOF/{$year}/0001",
+        'vulnerability_status' => VulnerabilityStatus::B->value,
+        'guardian_name' => 'Guardian',
+        'guardian_phone' => '07012345678',
+        'zone_id' => $this->zone->id,
+        'date_registered' => \Carbon\Carbon::today()->toDateString(),
+        'date_of_death' => \Carbon\Carbon::yesterday()->toDateString(),
+        'number_of_widows_left' => 0,
+        'number_of_orphans_left' => 0,
+    ]);
+
+    $d3 = Deceased::withoutGlobalScopes()->create([
+        'first_name' => 'Deceased',
+        'last_name' => 'Three',
+        'reg_no' => "GOF/{$year}/0003",
+        'vulnerability_status' => VulnerabilityStatus::B->value,
+        'guardian_name' => 'Guardian',
+        'guardian_phone' => '07012345678',
+        'zone_id' => $this->zone->id,
+        'date_registered' => \Carbon\Carbon::today()->toDateString(),
+        'date_of_death' => \Carbon\Carbon::yesterday()->toDateString(),
+        'number_of_widows_left' => 0,
+        'number_of_orphans_left' => 0,
+    ]);
+
+    // E. Malformed/non-numeric suffix does not crash or corrupt calculation
+    Deceased::withoutGlobalScopes()->create([
+        'first_name' => 'Malformed',
+        'last_name' => 'RegNo',
+        'reg_no' => "GOF/{$year}/ABC",
+        'vulnerability_status' => VulnerabilityStatus::A->value,
+        'guardian_name' => 'Guardian',
+        'guardian_phone' => '07012345678',
+        'zone_id' => $this->zone->id,
+        'date_registered' => \Carbon\Carbon::today()->toDateString(),
+        'date_of_death' => \Carbon\Carbon::yesterday()->toDateString(),
+        'number_of_widows_left' => 0,
+        'number_of_orphans_left' => 0,
+    ]);
+
+    // Next reg_no should be GOF/YYYY/0004 (max numeric is 3)
+    expect($service->generateDeceasedRegNo())->toBe("GOF/{$year}/0004");
+
+    // D. Soft-deleted highest record is NOT reused
+    $d3->delete(); // Soft delete GOF/YYYY/0003
+    expect($service->generateDeceasedRegNo())->toBe("GOF/{$year}/0004");
+});

@@ -13,12 +13,36 @@ class RegistrationNumberService
     public function generateDeceasedRegNo(): string
     {
         $year = Carbon::now()->year;
+        $prefix = 'GOF/'.$year.'/';
 
-        $count = Deceased::withTrashed()
-            ->whereYear('created_at', $year)
-            ->count();
+        // ✅ Concurrency protection for PostgreSQL:
+        // Acquire an exclusive transaction-level advisory lock for Deceased registration
+        // number allocation scoped by year. Automatically released upon COMMIT or ROLLBACK.
+        // Lock namespace: 42637 (GOFMIS Deceased reg allocation), sub-key: $year.
+        if (DB::connection()->getDriverName() === 'pgsql') {
+            DB::statement('SELECT pg_advisory_xact_lock(?, ?)', [42637, (int) $year]);
+        }
 
-        return 'GOF/'.$year.'/'.str_pad($count + 1, 4, '0', STR_PAD_LEFT);
+        $rows = Deceased::withoutGlobalScopes()
+            ->withTrashed()
+            ->where('reg_no', 'like', $prefix.'%')
+            ->get(['reg_no']);
+
+        $maxNum = $rows->map(function ($row) use ($prefix) {
+            $suffix = substr((string) $row->reg_no, strlen($prefix));
+
+            return is_numeric($suffix) ? (int) $suffix : 0;
+        })->max() ?? 0;
+
+        $next = $maxNum + 1;
+
+        // Collision loop handles non-sequential numbers or imported gaps
+        do {
+            $candidate = $prefix.str_pad((string) $next, 4, '0', STR_PAD_LEFT);
+            $next++;
+        } while (Deceased::withoutGlobalScopes()->withTrashed()->where('reg_no', $candidate)->exists());
+
+        return $candidate;
     }
 
     /**

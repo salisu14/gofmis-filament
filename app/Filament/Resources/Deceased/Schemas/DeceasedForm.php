@@ -20,8 +20,9 @@ use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Group;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
-use Illuminate\Support\Str;
 
 class DeceasedForm
 {
@@ -51,26 +52,23 @@ class DeceasedForm
                                 Group::make()->schema([
                                     Toggle::make('has_nin')
                                         ->label('Has NIN?')
+                                        ->default(false)
                                         ->helperText('Enable if this beneficiary has a valid 11-digit National Identification Number.')
                                         ->live()
-                                        ->default(false)
-                                        ->inline(false)
-                                        ->afterStateUpdated(function ($state, $set) {
+                                        ->afterStateUpdated(function (Set $set, bool $state): void {
                                             if (! $state) {
                                                 $set('nin', null);
                                             }
-                                        })
-                                        ->columnSpanFull(),
+                                        }),
 
                                     TextInput::make('nin')
                                         ->label('NIN')
-                                        ->string()
-                                        ->regex('/^[0-9]{11}$/')
+                                        ->visible(fn (Get $get): bool => (bool) $get('has_nin'))
+                                        ->required(fn (Get $get): bool => (bool) $get('has_nin'))
+                                        ->length(11)
+                                        ->regex('/^\d{11}$/')
                                         ->unique(ignoreRecord: true)
-                                        ->required(fn ($get) => $get('has_nin'))
-                                        ->visible(fn ($get) => $get('has_nin'))
-                                        ->placeholder('National Identification Number')
-                                        ->helperText('Enter the complete 11-digit National Identification Number.'),
+                                        ->placeholder('11-digit National Identification Number'),
 
                                     TextInput::make('reg_no')
                                         ->label('Registration Number')
@@ -111,7 +109,7 @@ class DeceasedForm
                                 Group::make()->schema([
                                     DatePicker::make('date_registered')
                                         ->label('Date Registered')
-                                        ->default(now())
+                                        ->default(now()->toDateString())
                                         ->maxDate('today')
                                         ->required()
                                         ->native(false),
@@ -137,7 +135,7 @@ class DeceasedForm
                                                 $set('death_place', $val);
                                             } elseif (str_starts_with($val, 'Other — ')) {
                                                 $set('death_place', 'Other');
-                                                $set('death_place_other', Str::after($val, 'Other — '));
+                                                $set('death_place_other', substr($val, 8));
                                             } else {
                                                 $set('death_place', 'Other');
                                                 $set('death_place_other', $val);
@@ -167,7 +165,7 @@ class DeceasedForm
                                                 $set('death_cause', $val);
                                             } elseif (str_starts_with($val, 'Other — ')) {
                                                 $set('death_cause', 'Other');
-                                                $set('death_cause_other', Str::after($val, 'Other — '));
+                                                $set('death_cause_other', substr($val, 8));
                                             } else {
                                                 $set('death_cause', 'Other');
                                                 $set('death_cause_other', $val);

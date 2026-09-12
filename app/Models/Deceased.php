@@ -146,10 +146,14 @@ class Deceased extends Model
     {
         parent::booted();
 
+        static::saving(function (Model $model) {
+            app(\App\Services\BeneficiaryNinService::class)->validateForSave($model);
+        });
+
         static::addGlobalScope('zone', function ($query) {
             $user = auth()->user();
 
-            if (! $user || $user->hasAnyRole(['admin', 'super_admin']) || $user->isDemoObserver()) {
+            if (! $user || $user->hasAnyRole(['admin', 'super_admin'])) {
                 return;
             }
 
@@ -164,33 +168,25 @@ class Deceased extends Model
         });
 
         static::saving(function ($model) {
-            if ($model->has_nin === null) {
-                $model->has_nin = filled($model->nin);
-            }
-
-            if (! $model->has_nin) {
-                $model->nin = null;
-            }
-
             $today = \Carbon\Carbon::today();
 
-            if ($model->date_of_birth && \Carbon\Carbon::parse($model->date_of_birth)->greaterThan($today)) {
+            if ($model->date_of_birth && \Carbon\Carbon::parse($model->date_of_birth)->startOfDay()->greaterThan($today)) {
                 throw new \InvalidArgumentException('Date of Birth cannot be in the future.');
             }
 
-            if ($model->date_of_death && \Carbon\Carbon::parse($model->date_of_death)->greaterThan($today)) {
+            if ($model->date_of_death && \Carbon\Carbon::parse($model->date_of_death)->startOfDay()->greaterThan($today)) {
                 throw new \InvalidArgumentException('Date of Death cannot be in the future.');
             }
 
-            if ($model->date_registered && \Carbon\Carbon::parse($model->date_registered)->greaterThan($today)) {
+            if ($model->date_registered && \Carbon\Carbon::parse($model->date_registered)->startOfDay()->greaterThan($today)) {
                 throw new \InvalidArgumentException('Date Registered cannot be in the future.');
             }
 
-            if ($model->date_of_birth && $model->date_of_death && \Carbon\Carbon::parse($model->date_of_death)->lessThan(\Carbon\Carbon::parse($model->date_of_birth))) {
+            if ($model->date_of_birth && $model->date_of_death && \Carbon\Carbon::parse($model->date_of_death)->startOfDay()->lessThan(\Carbon\Carbon::parse($model->date_of_birth)->startOfDay())) {
                 throw new \InvalidArgumentException('Date of Death cannot be earlier than Date of Birth.');
             }
 
-            if ($model->date_registered && $model->date_of_death && \Carbon\Carbon::parse($model->date_registered)->lessThan(\Carbon\Carbon::parse($model->date_of_death))) {
+            if ($model->date_registered && $model->date_of_death && \Carbon\Carbon::parse($model->date_registered)->startOfDay()->lessThan(\Carbon\Carbon::parse($model->date_of_death)->startOfDay())) {
                 throw new \InvalidArgumentException('Date Registered cannot be earlier than Date of Death.');
             }
         });
