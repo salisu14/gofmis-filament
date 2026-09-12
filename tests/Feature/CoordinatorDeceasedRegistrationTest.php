@@ -8,6 +8,7 @@ use App\Filament\Resources\Deceased\Pages\EditDeceased as AdminEditDeceased;
 use App\Models\Deceased;
 use App\Models\User;
 use App\Models\Zone;
+use Livewire\Livewire;
 
 uses(\Tests\TestCase::class, \Illuminate\Foundation\Testing\RefreshDatabase::class);
 
