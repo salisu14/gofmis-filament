@@ -114,11 +114,27 @@ class DeceasedResource extends Resource
                         ]),
 
                         Grid::make(3)->schema([
+                            Forms\Components\Toggle::make('has_nin')
+                                ->label('Has NIN?')
+                                ->helperText('Enable if this beneficiary has a valid 11-digit National Identification Number.')
+                                ->live()
+                                ->default(false)
+                                ->inline(false)
+                                ->afterStateUpdated(function ($state, $set) {
+                                    if (! $state) {
+                                        $set('nin', null);
+                                    }
+                                }),
+
                             Forms\Components\TextInput::make('nin')
                                 ->label('NIN')
+                                ->string()
+                                ->regex('/^[0-9]{11}$/')
                                 ->unique(ignoreRecord: true)
+                                ->required(fn (Get $get) => (bool) $get('has_nin'))
+                                ->visible(fn (Get $get) => (bool) $get('has_nin'))
                                 ->placeholder('11-digit identity number')
-                                ->maxLength(20),
+                                ->helperText('Enter the complete 11-digit National Identification Number.'),
 
                             Forms\Components\TextInput::make('reg_no')
                                 ->label('Registration Number')
