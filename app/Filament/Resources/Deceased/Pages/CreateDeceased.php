@@ -28,7 +28,7 @@ class CreateDeceased extends CreateRecord
             lastName: $data['last_name'],
             middleName: $data['middle_name'] ?? null,
             nin: $data['nin'] ?? null,
-            hasNin: $data['has_nin'] ?? false,
+            hasNin: isset($data['has_nin']) ? (bool) $data['has_nin'] : filled($data['nin'] ?? null),
             address: $data['address'] ?? null,
             vulnerabilityStatus: $vulnerabilityStatus,
             deathCause: $data['death_cause'] ?? null,
@@ -42,6 +42,9 @@ class CreateDeceased extends CreateRecord
             deathCertUrl: $data['death_cert_url'] ?? null,
             age: $data['age'] ?? null, // ✅ add
             zoneId: $data['zone_id'] ?? null, // ✅ add
+            dateRegistered: filled($data['date_registered'] ?? null) ? (string) $data['date_registered'] : null,
+            dateOfBirth: filled($data['date_of_birth'] ?? null) ? (string) $data['date_of_birth'] : null,
+            dateOfDeath: filled($data['date_of_death'] ?? null) ? (string) $data['date_of_death'] : null,
         );
 
         // 2. Resolve the action from the container and execute

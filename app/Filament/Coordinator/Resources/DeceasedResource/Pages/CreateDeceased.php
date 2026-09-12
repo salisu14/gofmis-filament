@@ -19,17 +19,18 @@ class CreateDeceased extends CreateRecord
     {
         // Resolve the vulnerability status to a string if it's an enum instance
         $vulnerabilityStatus = $data['vulnerability_status'] instanceof VulnerabilityStatus
-            ? $data['vulnerability_status']
-            : VulnerabilityStatus::from($data['vulnerability_status']);
+            ? $data['vulnerability_status']->value
+            : (string) ($data['vulnerability_status'] ?? '');
 
         // 1. Map Filament data array to your Data Object
         $deceasedData = new DeceasedData(
             firstName: $data['first_name'],
             lastName: $data['last_name'],
-            middleName: $data['middle_name'] ?: null,
+            middleName: $data['middle_name'] ?? null,
             nin: $data['nin'] ?? null,
+            hasNin: isset($data['has_nin']) ? (bool) $data['has_nin'] : filled($data['nin'] ?? null),
             address: $data['address'] ?? null,
-            vulnerabilityStatus: $vulnerabilityStatus->value,
+            vulnerabilityStatus: $vulnerabilityStatus,
             deathCause: $data['death_cause'] ?? null,
             deathPlace: $data['death_place'] ?? null,
             occupation: $data['occupation'] ?? null,
@@ -40,10 +41,10 @@ class CreateDeceased extends CreateRecord
             hasDeathCert: $data['has_death_cert'] ?? false,
             deathCertUrl: $data['death_cert_url'] ?? null,
             age: $data['age'] ?? null,
-            zoneId: $data['zone_id'] ?? null,
-            dateRegistered: isset($data['date_registered']) ? (string) $data['date_registered'] : null,
-            dateOfBirth: isset($data['date_of_birth']) ? (string) $data['date_of_birth'] : null,
-            dateOfDeath: isset($data['date_of_death']) ? (string) $data['date_of_death'] : null,
+            zoneId: auth()->user()?->coordinatedZone?->id ?? $data['zone_id'] ?? null,
+            dateRegistered: filled($data['date_registered'] ?? null) ? (string) $data['date_registered'] : null,
+            dateOfBirth: filled($data['date_of_birth'] ?? null) ? (string) $data['date_of_birth'] : null,
+            dateOfDeath: filled($data['date_of_death'] ?? null) ? (string) $data['date_of_death'] : null,
         );
 
         // 2. Resolve the action from the container and execute
