@@ -415,7 +415,8 @@ class EducationRequestResource extends Resource
                         Textarea::make('notes')
                             ->label('Reason for Request')
                             ->required()
-                            ->rows(4)
+                            ->rows(5)
+                            ->columnSpanFull()
                             ->placeholder('Explain why education support is needed...'),
 
                         FileUpload::make('supporting_documents')

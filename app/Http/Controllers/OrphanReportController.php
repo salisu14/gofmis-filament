@@ -67,7 +67,9 @@ class OrphanReportController extends Controller
 
         $pdf->setPaper('A4', 'portrait');
 
-        $filename = 'Orphan-Report-'.($orphan->reg_no ?? strtoupper(substr($orphan->id, 0, 8))).'.pdf';
+        $rawIdentifier = $orphan->reg_no ?? strtoupper(substr($orphan->id, 0, 8));
+        $safeIdentifier = preg_replace('/[^A-Za-z0-9_\-]/', '-', $rawIdentifier);
+        $filename = 'Orphan-Report-'.$safeIdentifier.'.pdf';
 
         return $pdf->download($filename);
     }

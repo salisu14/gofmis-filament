@@ -105,26 +105,30 @@
 <h3 style="background-color: #1f2937; color: #ffffff; padding: 6px 10px; margin-top: 10px; margin-bottom: 8px; font-size: 11px; text-transform: uppercase; border-radius: 3px;">4. For Medical Officer Use Only (attending doctor to fill below)</h3>
 <table class="info-grid">
     <tr>
-        <td class="label" style="height: 35px; width: 25%;">Consultation Date:</td>
-        <td class="value" style="width: 25%;"></td>
-        <td class="label" style="width: 25%;">Clinical Findings:</td>
-        <td class="value" style="width: 25%;"></td>
+        <td class="label" style="width: 20%;">Consultation Date:</td>
+        <td class="value" style="width: 30%;">___ / ___ / 20___</td>
+        <td class="label" style="width: 20%;">Attending Doctor:</td>
+        <td class="value" style="width: 30%;">Dr. ___________________________</td>
     </tr>
     <tr>
-        <td class="label" style="height: 35px;">Confirmed Diagnosis:</td>
-        <td class="value" colspan="3"><span class="muted">(Please state final diagnosis)</span></td>
+        <td class="label" style="vertical-align: top;">Clinical Findings:</td>
+        <td class="value" colspan="3" style="height: 75px; vertical-align: top;"><span class="muted">(4–6 lines: Presenting symptoms, vital signs, physical exam observations)</span></td>
     </tr>
     <tr>
-        <td class="label" style="height: 40px;">Investigations / Labs:</td>
-        <td class="value" colspan="3"><span class="muted">(List requested tests/procedures)</span></td>
+        <td class="label" style="vertical-align: top;">Confirmed Diagnosis:</td>
+        <td class="value" colspan="3" style="height: 100px; vertical-align: top;"><span class="muted">(6–10 lines: Primary diagnosis, secondary conditions, clinical summary)</span></td>
     </tr>
     <tr>
-        <td class="label" style="height: 45px;">Medications & Dosage:</td>
-        <td class="value" colspan="3"><span class="muted">(Drugs, strength, frequency & duration)</span></td>
+        <td class="label" style="vertical-align: top;">Investigations / Labs:</td>
+        <td class="value" colspan="3" style="height: 75px; vertical-align: top;"><span class="muted">(4–6 lines: Requested laboratory tests, imaging, diagnostic procedures)</span></td>
     </tr>
     <tr>
-        <td class="label" style="height: 35px;">Recommended Treatment:</td>
-        <td class="value" colspan="3"></td>
+        <td class="label" style="vertical-align: top;">Medications & Dosage:</td>
+        <td class="value" colspan="3" style="height: 120px; vertical-align: top;"><span class="muted">(6–10 lines: Prescribed drugs, strength, frequency, duration, administration instructions)</span></td>
+    </tr>
+    <tr>
+        <td class="label" style="vertical-align: top;">Recommended Treatment:</td>
+        <td class="value" colspan="3" style="height: 90px; vertical-align: top;"><span class="muted">(6–10 lines: Patient care instructions, dietary/activity advice, follow-up plan)</span></td>
     </tr>
     <tr>
         <td class="label" style="height: 35px;">Estimated Lab Cost:</td>
@@ -133,15 +137,9 @@
         <td class="value">₦ __________________</td>
     </tr>
     <tr>
-        <td class="label" style="height: 35px;">Attending Doctor Name:</td>
-        <td class="value">Dr. ___________________________</td>
-        <td class="label">Registration No / Stamp:</td>
-        <td class="value"></td>
-    </tr>
-    <tr>
         <td class="label" style="height: 35px;">Doctor's Signature:</td>
         <td class="value">_____________________________</td>
-        <td class="label">Follow-up Date:</td>
+        <td class="label">Official Stamp / Reg No:</td>
         <td class="value"></td>
     </tr>
 </table>

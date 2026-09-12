@@ -128,11 +128,11 @@ class ProjectResource extends Resource
                         //                            ->required(),
 
                         Forms\Components\Textarea::make('description')
-                            ->rows(3)
+                            ->rows(5)
                             ->columnSpanFull(),
 
                         Forms\Components\Textarea::make('location_address')
-                            ->rows(2)
+                            ->rows(3)
                             ->columnSpanFull(),
                     ]),
 

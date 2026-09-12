@@ -52,7 +52,7 @@ class PrescriptionForm
 
                     Textarea::make('treatment_notes')
                         ->label('Treatment Outcome & Administration Notes')
-                        ->rows(3)
+                        ->rows(4)
                         ->disabled()
                         ->dehydrated()
                         ->columnSpanFull()
@@ -103,7 +103,8 @@ class PrescriptionForm
 
                                         Textarea::make('description')
                                             ->label('Description / Symptoms')
-                                            ->rows(2)
+                                            ->rows(4)
+                                            ->columnSpanFull()
                                             ->placeholder('Brief description or common symptoms...'),
                                     ]),
                             ])
@@ -277,7 +278,7 @@ class PrescriptionForm
                     ->label('Clinical Notes & Dosage Instructions')
                     ->placeholder('Enter dosage instructions, frequency, duration, or additional observations...')
                     ->disabled(fn ($record) => $record?->isTreated())
-                    ->rows(4)
+                    ->rows(5)
                     ->columnSpanFull()
                     ->hint('Include dosage, frequency, and duration for each medication'),
             ]);

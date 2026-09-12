@@ -39,6 +39,11 @@ class ViewProject extends ViewRecord
                             ->money('NGN'),
                         TextEntry::make('progress_percentage')
                             ->suffix('%'),
+                        TextEntry::make('description')
+                            ->columnSpanFull(),
+                        TextEntry::make('location_address')
+                            ->label('Location Address')
+                            ->columnSpanFull(),
                     ]),
             ]);
     }

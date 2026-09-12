@@ -371,7 +371,8 @@ class OrphanResource extends Resource
                         Textarea::make('notes')
                             ->label('Notes')
                             ->placeholder('Optional notes about the marriage...')
-                            ->rows(2),
+                            ->rows(4)
+                            ->columnSpanFull(),
                     ])
                     ->action(function ($record, array $data) {
                         $record->markAsMarried($data['notes'] ?? null, $data['married_at'] ?? now());

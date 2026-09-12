@@ -329,7 +329,8 @@ class WelfareRequestResource extends Resource
                     ->schema([
                         Textarea::make('collection_notes')
                             ->label('Reason / Justification')
-                            ->rows(3)
+                            ->rows(4)
+                            ->columnSpanFull()
                             ->placeholder('Explain why this family needs welfare support...'),
                     ]),
 
