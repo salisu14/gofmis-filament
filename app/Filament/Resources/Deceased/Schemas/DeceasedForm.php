@@ -112,6 +112,7 @@ class DeceasedForm
                                     DatePicker::make('date_registered')
                                         ->label('Date Registered')
                                         ->default(now())
+                                        ->maxDate('today')
                                         ->required()
                                         ->native(false),
 

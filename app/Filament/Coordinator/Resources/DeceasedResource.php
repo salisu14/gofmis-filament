@@ -148,6 +148,7 @@ class DeceasedResource extends Resource
                             Forms\Components\DatePicker::make('date_registered')
                                 ->label('Date Registered')
                                 ->default(now())
+                                ->maxDate('today')
                                 ->required()
                                 ->native(false),
 
