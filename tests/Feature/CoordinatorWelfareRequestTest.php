@@ -3,6 +3,7 @@
 use App\Enums\BeneficiaryStatus;
 use App\Enums\VulnerabilityStatus;
 use App\Enums\WelfarePackageStatus;
+use App\Filament\Coordinator\Resources\WelfareRequestResource;
 use App\Filament\Coordinator\Resources\WelfareRequestResource\Pages\CreateWelfareRequest;
 use App\Models\Deceased;
 use App\Models\User;
@@ -13,7 +14,11 @@ use App\Models\Zone;
 use Filament\Facades\Filament;
 use Livewire\Livewire;
 
+uses(Illuminate\Foundation\Testing\RefreshDatabase::class);
+
 beforeEach(function () {
+    app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+
     Filament::setCurrentPanel(Filament::getPanel('coordinator'));
 
     $this->seed(\Database\Seeders\RolesAndPermissionsSeeder::class);
@@ -29,6 +34,9 @@ beforeEach(function () {
 
     $this->zone = Zone::create(['name' => 'Kano Zone', 'coordinator_id' => $this->coordinator->id]);
     $this->otherZone = Zone::create(['name' => 'Kaduna Zone', 'coordinator_id' => $this->otherCoordinator->id]);
+
+    $this->coordinator->refresh();
+    $this->otherCoordinator->refresh();
 
     $this->package = WelfarePackage::create([
         'name' => 'Annual Welfare Package 2026',
@@ -135,7 +143,7 @@ test('5. duplicate welfare request is rejected by validation', function () {
 });
 
 // 6. Valid request can still be submitted cleanly
-test('6. valid welfare request can be submitted by coordinator', function () {
+test('6. valid welfare request can be submitted by coordinator with create permission', function () {
     $ownDeceased = Deceased::factory()->create([
         'full_name' => 'Family Head Two',
         'zone_id' => $this->zone->id,
@@ -161,4 +169,155 @@ test('6. valid welfare request can be submitted by coordinator', function () {
         ->assertHasNoFormErrors();
 
     expect(WelfareBeneficiary::where('deceased_id', $ownDeceased->id)->exists())->toBeTrue();
+});
+
+// --- RBAC AUTHORIZATION ENFORCEMENT TESTS ---
+
+test('7. coordinator WITH default view and create permissions can access welfare requests and submit nominations', function () {
+    $this->actingAs($this->coordinator);
+
+    expect(WelfareRequestResource::canViewAny())->toBeTrue();
+    expect(WelfareRequestResource::canCreate())->toBeTrue();
+
+    $this->get('/coordinator/welfare-requests')->assertStatus(200);
+});
+
+test('8. coordinator WITHOUT view_welfare_interventions is denied navigation and list/view access', function () {
+    $role = \App\Models\Role::findByName('coordinator');
+    $perm = \App\Models\Permission::findByName('view_welfare_interventions');
+    $role->revokePermissionTo($perm);
+    app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+
+    $coordinator = User::factory()->create();
+    $coordinator->assignRole('coordinator');
+    Zone::create(['name' => 'Test Revoke View Zone', 'coordinator_id' => $coordinator->id]);
+
+    $this->actingAs($coordinator);
+
+    expect(WelfareRequestResource::canViewAny())->toBeFalse();
+
+    $this->get('/coordinator/welfare-requests')->assertStatus(403);
+});
+
+test('9. coordinator WITHOUT create_welfare_interventions is denied create action and service execution', function () {
+    $role = \App\Models\Role::findByName('coordinator');
+    $perm = \App\Models\Permission::findByName('create_welfare_interventions');
+    $role->revokePermissionTo($perm);
+    app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+
+    $coordinator = User::factory()->create();
+    $coordinator->assignRole('coordinator');
+    $zone = Zone::create(['name' => 'Test Revoke Create Zone', 'coordinator_id' => $coordinator->id]);
+    $coordinator = $coordinator->fresh();
+
+    $this->actingAs($coordinator);
+
+    expect(WelfareRequestResource::canViewAny())->toBeTrue();
+    expect(WelfareRequestResource::canCreate())->toBeFalse();
+
+    $this->get('/coordinator/welfare-requests')->assertStatus(200);
+    $this->get('/coordinator/welfare-requests/create')->assertStatus(403);
+
+    $ownDeceased = Deceased::factory()->create(['zone_id' => $zone->id]);
+
+    expect(function () use ($ownDeceased, $coordinator) {
+        app(\App\Services\Welfare\WelfareNominationService::class)->nominate(
+            (string) $this->package->id,
+            [(string) $ownDeceased->id],
+            $coordinator
+        );
+    })->toThrow(\Illuminate\Auth\Access\AuthorizationException::class);
+
+    expect(WelfareBeneficiary::where('deceased_id', $ownDeceased->id)->exists())->toBeFalse();
+});
+
+test('10. coordinator WITH permission but WRONG zone cannot view, edit, or nominate out-of-zone records', function () {
+    $this->actingAs($this->coordinator);
+
+    $otherDeceased = Deceased::factory()->create(['zone_id' => $this->otherZone->id]);
+    $otherBeneficiary = WelfareBeneficiary::create([
+        'welfare_package_id' => (string) $this->package->id,
+        'deceased_id' => (string) $otherDeceased->id,
+        'status' => BeneficiaryStatus::PENDING,
+        'suggested_by' => $this->otherCoordinator->id,
+    ]);
+
+    expect(WelfareRequestResource::canView($otherBeneficiary))->toBeFalse();
+    expect(WelfareRequestResource::canEdit($otherBeneficiary))->toBeFalse();
+
+    $result = app(\App\Services\Welfare\WelfareNominationService::class)->nominate(
+        (string) $this->package->id,
+        [(string) $otherDeceased->id],
+        $this->coordinator
+    );
+
+    expect($result['nominated_count'])->toBe(0);
+    expect($result['ineligible_count'])->toBe(1);
+});
+
+test('11. coordinator WITHOUT edit_welfare_interventions cannot edit even pending own-zone record', function () {
+    $coordinator = User::factory()->create();
+    $coordinator->assignRole('coordinator');
+    $zone = Zone::create(['name' => 'Test Edit Zone', 'coordinator_id' => $coordinator->id]);
+    $this->actingAs($coordinator);
+
+    $ownDeceased = Deceased::factory()->create(['zone_id' => $zone->id]);
+    $ownBeneficiary = WelfareBeneficiary::create([
+        'welfare_package_id' => (string) $this->package->id,
+        'deceased_id' => (string) $ownDeceased->id,
+        'status' => BeneficiaryStatus::PENDING,
+        'suggested_by' => $coordinator->id,
+    ]);
+
+    expect(WelfareRequestResource::canEdit($ownBeneficiary))->toBeFalse();
+
+    $role = \App\Models\Role::findByName('coordinator');
+    $perm = \App\Models\Permission::findByName('edit_welfare_interventions');
+    $role->givePermissionTo($perm);
+    app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+
+    $coordinator = User::find($coordinator->id);
+    $this->actingAs($coordinator);
+
+    expect(WelfareRequestResource::canEdit($ownBeneficiary))->toBeTrue();
+});
+
+test('12. super admin and admin retain full access regardless of individual permissions', function () {
+    $this->actingAs($this->admin);
+
+    $ownDeceased = Deceased::factory()->create(['zone_id' => $this->zone->id]);
+    $ownBeneficiary = WelfareBeneficiary::create([
+        'welfare_package_id' => (string) $this->package->id,
+        'deceased_id' => (string) $ownDeceased->id,
+        'status' => BeneficiaryStatus::PENDING,
+        'suggested_by' => $this->coordinator->id,
+    ]);
+
+    expect(WelfareRequestResource::canViewAny())->toBeTrue();
+    expect(WelfareRequestResource::canCreate())->toBeTrue();
+    expect(WelfareRequestResource::canView($ownBeneficiary))->toBeTrue();
+    expect(WelfareRequestResource::canEdit($ownBeneficiary))->toBeTrue();
+});
+
+test('13. permission revocation immediately denies access', function () {
+    $coordinator = User::factory()->create();
+    $coordinator->assignRole('coordinator');
+    Zone::create(['name' => 'Test Revoke All Zone', 'coordinator_id' => $coordinator->id]);
+    $this->actingAs($coordinator);
+
+    expect(WelfareRequestResource::canViewAny())->toBeTrue();
+    expect(WelfareRequestResource::canCreate())->toBeTrue();
+
+    $role = \App\Models\Role::findByName('coordinator');
+    $permView = \App\Models\Permission::findByName('view_welfare_interventions');
+    $permCreate = \App\Models\Permission::findByName('create_welfare_interventions');
+    $role->revokePermissionTo($permView);
+    $role->revokePermissionTo($permCreate);
+    app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+
+    $freshCoordinator = User::find($coordinator->id);
+    $this->actingAs($freshCoordinator);
+
+    expect(WelfareRequestResource::canViewAny())->toBeFalse();
+    expect(WelfareRequestResource::canCreate())->toBeFalse();
 });

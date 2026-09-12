@@ -339,7 +339,7 @@ test('auditor cannot reconcile or mutate funds and coordinator has only explicit
     }
     $expected = ['view_deceased', 'create_deceased', 'edit_deceased', 'view_orphans', 'create_orphans', 'edit_orphans',
         'view_widows', 'create_widows', 'edit_widows', 'view_zones', 'view_projects', 'create_projects', 'edit_projects',
-        'create_education_interventions', 'create_welfare_interventions',
+        'create_education_interventions', 'create_welfare_interventions', 'view_welfare_interventions',
         'create_loans', 'view_loans', 'edit_loans', 'biometrics.view', 'biometrics.enroll', 'view_reports'];
     sort($expected);
     expect(rbacRoleMatrix()['coordinator'])->toBe($expected);

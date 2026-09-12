@@ -14,6 +14,8 @@ use App\Services\BeneficiaryService;
 use Filament\Facades\Filament;
 use Livewire\Livewire;
 
+uses(Illuminate\Foundation\Testing\RefreshDatabase::class);
+
 beforeEach(function () {
     $this->seed(\Database\Seeders\RolesAndPermissionsSeeder::class);
 

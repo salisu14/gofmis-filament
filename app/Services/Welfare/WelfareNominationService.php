@@ -34,6 +34,11 @@ class WelfareNominationService
      */
     public function nominate(string $welfarePackageId, array $deceasedIds, User $user): array
     {
+        $isAdmin = $user->hasAnyRole(['admin', 'super_admin']);
+        if (! $isAdmin && ($user->isDemoObserver() || ! $user->can('create_welfare_interventions') || ! $user->managesZone())) {
+            throw new \Illuminate\Auth\Access\AuthorizationException('You are not authorized to nominate beneficiaries for welfare packages.');
+        }
+
         $package = WelfarePackage::find($welfarePackageId);
 
         $this->assertPackageAcceptingNominations($package);

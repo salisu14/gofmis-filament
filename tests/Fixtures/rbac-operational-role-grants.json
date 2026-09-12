@@ -37,6 +37,7 @@
         "view_orphans",
         "view_projects",
         "view_reports",
+        "view_welfare_interventions",
         "view_widows",
         "view_zones"
     ],
