@@ -308,14 +308,8 @@ class Widow extends Model
             ])));
         });
 
-        static::saving(function ($model) {
-            if ($model->has_nin === null) {
-                $model->has_nin = filled($model->nin);
-            }
-
-            if (! $model->has_nin) {
-                $model->nin = null;
-            }
+        static::saving(function (Model $model) {
+            app(\App\Services\BeneficiaryNinService::class)->validateForSave($model);
         });
 
         static::created(function (Widow $widow) {

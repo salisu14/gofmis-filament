@@ -236,7 +236,7 @@ test('11. same NIN + different deceased rejected', function () {
             'full_name' => 'Amina Usman',
             'address' => 'Garko, Kano State',
         ]);
-    })->toThrow(\Illuminate\Database\UniqueConstraintViolationException::class);
+    })->toThrow(\Illuminate\Validation\ValidationException::class);
 
     expect(Widow::where('nin', '12345678901')->count())->toBe(1);
 });

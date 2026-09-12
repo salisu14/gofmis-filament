@@ -183,7 +183,7 @@ test('7. duplicate NIN under a second deceased household is rejected', function 
             'full_name' => 'Amina Usman',
             'address' => 'Garko, Kano State',
         ]);
-    })->toThrow(\Illuminate\Database\UniqueConstraintViolationException::class);
+    })->toThrow(\Illuminate\Validation\ValidationException::class);
 
     expect(Widow::where('nin', '12345678901')->count())->toBe(1);
 });
