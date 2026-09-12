@@ -163,26 +163,29 @@ test('6. historical remarriage/divorce dates remain intact', function () {
         ->and($this->remarriedWidow->divorced_at->format('Y-m-d'))->toBe('2026-08-15');
 });
 
-// 7. Same NIN under a second deceased household is supported
-test('7. same NIN under a second deceased household is supported', function () {
+// 7. Duplicate NIN under a second deceased household is rejected
+test('7. duplicate NIN under a second deceased household is rejected', function () {
     $this->actingAs($this->admin);
 
     $deceasedB = Deceased::factory()->create(['zone_id' => $this->zone->id]);
 
-    $widowB = Widow::create([
-        'first_name' => 'Amina',
-        'last_name' => 'Usman',
-        'nin' => '12345678901', // Same NIN as activeWidow!
-        'reg_no' => 'WID-2026-0099',
-        'is_eligible' => true,
-        'is_married' => false,
-        'deceased_id' => $deceasedB->id,
-        'child_sequence' => 1,
-        'full_name' => 'Amina Usman',
-        'address' => 'Garko, Kano State',
-    ]);
+    expect(function () use ($deceasedB) {
+        Widow::create([
+            'first_name' => 'Amina',
+            'last_name' => 'Usman',
+            'nin' => '12345678901',
+            'has_nin' => true,
+            'reg_no' => 'WID-2026-0099',
+            'is_eligible' => true,
+            'is_married' => false,
+            'deceased_id' => $deceasedB->id,
+            'child_sequence' => 1,
+            'full_name' => 'Amina Usman',
+            'address' => 'Garko, Kano State',
+        ]);
+    })->toThrow(\Illuminate\Database\UniqueConstraintViolationException::class);
 
-    expect(Widow::where('nin', '12345678901')->count())->toBe(2);
+    expect(Widow::where('nin', '12345678901')->count())->toBe(1);
 });
 
 // 8. Old widow household remains historical while new widow household is operational
@@ -197,7 +200,7 @@ test('8. old widow household remains historical while new widow household is ope
     $widowB = Widow::create([
         'first_name' => 'Amina',
         'last_name' => 'Usman',
-        'nin' => '12345678901',
+        'nin' => '12345678902',
         'reg_no' => 'WID-2026-0099',
         'is_eligible' => true,
         'is_married' => false,

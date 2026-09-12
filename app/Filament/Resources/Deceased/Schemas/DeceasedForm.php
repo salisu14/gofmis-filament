@@ -23,6 +23,7 @@ use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
+use Illuminate\Support\Str;
 
 class DeceasedForm
 {
@@ -135,7 +136,7 @@ class DeceasedForm
                                                 $set('death_place', $val);
                                             } elseif (str_starts_with($val, 'Other — ')) {
                                                 $set('death_place', 'Other');
-                                                $set('death_place_other', substr($val, 8));
+                                                $set('death_place_other', Str::after($val, 'Other — '));
                                             } else {
                                                 $set('death_place', 'Other');
                                                 $set('death_place_other', $val);
@@ -165,7 +166,7 @@ class DeceasedForm
                                                 $set('death_cause', $val);
                                             } elseif (str_starts_with($val, 'Other — ')) {
                                                 $set('death_cause', 'Other');
-                                                $set('death_cause_other', substr($val, 8));
+                                                $set('death_cause_other', Str::after($val, 'Other — '));
                                             } else {
                                                 $set('death_cause', 'Other');
                                                 $set('death_cause_other', $val);

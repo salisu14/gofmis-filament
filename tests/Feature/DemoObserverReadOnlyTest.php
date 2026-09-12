@@ -68,6 +68,7 @@ function demoObserverCreateTestDeceased($zoneId)
         'first_name' => 'Test',
         'last_name' => 'Deceased',
         'nin' => (string) random_int(10000000000, 99999999999),
+        'has_nin' => true,
         'date_of_death' => '2025-01-01',
         'date_registered' => '2025-01-01',
         'zone_id' => $zoneId,
@@ -87,6 +88,7 @@ function demoObserverCreateTestWidow($deceased)
         'first_name' => 'Hauwa',
         'last_name' => 'Ibrahim',
         'nin' => (string) random_int(10000000000, 99999999999),
+        'has_nin' => true,
         'is_eligible' => true,
         'is_married' => false,
         'child_sequence' => 1,
@@ -493,7 +495,7 @@ test('50. Demo Observer can see existing records regardless of zone scope', func
 
     actingAs($this->demoObserver);
 
-    expect(Deceased::count())->toBeGreaterThanOrEqual(2);
+    expect(Deceased::withoutGlobalScopes()->count())->toBeGreaterThanOrEqual(2);
 });
 
 test('51. Coordinator zone isolation has not been weakened', function () {

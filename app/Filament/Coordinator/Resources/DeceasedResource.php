@@ -55,8 +55,13 @@ class DeceasedResource extends Resource
     {
         $user = auth()->user();
 
-        return $user?->hasAnyRole(['admin', 'super_admin'])
-            || $user?->managesZone();
+        if ($user?->hasAnyRole(['admin', 'super_admin'])) {
+            return true;
+        }
+
+        return $user?->isCoordinator()
+            && $user->can('create_deceased')
+            && $user->managesZone();
     }
 
     public static function canEdit($record): bool
